@@ -152,3 +152,43 @@ pipeline mechanics and for citing published precedent — not for reporting an R
 number as if it describes this project's own hardware. Keep that distinction explicit wherever any
 of this shows up in the report or slides, exactly like the "synthetic data" labeling used
 elsewhere in this project's evidence.
+
+---
+
+## 4. Risk check — "pretrain on public data, then fine-tune on our own rig data"
+
+This is the team's actual stated plan (as of 2026-09-14) and it's the right overall framework — it's
+literally why N-HiTS/TFT were chosen as *pretrained, fine-tuned* models rather than trained from
+scratch. But "fine-tune" is doing a lot of unstated work in that plan, and the Kumar et al. 2024
+paper (§1) has direct evidence that the naive version of this — just continuing training on the
+new data without addressing the domain gap — can fail outright rather than just underperform. Its
+own numbers, same task, two methods: DAN went from 89.27% (synthetic/source) to 99.55%
+(real/target) accuracy; SEDA went from 99.23% down to 24.77% doing the same synthetic→real switch.
+Same problem, opposite outcomes, purely on how the transfer was handled. Three concrete risks to
+close before this is a real plan rather than a one-line intention:
+
+1. **Feature-space mismatch.** N-HiTS/TFT are fed this project's specific 32-value envelope +
+   order-FFT feature set, computed for this project's own bearing geometry and window scheme. CWRU/
+   FEMTO-ST/XJTU-SY are raw vibration signals from different bearings at different sample rates —
+   they are not usable as pretraining input until they're run through the *same* feature-extraction
+   pipeline the rig's own data will use. That reprocessing step is real engineering work and isn't
+   currently scoped anywhere in the project plan.
+2. **RUL label scale mismatch.** FEMTO-ST/XJTU-SY's RUL labels are absolute hours-to-failure for
+   their own accelerated-life tests; this project's own labels come from an ISO-281-style life law
+   on a different physics model. Pretraining on one scale and fine-tuning on another, without
+   normalizing to something scale-invariant (e.g. percent-of-life-remaining instead of absolute
+   time), risks a model that's technically working but consistently miscalibrated in a way that's
+   easy to miss during development.
+3. **Small fine-tuning set makes this worse, not less important.** The rig-assembly and
+   fault-injection data collection (FDR's own "Next" list) will happen in the same short window as
+   everything else — the real fine-tuning dataset is likely to be small. Small target-domain data is
+   exactly the regime where naive continued training is riskiest and where a domain-adaptation-aware
+   approach (freeze/adapt the feature extractor, add a domain-adversarial branch — the DANN approach
+   Kumar et al. use, not full retraining) earns its keep.
+
+**Recommendation for the report/Ch.3**: don't leave "we fine-tune on our own data" as the full
+explanation. State the actual mechanism — feature-space alignment before pretraining, label
+normalization, and (if the domain gap proves large in practice) a domain-adaptation step — and cite
+Kumar et al. 2024's DAN-vs-SEDA result as the evidence for why the mechanism matters, not just the
+end goal. This is also a stronger answer to the kind of scrutiny Al-Badour has already shown he
+applies to under-specified claims.
