@@ -1,0 +1,4 @@
+wwwroot\css\app.css
+wwwroot\index.html
+C:\Users\Abdulrazaq\source\repos\Digital-Twin-Senior-Proj\src\DigitalTwin.Dashboard\wwwroot\css\app.css
+C:\Users\Abdulrazaq\source\repos\Digital-Twin-Senior-Proj\src\DigitalTwin.Dashboard\wwwroot\index.html

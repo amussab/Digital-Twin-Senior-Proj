@@ -1,0 +1,58 @@
+is_global = true
+build_property.EnableAotAnalyzer = 
+build_property.EnableSingleFileAnalyzer = 
+build_property.EnableTrimAnalyzer = false
+build_property.IncludeAllContentForSelfExtract = 
+build_property.VerifyReferenceTrimCompatibility = 
+build_property.VerifyReferenceAotCompatibility = 
+build_property.TargetFramework = net10.0
+build_property.TargetFrameworkIdentifier = .NETCoreApp
+build_property.TargetFrameworkVersion = v10.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = false
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property.EntryPointFilePath = 
+build_property._SupportedPlatformList = browser
+build_property.RootNamespace = DigitalTwin.Dashboard
+build_property.RootNamespace = DigitalTwin.Dashboard
+build_property.ProjectDir = C:\Users\Abdulrazaq\source\repos\Digital-Twin-Senior-Proj\src\DigitalTwin.Dashboard\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = false
+build_property.RazorLangVersion = 10.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\Users\Abdulrazaq\source\repos\Digital-Twin-Senior-Proj\src\DigitalTwin.Dashboard
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 10.0
+build_property.EnableCodeStyleSeverity = 
+
+[C:/Users/Abdulrazaq/source/repos/Digital-Twin-Senior-Proj/src/DigitalTwin.Dashboard/App.razor]
+build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Abdulrazaq/source/repos/Digital-Twin-Senior-Proj/src/DigitalTwin.Dashboard/Components/MetricCard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xNZXRyaWNDYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Abdulrazaq/source/repos/Digital-Twin-Senior-Proj/src/DigitalTwin.Dashboard/Components/PumpTwin.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQdW1wVHdpbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Abdulrazaq/source/repos/Digital-Twin-Senior-Proj/src/DigitalTwin.Dashboard/Components/TrendChart.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xUcmVuZENoYXJ0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Abdulrazaq/source/repos/Digital-Twin-Senior-Proj/src/DigitalTwin.Dashboard/Pages/Home.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSG9tZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Abdulrazaq/source/repos/Digital-Twin-Senior-Proj/src/DigitalTwin.Dashboard/Shared/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE1haW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Abdulrazaq/source/repos/Digital-Twin-Senior-Proj/src/DigitalTwin.Dashboard/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 

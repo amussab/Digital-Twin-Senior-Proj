@@ -1,0 +1,45 @@
+<div class="trend-chart" aria-label="@Title trend chart">
+    <div class="panel-heading">
+        <span>@Title</span>
+        <strong>@CurrentValue</strong>
+    </div>
+    <svg viewBox="0 0 600 170" preserveAspectRatio="none" role="img">
+        <defs>
+            <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.34" />
+                <stop offset="100%" stop-color="#22d3ee" stop-opacity="0" />
+            </linearGradient>
+        </defs>
+        <line x1="0" y1="42" x2="600" y2="42" class="grid-line" />
+        <line x1="0" y1="85" x2="600" y2="85" class="grid-line" />
+        <line x1="0" y1="128" x2="600" y2="128" class="grid-line" />
+        <polygon points="@AreaPoints" fill="url(#chartFill)" />
+        <polyline points="@LinePoints" class="trend-line" />
+    </svg>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public string CurrentValue { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<double> Values { get; set; } = [];
+
+    private string LinePoints => BuildPoints(closeArea: false);
+    private string AreaPoints => BuildPoints(closeArea: true);
+
+    private string BuildPoints(bool closeArea)
+    {
+        if (Values.Count == 0) return "";
+
+        var min = Values.Min();
+        var range = Math.Max(1, Values.Max() - min);
+        var points = Values.Select((value, index) =>
+        {
+            var x = Values.Count == 1 ? 0 : index * 600d / (Values.Count - 1);
+            var y = 150d - ((value - min) / range * 120d);
+            return $"{x:F1},{y:F1}";
+        });
+
+        var line = string.Join(" ", points);
+        return closeArea ? $"0,170 {line} 600,170" : line;
+    }
+}
