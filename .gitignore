@@ -17,6 +17,10 @@ __pycache__/
 AI-test/data/
 AI-test/artifacts/
 AI-test/lightning_logs/
+# Per-window prediction dump: ~400 KB and rewritten on every evaluate run.
+# The spec_check_*.md / .json reports next to it are the evidence record and
+# stay tracked.
+AI-test/reports/rul_predictions.csv
 lightning_logs/
 *.ckpt
 *.onnx
