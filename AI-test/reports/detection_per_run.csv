@@ -1,0 +1,9 @@
+run_id,fault_class,caught_at_stage,caught_by_stage3
+8,cage,2,True
+9,outer_race,1,True
+14,outer_race,1,True
+17,inner_race,1,True
+18,ball,2,True
+44,inner_race,2,True
+46,ball,2,True
+47,cage,2,True
