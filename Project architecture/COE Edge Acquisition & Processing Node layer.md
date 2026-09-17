@@ -25,7 +25,7 @@ The numbering follows the submitted specification sheet.
 
 | Requirement | How the Design Addresses It | Current Evidence |
 | :--- | :--- | :--- |
-| **Specification 4** — Sample at least 25 kSamples/s per channel. | The AD7606 uses OS ×4 and produces all eight channel words at 30 kSample-sets/s; six channels carry active signals and two are reserved. | Datasheet timing calculated; bench test pending. |
+| **Specification 4** — Sample at least 25 kSamples/s per channel. | The AD7606 operates with oversampling disabled and produces all eight channel words at 30 kSample-sets/s; six channels carry active signals and two are reserved. | Datasheet timing calculated; bench test pending. |
 | **Specification 5** — After a 20-revolution window is collected, make the payload ready within 333 ms, excluding the first window. | Timing starts at the final Keyphasor edge of the window and ends when the STM32 has completed the 152-byte payload in memory. | Test definition complete; STM32 timing measurement pending. |
 | **Specification 6** — Produce an AI-ready representation with fixed size and ordering at both supported operating modes. | Every valid 1750 or 3600 RPM window produces the same 32 AI features, four displacement values, RPM, and timestamp in a fixed 152-byte payload. | Interface defined; integration test pending. |
 | **Constraint 4** — Perform acquisition and processing locally without cloud computation. | The STM32 performs acquisition and DSP, the ESP32-C6 transports the payload, and the AI and FE twin run on a local host. | Architecture defined; offline integration test pending. |
@@ -39,11 +39,12 @@ The document uses **calculated**, **defined**, or **test pending** until the har
 ```mermaid
 flowchart TD
     ACC["4 IEPE accelerometers"] --> IEPE["SRD-1104 conditioner"]
-    IEPE --> ADC["AD7606 channels 1-4: on-chip analog filter + OS x4"]
+    IEPE --> LPF["4-channel fourth-order 10 kHz MFB LPF"]
+    LPF --> ADC["AD7606 channels 1-4"]
 
     PROBES["2 RK4 radial proximity probes"] --> PROX["Included RK4 Proximitor units"]
     PROX --> PROXIN["Voltage-compatible input protection"]
-    PROXIN --> ADC2["AD7606 channels 5-6: same on-chip filtering"]
+    PROXIN --> ADC2["AD7606 channels 5-6"]
 
     KEY["RK4 Keyphasor"] --> KEYIN["Voltage-compatible conditioning"]
     KEYIN --> TIMER["STM32 timer input"]
@@ -56,7 +57,7 @@ flowchart TD
 
 #### 3.1 Sensor Conditioning
 
-The four IEPE accelerometers connect through the SRD-1104 for sensor power and conditioning, then directly to the AD7606 inputs. A separate external anti-alias low-pass filter is not used in the baseline prototype. The design instead uses the AD7606's built-in second-order analog anti-alias filter together with its OS ×4 digital oversampling filter.
+The four IEPE accelerometers connect through the SRD-1104 for sensor power and conditioning, then pass through the custom four-channel fourth-order MFB low-pass filter before reaching AD7606 channels V1–V4. The external filter has an approximately 10 kHz cutoff and is the primary analog anti-aliasing stage for the accelerometer channels. The AD7606's built-in second-order analog input filter remains supplemental; digital oversampling is disabled.
 
 The two radial proximity probes use the Proximitor units included with the RK4 kit. They do not connect through the SRD-1104. Before connecting them to the AD7606, their output range, grounding, and connector mapping must be checked on the physical kit. Additional Proximitor units should not be purchased unless the kit inventory shows that they are missing.
 
@@ -79,11 +80,11 @@ The physical RK4 connectors must be inspected before wiring to confirm this plan
 
 #### 3.3 Sampling and Anti-Alias Filter
 
-The selected output rate is **30 kSample-sets/s**, with `OS[2:0] = 010` selecting OS ×4. The STM32 continues to generate one `CONVST` event every 33.333 microseconds. For each event, the AD7606 takes four internal samples per channel, averages them using its first-order sinc digital filter, and returns one 16-bit result per channel. The STM32 therefore receives 30 kSample-sets/s; it does not receive a 120 kSample/s stream.
+The selected sampling rate is **30 kSample-sets/s**, with `OS[2:0] = 000` disabling AD7606 digital oversampling. The STM32 generates one `CONVST` event every 33.333 microseconds. Each event produces one simultaneous 16-bit result for every channel, so the STM32 receives 30 kSample-sets/s directly.
 
-The AD7606 already places a second-order analog anti-alias filter before its ADC. OS ×4 adds digital filtering and supports a maximum `CONVST` rate of 50 kHz, so the selected 30 kHz output rate is within the documented limit. At OS ×4, the specified 3 dB bandwidth is 13.7 kHz in the ±5 V range and 18.5 kHz in the ±10 V range. The selected 2–8 kHz Component 3 passband is below both limits.
+The custom fourth-order MFB low-pass filter is installed between the SRD-1104 and AD7606 channels V1–V4. Its approximately 10 kHz cutoff is below the 15 kHz Nyquist frequency produced by the 30 kSample/s rate. The AD7606's built-in second-order analog input filter remains active as supplemental filtering, but its optional digital oversampling filter is not used.
 
-The separate external anti-alias filter is therefore removed from the prototype. Commissioning must still confirm that the received module preserves the required 2–8 kHz response and that no unusually strong out-of-band source causes measurable aliasing. This is a verification test, not an undefined processing stage.
+Commissioning must measure the complete SRD-1104 → external LPF → AD7606 response, confirm that the required 2–8 kHz bearing-resonance band is preserved, and verify the attenuation above the intended passband. The detailed component calculations and circuit are maintained in [LPF Design Details](LPF-design-details-circuit.md).
 
 ---
 
@@ -103,9 +104,9 @@ With an initial 10 MHz serial clock setting, transferring those 128 bits takes a
 
 > 128 bits divided by 10,000,000 bits/s = **12.8 microseconds**
 
-With OS ×4, the AD7606 conversion time is at most 18.8 microseconds. A `BUSY` falling-edge event indicates that the new result is available and starts the 10 MHz SPI/DMA read. The AD7606 permits the result to be read while the next conversion is running, so conversion and transfer do not have to fit serially before the next `CONVST` event.
+With oversampling disabled, the AD7606 conversion time is at most 4.2 microseconds. A `BUSY` falling-edge event indicates that the new result is available and starts the 10 MHz SPI/DMA read. The 128-bit read takes approximately 12.8 microseconds, so conversion plus transfer requires at most approximately 17.0 microseconds. This leaves approximately 16.3 microseconds before the next `CONVST` event at the selected 30 kHz sampling rate.
 
-The completed result must be read before the following `BUSY` falling edge updates the output register. Successive results are 33.333 microseconds apart, while the SPI transfer takes 12.8 microseconds, leaving approximately 20.5 microseconds for interrupt/DMA-start latency and margin. The transfer must not occur exactly on a `BUSY` falling edge.
+The completed result must be read before the following `BUSY` falling edge updates the output register. Successive results are 33.333 microseconds apart, while the SPI transfer takes 12.8 microseconds, leaving approximately 20.5 microseconds for interrupt/DMA-start latency and margin after each `BUSY` falling edge. The transfer must not occur exactly on a `BUSY` falling edge.
 
 #### 4.2 Twenty-Revolution Window
 
@@ -150,13 +151,13 @@ The complete 20-revolution pipeline does **not** have to finish within 8.533 ms.
 
 The two DMA blocks use only 8 KB of RAM, so complete raw windows are not stored. During implementation, the measured block-processing time and DMA-overrun counter will be checked. The 256-sample-set size will be changed only if testing shows that it is necessary.
 
-The detailed block-by-block timeline, firmware mental model, and complete worked example are provided in [COE Processing Pipeline Component Details](COE%20Processing%20Pipeline%20Component%20Details.md). They are not repeated here.
+The detailed block-by-block timeline, firmware mental model, and complete worked example are provided in [COE Processing Pipeline Component Details](COE_Processing_Pipeline_Component_Details%282%29.md). They are not repeated here.
 
 ---
 
 ### 5. Processing Pipeline
 
-The processing sequence below contains the operations needed for the AI features and FE displacement input. The logical stage order, component interfaces, feature order, and payload are defined. The nine logical components, their block/window behaviour, and their simple firmware grouping are explained in [COE Processing Pipeline Component Details](COE%20Processing%20Pipeline%20Component%20Details.md). This section keeps only the architecture-level summary.
+The processing sequence below contains the operations needed for the AI features and FE displacement input. The logical stage order, component interfaces, feature order, and payload are defined. The nine logical components, their block/window behaviour, and their simple firmware grouping are explained in [COE Processing Pipeline Component Details](COE_Processing_Pipeline_Component_Details%282%29.md). This section keeps only the architecture-level summary.
 
 ```mermaid
 flowchart TD
@@ -306,7 +307,7 @@ The following tests are sufficient to demonstrate whether the prototype meets th
 
 | Requirement | Verification Test | Pass Condition | Present Status |
 | :--- | :--- | :--- | :--- |
-| **Specification 4** | With OS ×4 enabled, record the sample count and elapsed time for every channel, verify each 10 MHz SPI/DMA read completes before the following `BUSY` falling edge, and check for DMA overruns. | Every active channel produces 30 kSamples/s, one block of streaming work completes every 8.533 ms on average, and no samples are lost. | Datasheet timing calculated; hardware test pending. |
+| **Specification 4** | With oversampling disabled, record the sample count and elapsed time for every channel, verify each 10 MHz SPI/DMA read completes before the following `BUSY` falling edge, and check for DMA overruns. | Every active channel produces 30 kSamples/s, one block of streaming work completes every 8.533 ms on average, and no samples are lost. | Datasheet timing calculated; hardware test pending. |
 | **Specification 5** | Measure from the final Keyphasor edge of a window until the 152-byte payload is complete in STM32 memory. Test repeated windows at 1750 and 3600 RPM. | Every tested window after the excluded first window is ready within 333 ms. | Test method defined; firmware timing pending. |
 | **Specification 6** | Generate and decode payloads at the two supported modes, 1750 and 3600 RPM. | Every valid window contains exactly 152 bytes with the same field and feature ordering. | Interface defined; integration test pending. |
 | **Constraint 4** | Disconnect external internet access while keeping the STM32, ESP32-C6, and host on the local network. | Acquisition, transmission, AI inference, FE processing, and dashboard display continue locally. | Architecture defined; offline test pending. |
@@ -327,11 +328,11 @@ Until a test is performed, its status remains **calculated** or **pending**, not
 No additional answer from the mechanical team is required before implementing the baseline pipeline. The following installed-system checks remain part of implementation and commissioning:
 
 1. Enter the measured sensitivity and offset for each installed accelerometer and proximity channel.
-2. Set `OS[2:0] = 010`, verify the AD7606's on-chip analog-plus-digital filter response over 2–8 kHz, and confirm the electrical compatibility of the six active inputs.
+2. Set `OS[2:0] = 000`, verify the complete external-LPF-plus-AD7606 analog response over 2–8 kHz, and confirm the electrical compatibility of the six active inputs.
 3. Verify reliable Keyphasor edge capture at both 1750 and 3600 RPM.
 4. Start with the selected 2–8 kHz resonance band and 5 kSamples/s envelope rate. Refine the resonance band or envelope low-pass cutoff only if measured data identifies a better setting.
 5. Monitor the Keyphasor revolution periods. Add angular resampling only if meaningful within-window speed variation produces spectral smearing or unstable order-band features.
-6. Verify reliable 30 kSample-sets/s acquisition with OS ×4, 10 MHz SPI/DMA reads triggered after `BUSY` falls, and one processed 256-sample-set block every 8.533 ms without overruns.
+6. Verify reliable 30 kSample-sets/s acquisition with oversampling disabled, 10 MHz SPI/DMA reads triggered after `BUSY` falls, and one processed 256-sample-set block every 8.533 ms without overruns.
 7. Implement the UART and local Wi-Fi transfer and confirm that the host decodes the 152-byte payload.
 
 These checks tune or verify the installed system; they do not leave the architecture undefined.
@@ -341,23 +342,35 @@ These checks tune or verify the installed system; they do not leave the architec
 ## Bill of Materials
 
 | Component | Role | Source / Status |
-| :--- | :--- | :--- |
-| STM32 NUCLEO-H755ZI-Q | Acquisition and DSP controller | [Amazon](https://www.amazon.sa/-/en/XFCZMG-NUCLEO-H755ZI-Q-Nucleo-144-Development-STM32H755ZI/dp/B0CKVZ2X7Z) |
-| A49T AD7606 eight-channel ADC module | Samples six active conditioned signals simultaneously; two channel words remain reserved | [AliExpress](https://www.aliexpress.com/item/1005012637207490.html); verify the received module and serial timing |
-| SMACQ SRD-1104 | Conditions and powers four IEPE accelerometers | [AliExpress](https://ar.aliexpress.com/item/1005007510744310.html?gatewayAdapt=glo2ara) |
-| AD7606 on-chip filtering | Second-order analog anti-alias filter followed by an OS ×4 digital oversampling/decimation stage (120 kSPS internal → 30 kSPS output) | Built into the selected ADC; no separate external anti-alias filter board — decision made after evaluating an external LTC1569-7 filter path and choosing internal oversampling instead to reduce sourcing complexity and cost |
-| 24V → 5V DC-DC buck converter | Steps down the 24V local-control-system rail to the regulated 5V bus for AD7606, STM32, and ESP32-C6 | [AliExpress](https://ar.aliexpress.com/item/1005008965910286.html) — 3A/15W buck module selected, sized with margin above the ~1–1.3A combined board load |
-| BNC pigtail cable, bare wire (SRD-1104 → AD7606) | Bridges the SRD-1104's BNC signal outputs to the AD7606's bare-wire screw-terminal inputs | [Amazon](https://www.amazon.sa/-/en/MEIRIYFA-Pigtail-Connector-Extension-Terminal/dp/B09SKMYBZ8?th=1) — BNC male, 5-pack (4 channels + 1 spare) |
-| Coaxial cable, sensor to conditioner (10-32 to BNC) | Connects each accelerometer to an SRD-1104 input channel | **Pending** — connector type on the sensor end depends on the accelerometer model, which is not yet selected; cannot confirm whether this needs a bare-wire/10-32 pigtail or comes pre-terminated with the sensor |
-| Proximitor-to-ADC connection/protection | Connects the RK4 buffered displacement outputs safely to the ADC | **Pending** — requires measuring the RK4 Proximitor's actual output voltage range before resistor/protection values can be specified |
-| Keyphasor input conditioning | Protects the STM32 input and provides a valid timer-capture signal | **Pending** — requires measuring the RK4 Keyphasor's actual output voltage level before the conditioning circuit can be specified |
-| 24V source interface hardware | Physically connects the DC-DC converter's input leads to the local control system's 24V supply | **Pending** — depends on the physical connector/terminal type of the local control system (e.g., screw terminal, banana jack, bare wire), to be confirmed with the ME |
-| ESP32-C6 development board | UART-to-local-Wi-Fi bridge | [Selected ESP32-C6 board](https://www.aliexpress.com/item/1005012742424741.html) |
+|---|---|---|
+| STM32 NUCLEO-H755ZI-Q | Acquisition, timing, and DSP controller | [Amazon](https://www.amazon.sa/-/en/XFCZMG-NUCLEO-H755ZI-Q-Nucleo-144-Development-STM32H755ZI/dp/B0CKVZ2X7Z) |
+| A49T AD7606 eight-channel ADC module | Simultaneously samples six conditioned analog signals; two ADC channels remain reserved | [AliExpress](https://www.aliexpress.com/item/1005012637207490.html) — verify the received module, input-range configuration, and serial timing |
+| SMACQ SRD-1104 | Powers and conditions four IEPE accelerometers | [AliExpress](https://ar.aliexpress.com/item/1005007510744310.html) |
+| Four-channel fourth-order MFB low-pass filter | Provides an approximately 10 kHz analog anti-alias filter between the SRD-1104 and AD7606 | Custom circuit using two TL074 ICs and the resistor/capacitor kits listed below |
+| AD7606 on-chip filtering | Provides supplemental second-order analog filtering after the external LPF | Built into the selected ADC; digital oversampling is disabled in the baseline design |
+| TL074CN DIP-14 quad op-amps | Implements eight second-order MFB stages: two stages for each of four accelerometer channels | [AliExpress](https://ar.aliexpress.com/item/1005006131796020.html) — two ICs required; one 10-piece package selected |
+| DIP-14 IC sockets | Allows the two TL074 ICs to be installed and replaced without desoldering | [AliExpress](https://ar.aliexpress.com/item/1005006130784050.html) — two sockets required; one package selected |
+| 1% metal-film resistor assortment | Supplies the 20 kΩ, 10 kΩ, and 3.3 kΩ resistors required by the LPF | [AliExpress](https://ar.aliexpress.com/item/1005008289034002.html) |
+| Ceramic capacitor assortment | Supplies the 1 nF, 200 pF, 47 pF, 300 pF, 4.7 nF, and 100 nF capacitors required by the LPF | [AliExpress](https://ar.aliexpress.com/item/1005009570762979.html) |
+| Electrolytic capacitor assortment | Supplies bulk decoupling capacitors for the LPF power rails | [AliExpress](https://ar.aliexpress.com/item/1005008123014567.html) |
+| 24 V → 5 V DC-DC buck converter | Generates the regulated 5 V bus for the AD7606, STM32, and ESP32-C6 | [AliExpress](https://ar.aliexpress.com/item/1005008965910286.html) — 3 A/15 W converter retained |
+| A2415S-1WR3 isolated DC-DC converter | Converts the 24 V supply into approximately +15 V, COM, and −15 V for the two TL074 ICs | [AliExpress](https://ar.aliexpress.com/item/1005006169352485.html) — one module selected; verify both output rails before installing the TL074s |
+| Universal double-sided perfboard | Holds the final soldered LPF and its power/interface connections | [AliExpress](https://ar.aliexpress.com/item/1005003647800709.html) |
+| 2-pin and 3-pin PCB terminal blocks | Provides removable signal, power, ground, and ±15 V connections on the LPF board | [AliExpress](https://ar.aliexpress.com/item/1005007055503766.html) |
+| UL1007 22-AWG multicolor hookup wire | Connects power, ground, and signals within the acquisition node | [AliExpress](https://ar.aliexpress.com/item/1005005450270866.html) |
+| SRD-1104 rear terminal connection | Connects the four SRD-1104 signal outputs to the four LPF inputs | Uses the 10-pin, 3.81 mm terminal supplied with the SRD-1104; BNC pigtails are not required |
+| ESP32-C6 development board | UART-to-local-Wi-Fi communication bridge | [AliExpress](https://www.aliexpress.com/item/1005012742424741.html) |
+| Analog signal cabling | Connects the SRD-1104 outputs to the LPF and the LPF outputs to the AD7606 | **Pending** — cable type and length will be selected after receiving the components and measuring the final installation distances |
+| Four IEPE accelerometers | Measures vibration at the selected machine locations | **Pending** — accelerometer models have not yet been selected |
+| Coaxial cables, sensor to conditioner | Connects each accelerometer to an SRD-1104 BNC input | **Pending** — sensor-end connector depends on the selected accelerometer; commonly 10-32 to BNC |
+| Proximitor-to-ADC connection/protection | Connects the two RK4 buffered displacement outputs safely to the AD7606 | **Pending** — requires measuring the actual Proximitor output-voltage range |
+| Keyphasor input conditioning | Protects the STM32 input and produces a valid timer-capture signal | **Pending** — requires measuring the actual RK4 Keyphasor output-voltage level |
+| 24 V source interface hardware | Physically connects the acquisition node to the local control system’s 24 V supply | **Pending** — connector type must be confirmed with the mechanical engineer |
 ---
 
 ## References
 
-1. [COE Processing Pipeline Component Details](COE%20Processing%20Pipeline%20Component%20Details.md) — explanation of all nine logical processing components, the streaming method, firmware mental model, and worked example.
+1. [COE Processing Pipeline Component Details](COE_Processing_Pipeline_Component_Details%282%29.md) — explanation of all nine logical processing components, the streaming method, firmware mental model, and worked example.
 2. Bently Nevada, *RK4 Rotor Kit Datasheet*, document 141592, Rev. K.
 3. SMACQ, *SRD-1104 User Manual*.
 4. Analog Devices, *AD7606/AD7606-6/AD7606-4 Data Sheet*.

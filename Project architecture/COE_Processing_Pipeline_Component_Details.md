@@ -22,7 +22,7 @@ The main goals are:
 | :--- | :--- |
 | Active analog inputs | Four accelerometers and two radial proximity probes |
 | ADC | AD7606 with eight simultaneous channels |
-| AD7606 oversampling | OS ×4, `OS[2:0] = 010` |
+| AD7606 oversampling | Disabled, `OS[2:0] = 000` |
 | Selected output rate | 30,000 sample sets per second |
 | Serial read clock | 10 MHz |
 | Operating modes | 1750 RPM and 3600 RPM, steady operation |
@@ -38,7 +38,7 @@ The main goals are:
 | Displacement results | Amplitude and phase for two probes, four values total |
 | Application payload | 152 bytes |
 
-The STM32 generates `CONVST` at 30 kHz. With OS ×4, the AD7606 takes four internal samples per channel and returns one filtered result per channel for each trigger, so the firmware and DMA still receive 30,000 sample sets per second. The ADC's built-in second-order analog anti-alias filter and OS ×4 digital filter replace the previously proposed separate external anti-alias board. The reduction to the 5 kSamples/s envelope rate still uses a decimation factor of 6. Component 3 initially uses a 2–8 kHz band-pass, which is a project baseline for the custom 6200 bearing assembly rather than a universal resonance band for every 6200 bearing. Digital filter coefficients must be calculated for the unchanged 30 kSamples/s output rate.
+The STM32 generates `CONVST` at 30 kHz with AD7606 oversampling disabled. Each trigger produces one simultaneous result per channel, so the firmware and DMA receive 30,000 sample sets per second. The custom four-channel fourth-order MFB low-pass filter provides the primary approximately 10 kHz analog anti-aliasing for accelerometer channels V1–V4, while the AD7606's built-in second-order analog filter remains supplemental. The reduction to the 5 kSamples/s envelope rate still uses a decimation factor of 6. Component 3 initially uses a 2–8 kHz band-pass, which is a project baseline for the custom 6200 bearing assembly rather than a universal resonance band for every 6200 bearing. Digital filter coefficients must be calculated for the unchanged 30 kSamples/s rate.
 
 The rotor operates in two steady-speed modes: 1750 RPM and 3600 RPM. Windows acquired during startup, shutdown, or transitions between modes are not used for the baseline AI/FE output.
 
@@ -51,23 +51,24 @@ The analog signals reach the STM32 through these paths:
 ```text
 Four accelerometers
   -> SRD-1104 IEPE conditioner
+  -> four-channel fourth-order 10 kHz MFB LPF
   -> AD7606 channels V1-V4
-     (on-chip analog filter + OS x4 digital filter)
+     (supplemental on-chip analog filter; oversampling disabled)
 
 Two RK4 radial proximity probes
   -> RK4 Proximitor units
   -> voltage-compatible protection stage
   -> AD7606 channels V5-V6
-     (same on-chip analog + OS x4 digital filtering)
+     (on-chip analog filter; oversampling disabled)
 
 RK4 Keyphasor
   -> signal conditioning
   -> STM32 timer-capture input
 ```
 
-The SRD-1104 is used for the IEPE accelerometers. The proximity probes use their Proximitor units and are not routed through the IEPE conditioner. A separate external anti-alias low-pass filter is not used in the baseline. Anti-aliasing is provided by the AD7606's built-in second-order analog filter followed by its OS ×4 first-order sinc digital filter. The analog stage occurs before conversion; the digital stage averages the four internal samples before the 30 kSample-sets/s result is read.
+The SRD-1104 is used for the IEPE accelerometers. Its four conditioned outputs pass through the custom fourth-order MFB low-pass filter before reaching AD7606 channels V1–V4. The external filter has an approximately 10 kHz cutoff and is the primary anti-aliasing stage for those channels. The proximity probes use their Proximitor units and are not routed through the IEPE conditioner or the four-channel accelerometer LPF.
 
-The AD7606 datasheet gives OS ×4 a maximum `CONVST` rate of 50 kHz and a 3 dB bandwidth of 13.7 kHz in the ±5 V range or 18.5 kHz in the ±10 V range. The selected 30 kHz output rate and 2–8 kHz Component 3 passband are within those limits. Bench verification still checks the received module's 2–8 kHz response and confirms that the installed system has no unusually strong out-of-band interference. See the [Analog Devices AD7606 datasheet, Tables 3 and 9](https://www.analog.com/media/en/technical-documentation/data-sheets/ad7606_7606-6_7606-4.pdf).
+AD7606 digital oversampling is disabled with `OS[2:0] = 000`. The ADC's built-in second-order analog filter remains active as supplemental input filtering. Bench verification must measure the complete SRD-1104 → external LPF → AD7606 response, confirm that the required 2–8 kHz band is preserved, and verify attenuation above the intended passband. See the [Analog Devices AD7606 datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/ad7606_7606-6_7606-4.pdf) and [LPF Design Details](LPF-design-details-circuit.md).
 
 The planned AD7606 mapping is:
 
@@ -157,9 +158,9 @@ Component 1 collects the six active analog signals through the eight-channel ADC
 
 ## Operation
 
-1. Set the AD7606 oversampling pins to `OS[2:0] = 010`, selecting OS ×4.
+1. Set the AD7606 oversampling pins to `OS[2:0] = 000`, disabling digital oversampling.
 2. An STM32 hardware timer triggers `CONVST` 30,000 times per second.
-3. For each trigger, the AD7606 takes four internal samples of V1 through V8, applies its OS ×4 digital averaging filter, and produces one eight-word result.
+3. For each trigger, the AD7606 performs one simultaneous conversion of V1 through V8 and produces one eight-word result.
 4. When `BUSY` falls, the STM32 starts a 10 MHz SPI/DMA read of that completed result. Reading may continue while the next conversion is running.
 5. DMA places each eight-word ADC sample set into the active 256-sample block. V7 and V8 are retained as unused/reserved words so the transfer format remains simple.
 6. While DMA fills one block, the processor handles the other block.
@@ -183,11 +184,11 @@ One `CONVST` period at 30 kHz is:
 
 > 1 ÷ 30,000 = 33.333 microseconds
 
-At OS ×4, the AD7606 maximum conversion time is 18.8 microseconds. A single-lane serial read contains 128 bits, so at 10 MHz it takes:
+With oversampling disabled, the AD7606 maximum conversion time is 4.2 microseconds. A single-lane serial read contains 128 bits, so at 10 MHz it takes:
 
 > 128 ÷ 10,000,000 = 12.8 microseconds
 
-These times do not have to be added and completed before the next `CONVST`, because the AD7606 permits the completed result to be read while the following conversion is running. The result must be read before the following `BUSY` falling edge replaces the output register. Successive results are 33.333 microseconds apart, leaving approximately:
+Conversion and the serial read require at most approximately 17.0 microseconds together, leaving approximately 16.3 microseconds before the next `CONVST`. The result must also be read before the following `BUSY` falling edge replaces the output register. Successive results are 33.333 microseconds apart, leaving approximately:
 
 > 33.333 − 12.8 = 20.533 microseconds
 
@@ -666,7 +667,7 @@ The DMA blocks are therefore a memory and scheduling method. The AI and FE digit
 
 The following checks are enough for the prototype:
 
-1. Set `OS[2:0] = 010` and confirm that the AD7606 transfers all eight channel words at 30 kSample-sets/s without data loss; V1–V6 carry active signals and V7–V8 are reserved.
+1. Set `OS[2:0] = 000` and confirm that the AD7606 transfers all eight channel words at 30 kSample-sets/s without data loss; V1–V6 carry active signals and V7–V8 are reserved.
 2. At 10 MHz SPI, confirm that every 128-bit DMA read started after `BUSY` falls completes before the following `BUSY` falling edge, and that streaming processing keeps up with the 256-sample blocks arriving every 8.533 ms.
 3. Confirm that one logical window contains exactly 20 valid Keyphasor revolutions at each supported mode, 1750 RPM and 3600 RPM, and that transition windows are rejected.
 4. Confirm that Component 6 uses every envelope sample in the 20-revolution window and zero-pads, rather than truncates or angle-resamples, each record to the 4,096-point FFT size.
@@ -685,7 +686,7 @@ Calculations show that the design is feasible. These requirements should be desc
 No additional answer from the mechanical team is required before implementing the baseline pipeline. The following installed-system checks remain part of commissioning:
 
 1. Enter the calibration sensitivity and offset for each installed accelerometer and proximity channel.
-2. Verify the AD7606 OS ×4 on-chip analog-plus-digital response over 2–8 kHz and electrical compatibility at its inputs; no separate external anti-alias board is included.
+2. Verify the complete SRD-1104 → external fourth-order LPF → AD7606 response over 2–8 kHz, the attenuation above the intended passband, and electrical compatibility at the ADC inputs.
 3. Verify reliable Keyphasor edge capture at both operating modes.
 4. Start Component 3 with the selected 2–8 kHz band and refine it only if measured data identifies a stronger impact-sensitive band.
 5. Verify that the selected envelope low-pass cutoff preserves the highest order feature used by the classifier before decimation to 5 kSamples/s.
