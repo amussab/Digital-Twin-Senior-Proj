@@ -47,6 +47,8 @@ def _task(args):
 def build(workers: int = 16) -> pd.DataFrame:
     t0 = time.time()
     root = RAW_DIR / "xjtu_sy"
+    if (root / "XJTU-SY_Bearing_Datasets").is_dir():  # HuggingFace mirror nests one level
+        root = root / "XJTU-SY_Bearing_Datasets"
     cfg = common.pipeline(FS, BEARING_ORDERS[DATASET])
     jobs, metas = [], []
     for cond, (cdir, rpm) in CONDITIONS.items():
