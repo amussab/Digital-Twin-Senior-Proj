@@ -1,0 +1,75 @@
+﻿@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div class="pump-viewer-shell">
+    <canvas id="@CanvasId" class="pump-viewer-canvas"></canvas>
+
+    <div class="bearing-alerts">
+        @if (!string.IsNullOrWhiteSpace(Bearing1Fault))
+        {
+            <div class="bearing-alert">
+                <strong>⚠ Bearing 1</strong>
+                <span>@Bearing1Fault</span>
+                <small>@FaultConfidencePercent.ToString("F1")% confidence</small>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Bearing2Fault))
+        {
+            <div class="bearing-alert">
+                <strong>⚠ Bearing 2</strong>
+                <span>@Bearing2Fault</span>
+                <small>@FaultConfidencePercent.ToString("F1")% confidence</small>
+            </div>
+        }
+    </div>
+
+    <div class="pump-viewer-help">
+        Drag to rotate · Scroll to zoom
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Bearing1Fault { get; set; }
+    [Parameter] public string? Bearing2Fault { get; set; }
+    [Parameter] public double FaultConfidencePercent { get; set; }
+
+    private readonly string CanvasId = $"pump-viewer-{Guid.NewGuid():N}";
+    private bool _initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await JS.InvokeVoidAsync(
+            "pumpViewer.initialize",
+            CanvasId,
+            "models/pump.glb");
+
+        _initialized = true;
+        await UpdateFaultMarkersAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_initialized)
+            await UpdateFaultMarkersAsync();
+    }
+
+    private async Task UpdateFaultMarkersAsync()
+    {
+        await JS.InvokeVoidAsync(
+            "pumpViewer.setBearingFaults",
+            CanvasId,
+            Bearing1Fault,
+            Bearing2Fault);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_initialized)
+            await JS.InvokeVoidAsync("pumpViewer.dispose", CanvasId);
+    }
+}

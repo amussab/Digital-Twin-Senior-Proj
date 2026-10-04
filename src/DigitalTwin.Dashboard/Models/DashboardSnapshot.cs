@@ -12,4 +12,6 @@ public sealed record DashboardSnapshot(
     double ProcessingLatencyMs,
     bool IsConnected,
     double? PhysicsRulHours = null,
-    double? RulResidualPercent = null);
+    double? RulResidualPercent = null,
+    string? Bearing1Fault = null,
+    string? Bearing2Fault = null);
