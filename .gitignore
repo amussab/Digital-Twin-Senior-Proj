@@ -63,3 +63,20 @@ $RECYCLE.BIN/
 # should never be committed.
 ~$*
 *.tmp
+
+# ---------------------------------------------------------------------------
+# AI-engine
+# ---------------------------------------------------------------------------
+# Raw public datasets and feature caches: tens of GB, re-downloadable, see
+# AI-engine/data/raw/MANIFEST.md (the manifest itself is tracked).
+AI-engine/data/*
+!AI-engine/data/raw/
+AI-engine/data/raw/*
+!AI-engine/data/raw/MANIFEST.md
+AI-engine/checkpoints/
+# Small exported models + contract ARE tracked: the backend and the PPR demo
+# run from them without retraining.
+!AI-engine/models/*.onnx
+
+# Copyrighted papers stay local.
+Project architecture/**/*.pdf

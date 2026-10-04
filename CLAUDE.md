@@ -8,6 +8,38 @@ paperwork (syllabus, rubrics, report drafts, deadlines) lives one level up in
 that one for course/deadline/report context; read this one for the system design and the
 `AI-test/` codebase.
 
+## Always-loaded context
+
+@.claude/FACTS.md
+
+- **Specs:** `Project architecture/overview/Specifications.md` is the Markdown copy of the team
+  xlsx. Read it before claiming any spec is met.
+- **Evidence:** `.claude/rules/evidence-strength.md` holds the course's 0–9 evidence ladder. Every
+  PPR artifact targets Rank 9 (a working demo run live at the presentation). The fallback is
+  Rank 6–8 (demo or simulation + recorded data). Never ship Rank 0–3 as prototype evidence.
+- **Path-scoped rules:** `.claude/rules/ai-engine.md` (AI-engine/**, AI-test/**),
+  `.claude/rules/dotnet.md` (src/**), `.claude/rules/git-workflow.md` (always).
+
+## Working model: coordinator + specialist subagents
+
+The main session acts as **coordinator**. It owns the plan, the interface contracts
+(`AI-engine/DESIGN.md`), integration, and final verification. Specialised work goes to the
+subagents defined in `.claude/agents/`:
+
+| Agent | Model | Scope |
+|---|---|---|
+| data-engineer | sonnet | dataset download, adapters → window table |
+| ml-engineer | opus | hybrid N-HiTS + TFT training, evaluation, ONNX export |
+| backend-engineer | sonnet | ASP.NET Core + SignalR + ONNX Runtime backend |
+| digital-twin-engineer | sonnet | initial physics twin + physics RUL (IS2) |
+| evidence-reviewer | sonnet | read-only; grades artifacts against the evidence ladder and PPR rubric |
+
+How delegation works:
+- Each subagent prompt names the files to read first and the exact output contract.
+- Subagents report back measured facts only. The coordinator re-verifies key numbers before
+  repeating them to the user.
+- An evidence-reviewer pass is mandatory before anything goes to the instructor.
+
 ## Layout
 
 ```
@@ -17,7 +49,8 @@ Digital-Twin-Senior-Proj/
 │   ├── COE/                   edge acquisition & processing node (STM32/ESP32-C6)
 │   ├── ICS/                   AI models + dashboard/digital-twin backend (this user's discipline)
 │   └── ME/                    physical system + FE digital twin (placeholder, not yet written)
-├── AI-test/                   # runnable testbench for ICS1 (N-HiTS/RUL) and ICS2 (TFT/classification)
+├── AI-test/                   # earlier synthetic-only testbench for ICS1 (N-HiTS/RUL) and ICS2 (TFT/classification)
+├── AI-engine/                 # production hybrid AI engine (real public data) — see AI-engine/DESIGN.md
 └── Component selection (pugh matrix)/
 ```
 
@@ -105,6 +138,9 @@ a quiet reformulation. Don't re-derive this from scratch; read that section firs
    currently takes no position on it.
 4. Deployment hardware (laptop vs. Raspberry Pi 5) — latency numbers in any report are from a dev
    laptop and must be re-measured on whichever is chosen before being quoted anywhere official.
-5. Channel-count gap for external datasets (FEMTO-ST/XJTU-SY have 2 accelerometer channels, this
-   project's rig has 4) — `external.py` refuses by default rather than fabricating the second
-   plane; `--mirror-plane` exists only for smoke-testing, never for a reported number.
+5. Channel-count gap for external datasets. **Proposed resolution (2026-10-04)**: the rig is two
+   biaxial (X,Y) bearings, and XJTU-SY, IMS Test 1 and MaFaulDa all have two orthogonal radial axes
+   per bearing. The plan is to make the per-bearing 16-feature record the model unit, not the
+   4-channel rig. See `ICS External Datasets & Literature Precedent.md` §5 for the dataset
+   selection. `external.py` has not been updated yet: it still has FEMTO and refuses mismatched
+   channels, and `--mirror-plane` stays smoke-test only.
