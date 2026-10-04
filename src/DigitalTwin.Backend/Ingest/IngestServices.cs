@@ -32,28 +32,77 @@ public sealed class UdpIngestService : BackgroundService
     }
 }
 
-/// <summary>Streams a recorded run (.bin/.csv) or a SYNTHETIC generated run through the same pipeline (rig-less demo).</summary>
+/// <summary>Runtime-selectable demo source (config default; POST /api/demo/source switches it live).</summary>
+public sealed class DemoControl
+{
+    public const string Real = "demo";          // recorded XJTU-SY payloads (MEASURED public data)
+    public const string TwinSim = "twin-sim";   // [SIMULATION] synthetic degrading run with FE-beam displacement
+    public const string Synthetic = "synthetic";
+    private readonly string _machineId;
+    private volatile string _source;
+    private int _version;
+    public DemoControl(IOptions<BackendOptions> o)
+    {
+        _machineId = o.Value.MachineId;
+        var r = o.Value.Replay;
+        _source = r.Source.ToLowerInvariant() is Real or TwinSim or Synthetic ? r.Source.ToLowerInvariant() : Real;
+        if (r.Synthetic && string.IsNullOrEmpty(r.Path) && r.Source == "") _source = Synthetic;
+    }
+    public string Source => _source;
+    public int Version => Volatile.Read(ref _version);
+    public bool TrySet(string name)
+    {
+        name = name.ToLowerInvariant();
+        if (name is not (Real or TwinSim or Synthetic)) return false;
+        _source = name; Interlocked.Increment(ref _version); return true;
+    }
+    /// <summary>Label shown on the dashboard (MachineId). Simulation sources are labelled explicitly.</summary>
+    public string MachineLabel => _source switch
+    {
+        TwinSim => _machineId + " [SIMULATION: twin demo]",
+        Synthetic => _machineId + " [SYNTHETIC]",
+        _ => _machineId + " [REPLAY: XJTU-SY public data]",
+    };
+}
+
+/// <summary>Streams a recorded run (.bin/.csv) or a generated [SIMULATION] run through the same pipeline (rig-less demo).</summary>
 public sealed class ReplaySource : BackgroundService
 {
-    private readonly Pipeline _pipe; private readonly ReplayOptions _o; private readonly ILogger<ReplaySource> _log;
-    public ReplaySource(Pipeline p, IOptions<BackendOptions> o, ILogger<ReplaySource> l) { _pipe = p; _o = o.Value.Replay; _log = l; }
+    private readonly Pipeline _pipe; private readonly BackendOptions _opt; private readonly ReplayOptions _o;
+    private readonly DemoControl _ctl; private readonly ILogger<ReplaySource> _log;
+    public ReplaySource(Pipeline p, DemoControl c, IOptions<BackendOptions> o, ILogger<ReplaySource> l)
+    { _pipe = p; _ctl = c; _opt = o.Value; _o = o.Value.Replay; _log = l; }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         if (!_o.Enabled) return;
-        var records = _o.Synthetic && string.IsNullOrEmpty(_o.Path) ? SyntheticWindows.DegradingRun(600) : Load(_o.Path);
-        _log.LogWarning("REPLAY enabled: {N} records at {Hz} Hz from {Src}", records.Count, _o.RateHz,
-            string.IsNullOrEmpty(_o.Path) ? "SYNTHETIC generator" : _o.Path);
+        await Task.Yield();
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1.0 / Math.Max(_o.RateHz, 0.001)));
-        do
+        while (!ct.IsCancellationRequested)
         {
+            var ver = _ctl.Version; var src = _ctl.Source;
+            List<WindowPayload> records;
+            try { records = Records(src); }
+            catch (Exception ex) { _log.LogError(ex, "REPLAY: cannot load source {Src}; replay stopped", src); return; }
+            _log.LogWarning("REPLAY source={Src}: {N} records at {Hz} Hz ({Prov})", src, records.Count, _o.RateHz,
+                src == DemoControl.Real ? "MEASURED XJTU-SY public data, not the rig" : "[SIMULATION] generated data");
+            _pipe.Reset();
             foreach (var rec in records)
             {
+                if (ver != _ctl.Version) break;
                 if (!await timer.WaitForNextTickAsync(ct)) return;
                 await _pipe.IngestAsync(PayloadCodec.Encode(rec), "replay", ct);
             }
-        } while (_o.Loop && !ct.IsCancellationRequested);
+            if (ver == _ctl.Version && !_o.Loop) return;
+        }
     }
+
+    private List<WindowPayload> Records(string src) => src switch
+    {
+        DemoControl.TwinSim => SyntheticWindows.DegradingRun(400, hoursPerWindow: _opt.HoursPerWindow),
+        DemoControl.Synthetic => SyntheticWindows.DegradingRun(600),
+        _ => Load(Paths.Resolve(_o.Path)),
+    };
 
     public static List<WindowPayload> Load(string path)
     {
@@ -87,7 +136,7 @@ public sealed class ReplaySource : BackgroundService
 /// <summary>SYNTHETIC payload generator (not rig data): healthy plateau, then exponential growth with an outer-race signature.</summary>
 public static class SyntheticWindows
 {
-    public static List<WindowPayload> DegradingRun(int n, int healthyWindows = 60, int seed = 7)
+    public static List<WindowPayload> DegradingRun(int n, int healthyWindows = 60, int seed = 7, double hoursPerWindow = 0)
     {
         var rng = new Random(seed); var list = new List<WindowPayload>(n);
         var beam = new DigitalTwin.Twin.FeBeam(); var unb = System.Numerics.Complex.FromPolarCoordinates(1e-5, 0.5);
@@ -103,7 +152,8 @@ public static class SyntheticWindows
             double N(double v, double rel) => v * (1 + rel * (2 * rng.NextDouble() - 1));
             double Np(double v) => v + 0.05 * (2 * rng.NextDouble() - 1);
             var disp = new[] { (float)N(pr.A1, 0.05), (float)Np(pr.Ph1), (float)N(pr.A2, 0.05), (float)Np(pr.Ph2) };
-            list.Add(w with { Displacements = disp });
+            var t20 = hoursPerWindow > 0 ? (uint)Math.Round(i * hoursPerWindow * 3.6e6) : w.T20Ms;
+            list.Add(w with { Displacements = disp, T20Ms = t20 });
         }
         return list;
     }

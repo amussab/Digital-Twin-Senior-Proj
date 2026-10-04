@@ -1,4 +1,5 @@
 using DigitalTwin.Backend.Config;
+using DigitalTwin.Backend.Ingest;
 using DigitalTwin.Backend.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
@@ -14,8 +15,8 @@ public sealed class StateStore
 
 public sealed class SnapshotFactory
 {
-    private readonly BackendOptions _o;
-    public SnapshotFactory(IOptions<BackendOptions> o) => _o = o.Value;
+    private readonly BackendOptions _o; private readonly DemoControl _ctl;
+    public SnapshotFactory(IOptions<BackendOptions> o, DemoControl ctl) { _o = o.Value; _ctl = ctl; }
 
     /// <summary>Picks the worse bearing: ready beats warming; then higher health index; then lower RUL.</summary>
     public static BearingResult? Worst(IReadOnlyList<BearingResult> bearings) =>
@@ -24,20 +25,40 @@ public sealed class SnapshotFactory
                 .ThenBy(b => b.RulHours ?? double.MaxValue)
                 .FirstOrDefault();
 
+    /// <summary>Contract class label -> the dashboard display name (the UI colours "Healthy" green).</summary>
+    public static string Display(string cls) => cls switch
+    {
+        "healthy" => "Healthy",
+        "outer_race" => "Outer-race fault",
+        "inner_race" => "Inner-race fault",
+        "cage" => "Cage fault",
+        "ball" => "Ball fault",
+        _ => cls,   // commissioning / warming_up / no_data pass through
+    };
+
+    /// <summary>Per-bearing alert text for the 3D viewer: null = no alert (healthy or no estimate yet).</summary>
+    public static string? BearingAlert(IReadOnlyList<BearingResult> bearings, int bearing)
+    {
+        var b = bearings.FirstOrDefault(x => x.Bearing == bearing);
+        if (b is null || b.State != BearingStates.Ready || b.FaultClass == "healthy") return null;
+        return Display(b.FaultClass);
+    }
+
     public DashboardSnapshot Build(PipelineState s, DateTimeOffset now)
     {
         var connected = s.LastPayloadUtc is { } t && (now - t).TotalSeconds <= _o.ConnectionTimeoutSeconds;
         var w = Worst(s.Bearings);
         if (w is null || s.Window is null)
-            return new DashboardSnapshot("1.0", now, _o.MachineId, 0, -1, "no_data", 0, 0, 0, false);
+            return new DashboardSnapshot("1.0", now, _ctl.MachineLabel, 0, -1, "no_data", 0, 0, 0, false);
 
         var rul = w.RulHours ?? -1;
         double? residual = null;
         // IS2 residual (twin README): |physics - AI| / AI x 100.
         if (s.PhysicsRulHours is { } p && w.RulHours is { } a && a > 0) residual = Math.Abs(p - a) / a * 100;
-        return new DashboardSnapshot("1.0", now, _o.MachineId, s.Window.Rpm, rul, w.FaultClass,
+        return new DashboardSnapshot("1.0", now, _ctl.MachineLabel, s.Window.Rpm, rul, Display(w.FaultClass),
             Math.Round(w.ConfidencePercent, 2), Math.Round(Math.Clamp((w.HealthIndex ?? 0) * 100, 0, 100), 2),
-            Math.Round(s.LastProcessingMs, 3), connected, s.PhysicsRulHours, residual);
+            Math.Round(s.LastProcessingMs, 3), connected, s.PhysicsRulHours, residual,
+            BearingAlert(s.Bearings, 1), BearingAlert(s.Bearings, 2));
     }
 }
 

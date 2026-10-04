@@ -13,6 +13,8 @@ public interface IInferenceEngine
     int RequiredHistory { get; }
     /// <summary>Run classification + RUL for one bearing whose tracker is Ready.</summary>
     BearingResult Infer(BearingTracker tracker);
+    /// <summary>Builds the per-bearing tracker consistent with this engine's contract.</summary>
+    BearingTracker CreateTracker(int bearing, int baselineWindowsOverride);
 }
 
 /// <summary>Digital-twin hook (IS2). A physics agent supplies the real implementation later.</summary>
@@ -21,6 +23,9 @@ public interface IPhysicsTwin
     /// <summary>Physics-based RUL in hours for the current window, or null when unavailable.</summary>
     double? EstimateRulHours(WindowPayload window, BearingResult worstBearing);
 }
+
+/// <summary>Twins that can drop their state when the demo source changes.</summary>
+public interface IResettable { void Reset(); }
 
 public sealed class NullPhysicsTwin : IPhysicsTwin
 {
@@ -33,15 +38,16 @@ public sealed class NullPhysicsTwin : IPhysicsTwin
 /// the same base the AI RUL uses, so replay faster than real time keeps both RULs comparable.
 /// INITIAL/REPLACEABLE: rotor geometry is assumed (see AI-engine/aiengine/twin/README.md).
 /// </summary>
-public sealed class FeBeamPhysicsTwinAdapter : IPhysicsTwin
+public sealed class FeBeamPhysicsTwinAdapter : IPhysicsTwin, IResettable
 {
     private static readonly DateTimeOffset Epoch = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-    private readonly DigitalTwin.Twin.FeBeamPhysicsTwin _twin = new();
+    private DigitalTwin.Twin.FeBeamPhysicsTwin _twin = new();
     private readonly double _hoursPerWindow;
     private long _n;
     public FeBeamPhysicsTwinAdapter(double hoursPerWindow) => _hoursPerWindow = hoursPerWindow;
 
     public DigitalTwin.Twin.TwinUpdate? Last { get; private set; }
+    public void Reset() { _twin = new(); _n = 0; Last = null; }
 
     public double? EstimateRulHours(WindowPayload w, BearingResult worstBearing)
     {

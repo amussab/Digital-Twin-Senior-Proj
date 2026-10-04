@@ -34,10 +34,28 @@ public sealed class UdpOptions
 public sealed class ReplayOptions
 {
     public bool Enabled { get; set; }
+    /// <summary>"demo" = recorded XJTU-SY payloads (Path); "twin-sim" = [SIMULATION] twin run with FE-beam displacement; "synthetic" = generated features.</summary>
+    public string Source { get; set; } = "demo";
     /// <summary>RECORDED PAYLOAD FILE. .bin (concatenated 152-byte records) or .csv (rpm + 32 features + 4 disp).
     /// AI-engine will produce AI-engine/models/demo_payloads.bin; set Backend:Replay:Path to it. Empty + Synthetic=true generates a SYNTHETIC degrading run.</summary>
     public string Path { get; set; } = "";
     public bool Synthetic { get; set; }
-    public double RateHz { get; set; } = 1;
+    public double RateHz { get; set; } = 10;
     public bool Loop { get; set; } = true;
+}
+
+/// <summary>Resolves repo-relative paths (works from the repo root or from bin/ folders).</summary>
+public static class Paths
+{
+    public static string Resolve(string path)
+    {
+        if (string.IsNullOrEmpty(path) || Path.IsPathRooted(path) || File.Exists(path)) return Path.GetFullPath(path);
+        foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+            for (var d = new DirectoryInfo(start); d != null; d = d.Parent)
+            {
+                var c = Path.Combine(d.FullName, path);
+                if (File.Exists(c) || Directory.Exists(c)) return c;
+            }
+        return Path.GetFullPath(path);
+    }
 }

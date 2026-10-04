@@ -1,91 +1,81 @@
 namespace DigitalTwin.Backend.Inference;
 
 /// <summary>
-/// C# port of AI-test/features.py for ONE biaxial bearing (16 raw features = 2 channels x 8). Stateless; the
-/// healthy baseline is passed in. All constants come from FeatureConstants (contract). Output is a name -> value
-/// map so the tensor mapper picks columns by contract name, not by position.
+/// C# port of AI-engine/aiengine/features.py::engineer_arrays for ONE biaxial bearing (16 raw features = X axis 8
+/// then Y axis 8, COE C7 order). Stateless; the healthy baseline is passed in. Output order = contract engineered_order.
 /// </summary>
 public sealed class FeatureEngineer
 {
-    private const double Eps = 1e-9;
-    public const int Channels = 2;
+    public const int RawCount = 16;
     private readonly FeatureConstants _c;
-    private readonly int _perChannel;
-    private readonly int _ienv, _ibp, _ikurt, _icrest;
-    private readonly int[] _family;
+    // index of each raw feature inside one axis 8-vector
+    private const int Bp = 0, Kurt = 1, Crest = 2, Env = 3;
+    private static readonly int[] Fam = { 4, 5, 6, 7 }; // ftf, bsf, bpfo, bpfi
 
-    public FeatureEngineer(FeatureConstants c)
-    {
-        _c = c;
-        _perChannel = c.PerChannelFeatureSuffixes.Count;
-        var suffixes = c.PerChannelFeatureSuffixes.ToList();
-        int Ix(string s) { var i = suffixes.IndexOf(s); return i >= 0 ? i : throw new InvalidOperationException($"contract raw_feature_order lacks '{s}'"); }
-        _ibp = Ix("bp_rms"); _ikurt = Ix("bp_kurtosis"); _icrest = Ix("bp_crest"); _ienv = Ix("env_rms");
-        _family = new[] { Ix("ftf_mag"), Ix("bsf_mag"), Ix("bpfo_mag"), Ix("bpfi_mag") };
-    }
-
-    public int RawCount => Channels * _perChannel;
+    public FeatureEngineer(FeatureConstants c) => _c = c;
+    public FeatureConstants Constants => _c;
     public int BaselineWindows => _c.BaselineWindows;
 
-    /// <summary>Median of each raw column over the commissioning windows (+eps), as in compute_baseline.</summary>
+    /// <summary>Median of every raw column over the commissioning windows, then the relative floor (features.py::_floor).</summary>
     public double[] ComputeBaseline(IReadOnlyList<float[]> windows)
     {
         var b = new double[RawCount];
-        for (var j = 0; j < RawCount; j++)
-        {
-            var col = windows.Select(w => (double)w[j]).OrderBy(v => v).ToArray();
-            var mid = col.Length / 2;
-            b[j] = (col.Length % 2 == 1 ? col[mid] : (col[mid - 1] + col[mid]) / 2) + Eps;
-        }
+        for (var j = 0; j < RawCount; j++) b[j] = Median(windows.Select(w => (double)w[j]).ToArray());
+        var amax = b.Max(Math.Abs);
+        for (var j = 0; j < RawCount; j++) b[j] += _c.RelFloor * (amax + _c.Eps);
         return b;
     }
 
-    public Dictionary<string, double> Compute(float[] raw, double rpm, double[] baseline)
+    public static double Median(double[] v)
     {
-        double R(int ch, int idx) => raw[ch * _perChannel + idx] / baseline[ch * _perChannel + idx];
-        var envR = new double[Channels]; var bpR = new double[Channels];
-        for (var ch = 0; ch < Channels; ch++) { envR[ch] = R(ch, _ienv); bpR[ch] = R(ch, _ibp); }
+        var s = (double[])v.Clone(); Array.Sort(s);
+        var n = s.Length;
+        return n % 2 == 1 ? s[n / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+    }
 
-        var fam = new double[4, Channels];
-        for (var f = 0; f < 4; f++) for (var ch = 0; ch < Channels; ch++) fam[f, ch] = R(ch, _family[f]);
+    public double[] Compute(float[] raw, double rpm, double[] baseline)
+    {
+        double eps = _c.Eps;
+        double V(int ax, int i) => raw[ax * 8 + i];
+        double Ratio(int ax, int i) => V(ax, i) / (baseline[ax * 8 + i] + eps);
+        var envR = new[] { Ratio(0, Env), Ratio(1, Env) };
+        var bpR = new[] { Ratio(0, Bp), Ratio(1, Bp) };
+        var famR = new double[4, 2];
+        for (var f = 0; f < 4; f++) for (var a = 0; a < 2; a++) famR[f, a] = Ratio(a, Fam[f]);
+        double envMax = Math.Max(envR[0], envR[1]), bpMax = Math.Max(bpR[0], bpR[1]);
+        double famMax = double.MinValue; foreach (var v in famR) famMax = Math.Max(famMax, v);
 
-        var envMax = envR.Max(); var bpMax = bpR.Max();
-        var famMax = 0.0; foreach (var v in fam) famMax = Math.Max(famMax, v);
+        double kMax = Math.Max(V(0, Kurt), V(1, Kurt)), cMax = Math.Max(V(0, Crest), V(1, Crest));
+        double kBase = Math.Max(baseline[Kurt], baseline[8 + Kurt]);
 
-        var o = new Dictionary<string, double>
-        {
-            ["hi"] = HealthIndex(envMax, bpMax, famMax),
-            ["log_env_ratio"] = Math.Log(1 + Math.Max(envMax - 1, 0)),
-            ["log_bp_ratio"] = Math.Log(1 + Math.Max(bpMax - 1, 0)),
-        };
-        double kMax = double.MinValue, cMax = double.MinValue, kBase = double.MinValue;
-        for (var ch = 0; ch < Channels; ch++)
-        {
-            kMax = Math.Max(kMax, raw[ch * _perChannel + _ikurt]);
-            cMax = Math.Max(cMax, raw[ch * _perChannel + _icrest]);
-            kBase = Math.Max(kBase, baseline[ch * _perChannel + _ikurt]);
-        }
-        o["kurtosis_max"] = kMax; o["crest_max"] = cMax; o["kurtosis_rise"] = Math.Max(kMax - kBase, 0);
+        var loud = envR[1] > envR[0] ? 1 : 0; // numpy argmax: first index on ties
+        var pf = new double[4]; for (var f = 0; f < 4; f++) pf[f] = famR[f, loud];
+        var tot = pf.Sum() + eps;
+        var shares = pf.Select(v => v / tot).ToArray();
+        var srt = (double[])shares.Clone(); Array.Sort(srt);
 
-        // Plane asymmetry within one bearing: X-channel vs Y-channel envelope ratio.
-        o["plane_asymmetry"] = (envR[0] - envR[1]) / (envR[0] + envR[1] + Eps);
+        var rawFam = new double[4];
+        for (var f = 0; f < 4; f++) rawFam[f] = Math.Sqrt(V(0, Fam[f]) * V(0, Fam[f]) + V(1, Fam[f]) * V(1, Fam[f]));
+        var rtot = rawFam.Sum() + eps;
 
-        var loudest = 0; for (var ch = 1; ch < Channels; ch++) if (envR[ch] > envR[loudest]) loudest = ch;
-        var pf = new double[4]; for (var f = 0; f < 4; f++) pf[f] = fam[f, loudest];
-        var total = pf.Sum() + Eps;
-        var shares = pf.Select(v => v / total).ToArray();
-        o["ftf_share"] = shares[0]; o["bsf_share"] = shares[1]; o["bpfo_share"] = shares[2]; o["bpfi_share"] = shares[3];
-        var sorted = shares.OrderBy(v => v).ToArray();
-        o["family_contrast"] = sorted[3] - sorted[2];
-        o["rpm_norm"] = (rpm - _c.RpmCenter) / _c.RpmHalfRange;
+        double L(double v) => Math.Log(Math.Max(v, eps));
+        var o = new double[21];
+        o[0] = HealthIndex(envMax, bpMax, famMax);
+        o[1] = L(envMax); o[2] = L(bpMax);
+        o[3] = kMax; o[4] = cMax; o[5] = Math.Max(kMax - kBase, 0.0);
+        o[6] = (envR[0] - envR[1]) / (envR[0] + envR[1] + eps);
+        o[7] = shares[0]; o[8] = shares[1]; o[9] = shares[2]; o[10] = shares[3];
+        o[11] = srt[3] - srt[2];
+        for (var f = 0; f < 4; f++) o[12 + f] = L(Math.Max(famR[f, 0], famR[f, 1]));
+        for (var f = 0; f < 4; f++) o[16 + f] = rawFam[f] / rtot;
+        o[20] = (rpm - _c.RpmCenter) / _c.RpmScale;
         return o;
     }
 
     private double HealthIndex(double env, double bp, double fam)
     {
-        var fused = Math.Pow(Math.Max(env, 1), _c.WEnv) * Math.Pow(Math.Max(bp, 1), _c.WBp) * Math.Pow(Math.Max(fam, 1), _c.WFamily);
-        var num = Math.Log(1 + _c.HiCurveK * (fused - 1));
-        var den = Math.Log(1 + _c.HiCurveK * (_c.HiRRef - 1));
-        return Math.Clamp(num / den, 0.0, 1.2);
+        var fused = Math.Pow(Math.Max(env, 1.0), _c.WEnv) * Math.Pow(Math.Max(bp, 1.0), _c.WBp) * Math.Pow(Math.Max(fam, 1.0), _c.WFamily);
+        var hi = Math.Log(1 + _c.HiCurveK * (fused - 1.0)) / Math.Log(1 + _c.HiCurveK * (_c.HiRRef - 1.0));
+        return Math.Clamp(hi, 0.0, _c.HiClipMax);
     }
 }

@@ -46,6 +46,7 @@ public class BackendFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder b)
     {
         b.UseSetting("Backend:Udp:Enabled", "false");
+        b.UseSetting("Backend:Replay:Enabled", "false");
         b.UseSetting("Backend:BaselineWindowsOverride", "3");
         b.UseSetting("Backend:ModelContractPath", "does-not-exist/model_contract.json");
         b.UseSetting("Urls", "http://127.0.0.1:0");
@@ -156,57 +157,88 @@ public class EndToEndTests : IClassFixture<BackendFactory>
     }
 }
 
-/// <summary>Skips with a clear message until the engine exports golden_vectors.json.</summary>
-public sealed class GoldenFactAttribute : FactAttribute
+/// <summary>Locates AI-engine/models/golden_vectors.json by walking up from the test binary. Fails (not skips) when absent.</summary>
+public static class Golden
 {
-    public static string? Find()
+    public static string Dir()
     {
         for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
         {
-            var p = Path.Combine(d.FullName, "AI-engine", "models", "golden_vectors.json");
-            if (File.Exists(p)) return p;
+            var p = Path.Combine(d.FullName, "AI-engine", "models");
+            if (File.Exists(Path.Combine(p, "golden_vectors.json"))) return p;
         }
-        return null;
-    }
-    public GoldenFactAttribute()
-    {
-        if (Find() is null)
-            Skip = "golden_vectors.json not found under AI-engine/models/: pending export from the AI engine. Parity test will run once it exists.";
+        throw new FileNotFoundException("AI-engine/models/golden_vectors.json not found above " + AppContext.BaseDirectory);
     }
 }
 
 public class GoldenParityTests
 {
+    private readonly ITestOutputHelper _out;
+    public GoldenParityTests(ITestOutputHelper o) => _out = o;
+
+    private static double[] Arr(JsonElement e) => e.EnumerateArray().Select(x => x.GetDouble()).ToArray();
+
     /// <summary>
-    /// ASSUMED schema (to be matched to the engine's export): {"vectors":[{"bearing":1,"raw_windows":[[16 floats]...],"rpm":[..],
-    /// "expected":{"fault_class":"..","health_index":x,"rul_hours":y}}]}. Feeds windows through FeatureEngineer + OnnxInferenceEngine
-    /// using model_contract.json from the same folder.
+    /// Feeds golden_vectors.json inputs (same 16 values to both bearings, as engine.py::golden_vectors does) through the C#
+    /// BearingTracker + OnnxInferenceEngine and compares engineered row, TFT tensors, class probabilities, HI, forecast,
+    /// RUL, stage and class with the Python engine outputs. Contract tolerance: 1e-4 abs (probs/HI), 1e-3 rel (RUL).
     /// </summary>
-    [GoldenFact]
+    [Fact]
     public void CSharpPipeline_MatchesPythonGoldenVectors()
     {
-        var gv = GoldenFactAttribute.Find()!;
-        var contract = ModelContract.Load(Path.Combine(Path.GetDirectoryName(gv)!, "model_contract.json"));
-        using var engine = new OnnxInferenceEngine(contract, 1.0, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
-        var fe = new FeatureEngineer(contract.Features);
-        using var doc = JsonDocument.Parse(File.ReadAllText(gv));
-        foreach (var v in doc.RootElement.GetProperty("vectors").EnumerateArray())
+        var dir = Golden.Dir();
+        var contract = ModelContract.Load(Path.Combine(dir, "model_contract.json"));
+        using var engine = new OnnxInferenceEngine(contract, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "golden_vectors.json")));
+        var root = doc.RootElement;
+        var cases = root.GetProperty("cases").EnumerateArray().ToDictionary(c => c.GetProperty("window_index").GetInt32());
+        var tr = engine.CreateTracker(1, 0);
+        double t0 = -1, maxEng = 0, maxEnc = 0, maxProb = 0, maxHi = 0, maxFc = 0, maxRulRel = 0;
+        var checkedN = 0;
+        foreach (var inp in root.GetProperty("inputs").EnumerateArray())
         {
-            var bearing = v.GetProperty("bearing").GetInt32();
-            var wins = v.GetProperty("raw_windows").EnumerateArray().Select(a => a.EnumerateArray().Select(x => (float)x.GetDouble()).ToArray()).ToList();
-            var rpms = v.GetProperty("rpm").EnumerateArray().Select(x => x.GetDouble()).ToList();
-            var tr = new BearingTracker(1, fe, contract.Features.BaselineWindows, contract.RequiredHistory);
-            for (var i = 0; i < wins.Count; i++)
-            {
-                var full = new float[32]; wins[i].CopyTo(full, 0);
-                tr.Update(full, rpms[i]);
-            }
+            var f16 = Arr(inp.GetProperty("features16")).Select(v => (float)v).ToArray();
+            var full = f16.Concat(f16).ToArray();
+            var ms = inp.GetProperty("t20_ms").GetUInt32();
+            if (t0 < 0) t0 = ms;
+            tr.Update(full, inp.GetProperty("rpm").GetDouble(), (ms - t0) / 3.6e6);
+            var wi = inp.GetProperty("window_index").GetInt32();
+            if (!cases.TryGetValue(wi, out var cs)) { if (tr.State == BearingStates.Ready) engine.Infer(tr); continue; }
             Assert.Equal(BearingStates.Ready, tr.State);
             var r = engine.Infer(tr);
-            var exp = v.GetProperty("expected");
-            Assert.Equal(exp.GetProperty("fault_class").GetString(), r.FaultClass);
-            Assert.InRange(r.HealthIndex!.Value, exp.GetProperty("health_index").GetDouble() - 1e-3, exp.GetProperty("health_index").GetDouble() + 1e-3);
+            var o = cs.GetProperty("output");
+
+            maxEng = Math.Max(maxEng, Arr(cs.GetProperty("engineered")).Zip(tr.Latest!).Max(p => Math.Abs(p.First - p.Second)));
+            var enc = cs.GetProperty("tft_encoder_cont").EnumerateArray().SelectMany(row => Arr(row)).ToArray();
+            var dec = cs.GetProperty("tft_decoder_cont").EnumerateArray().SelectMany(row => Arr(row)).ToArray();
+            maxEnc = Math.Max(maxEnc, enc.Zip(r.Details!.TftEncoder!).Max(p => Math.Abs(p.First - p.Second)));
+            maxEnc = Math.Max(maxEnc, dec.Zip(r.Details.TftDecoder!).Max(p => Math.Abs(p.First - p.Second)));
+
+            Assert.Equal(o.GetProperty("fault_class").GetString(), r.FaultClass);
+            foreach (var p in o.GetProperty("class_probs").EnumerateObject())
+                maxProb = Math.Max(maxProb, Math.Abs(p.Value.GetDouble() - r.ClassProbs![p.Name]));
+            maxHi = Math.Max(maxHi, Math.Abs(o.GetProperty("health_index").GetDouble() - r.HealthIndex!.Value));
+            maxFc = Math.Max(maxFc, Arr(o.GetProperty("hi_forecast")).Zip(r.Details.HiForecast).Max(p => Math.Abs(p.First - p.Second)));
+            var rulPy = o.GetProperty("rul_hours").GetDouble();
+            maxRulRel = Math.Max(maxRulRel, Math.Abs(rulPy - r.RulHours!.Value) / Math.Max(Math.Abs(rulPy), 1e-9));
+            Assert.Equal(o.GetProperty("health_stage").GetInt32(), r.Details.HealthStage);
+            Assert.Equal(o.GetProperty("rul_threshold_class").GetString(), r.Details.RulThresholdClass);
+            Assert.Equal(o.GetProperty("onset_detected").GetBoolean(), r.Details.OnsetDetected);
+            if (checkedN == 0)
+            {
+                var pyH = o.GetProperty("class_probs").GetProperty("healthy").GetDouble(); var csH = r.ClassProbs!["healthy"];
+                _out.WriteLine($"sample window {wi}: py healthy={pyH:R} cs healthy={csH:R}; py rul={rulPy:R} cs rul={r.RulHours:R}");
+            }
+            checkedN++;
         }
+        _out.WriteLine($"PARITY cases={checkedN}: max|engineered|={maxEng:E2} max|tft tensors|={maxEnc:E2} max|prob|={maxProb:E2} max|HI|={maxHi:E2} max|forecast|={maxFc:E2} max rel RUL={maxRulRel:E2}");
+        Assert.Equal(cases.Count, checkedN);
+        Assert.True(maxEng < 1e-6, $"engineered {maxEng}");
+        Assert.True(maxEnc < 1e-4, $"tft tensors {maxEnc}");
+        Assert.True(maxProb < 1e-4, $"probs {maxProb}");
+        Assert.True(maxHi < 1e-4, $"hi {maxHi}");
+        Assert.True(maxFc < 1e-4, $"forecast {maxFc}");
+        Assert.True(maxRulRel < 1e-3, $"rul rel {maxRulRel}");
     }
 }
 
@@ -215,14 +247,15 @@ public class FeatureEngineerTests
     [Fact]
     public void Healthy_Window_Has_HealthIndex_Zero_And_Growth_Raises_It()
     {
-        var fe = new FeatureEngineer(FeatureConstants.StubDefaults);
+        var c = FeatureConstants.StubDefaults;
+        var fe = new FeatureEngineer(c);
         var rng = new Random(5);
         var baseWins = Enumerable.Range(0, 24).Select(i => SyntheticWindows.Make(i, 1750f, 1, 1, rng).Features[..16]).ToList();
         var b = fe.ComputeBaseline(baseWins);
         var healthy = fe.Compute(SyntheticWindows.Make(0, 1750f, 1, 1, rng).Features[..16], 1750, b);
         var worn = fe.Compute(SyntheticWindows.Make(0, 1750f, 6, 1, rng).Features[..16], 1750, b);
-        Assert.True(healthy["hi"] < 0.1);
-        Assert.True(worn["hi"] > healthy["hi"] + 0.3);
-        Assert.True(worn["bpfo_share"] > 0.5);
+        Assert.True(healthy[c.Index("hi")] < 0.1);
+        Assert.True(worn[c.Index("hi")] > healthy[c.Index("hi")] + 0.3);
+        Assert.True(worn[c.Index("bpfo_share")] > 0.5);
     }
 }

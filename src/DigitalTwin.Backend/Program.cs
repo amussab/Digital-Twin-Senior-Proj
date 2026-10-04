@@ -12,13 +12,13 @@ builder.Services.AddSingleton<IInferenceEngine>(sp =>
 {
     var opt = sp.GetRequiredService<IOptions<BackendOptions>>().Value;
     var log = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Engine");
-    var path = Path.GetFullPath(opt.ModelContractPath);
+    var path = Paths.Resolve(opt.ModelContractPath);
     try
     {
         if (File.Exists(path))
         {
             var contract = ModelContract.Load(path);
-            var engine = new OnnxInferenceEngine(contract, opt.HoursPerWindow, log);
+            var engine = new OnnxInferenceEngine(contract, log);
             log.LogInformation("Loaded ONNX engine from {Path} (contract v{V}); provenance: {P}", path, contract.ContractVersion, contract.Provenance);
             return engine;
         }
@@ -43,6 +43,7 @@ builder.Services.AddSingleton<IPhysicsTwin>(sp =>
     log.LogInformation("Physics twin disabled (Backend:PhysicsTwin={V}); PhysicsRulHours = null", opt.PhysicsTwin);
     return new NullPhysicsTwin();
 });
+builder.Services.AddSingleton<DemoControl>();
 builder.Services.AddSingleton<StateStore>();
 builder.Services.AddSingleton<SnapshotFactory>();
 builder.Services.AddSingleton<SnapshotPublisher>();
@@ -61,6 +62,7 @@ app.UseCors();
 
 // Serve the published Blazor WASM dashboard from this process (one LAN URL).
 var dashDir = app.Services.GetRequiredService<IOptions<BackendOptions>>().Value.DashboardPath;
+if (!string.IsNullOrWhiteSpace(dashDir)) dashDir = Paths.Resolve(dashDir);
 var serveDash = !string.IsNullOrWhiteSpace(dashDir) && Directory.Exists(dashDir);
 if (serveDash)
 {
@@ -104,6 +106,10 @@ app.MapGet("/api/state", (StateStore s, SnapshotFactory f, IInferenceEngine e) =
 
 app.MapGet("/api/metrics", (LatencyRecorder l, IInferenceEngine e) =>
     Results.Ok(new { isSimulated = e.IsSimulated, rejects = l.Rejects, stages = l.Snapshot() }));
+
+app.MapGet("/api/demo", (DemoControl c) => Results.Ok(new { source = c.Source, machine = c.MachineLabel }));
+app.MapPost("/api/demo/source", (string name, DemoControl c) =>
+    c.TrySet(name) ? Results.Ok(new { source = c.Source }) : Results.BadRequest(new { error = "name must be demo | twin-sim | synthetic" }));
 
 app.MapGet("/api/health", (IInferenceEngine e) => Results.Ok(new { status = "ok", isSimulated = e.IsSimulated }));
 

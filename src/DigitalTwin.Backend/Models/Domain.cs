@@ -23,7 +23,13 @@ public sealed record BearingResult(
     double? RulHours,
     IReadOnlyDictionary<string, double>? ClassProbs,
     int BufferFill,
-    int BufferRequired);
+    int BufferRequired,
+    BearingDetails? Details = null);
+
+/// <summary>Extra per-bearing engine output (stage, forecast, threshold class, RUL interval) for the API and parity tests.</summary>
+public sealed record BearingDetails(
+    int HealthStage, bool OnsetDetected, string RulThresholdClass, double[] HiForecast,
+    double RulLoHours, double RulHiHours, double TftMs, double NhitsMs, double[]? TftEncoder = null, double[]? TftDecoder = null);
 
 public sealed record PipelineState(
     WindowPayload? Window,
