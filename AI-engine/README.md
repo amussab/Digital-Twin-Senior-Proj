@@ -36,7 +36,9 @@ $PY app.py demo                                # 152-byte payload replay through
 | File | Role |
 |---|---|
 | `aiengine/features.py` | per-bearing engineered inputs + HI, baselines (C#-portable; `engineer_arrays` is the reference) |
-| `aiengine/labels.py` | causal onset (HI > μ+3σ ×3), stages 1–6, observable class |
+| `aiengine/labels.py` | causal onset (HI > μ+3·max(σ,0.01) of HI windows 6–29, 12 consecutive), stages 1–6, observable class |
+| `aiengine/robustness.py` | SECONDARY LOBO robustness over all eligible XJTU-SY bearings |
+| `aiengine/demo_stream.py` | `models/demo_payloads.bin` real held-out replay stream (152-byte payloads) |
 | `aiengine/splits.py` → `splits.json` | frozen bearing/record-level splits per dataset |
 | `aiengine/models.py`, `train.py` | TimeSeriesDataSets, TFT/N-HiTS builders, pretrain, `finetune()` |
 | `aiengine/select.py` | LOBO RUL-estimator selection, TFT val grid |
@@ -46,17 +48,45 @@ $PY app.py demo                                # 152-byte payload replay through
 | `aiengine/engine.py` | `HybridEngine` runtime (payload → per-bearing JSON), mirrored by C# |
 | `aiengine/datasets/synthetic_rig.py` | SYNTHETIC two-bearing rig stand-in |
 
+## Real-data run (2026-10-05) — exact reproduce commands
+
+```bash
+PY=../AI-test/.venv/Scripts/python.exe; D="--datasets xjtu_sy ims"
+$PY app.py selftest
+$PY app.py train  $D --run real --epochs 30 --threads 20                     # pretrain, IMS excluded
+$PY app.py select tft $D --run real --epochs 20 --threads 8 --tft-encoders 6 12 --weight-powers 0.25 0.5
+cp checkpoints/real/select_tft/tft_02/tft.ckpt checkpoints/real/tft.ckpt     # val winner: enc 12, power 0.25
+$PY app.py select rul $D --run real --epochs 12 --threads 8                  # LOBO over 12 train+val bearings
+$PY app.py train  $D --run real --skip-tft --skip-nhits --tft-encoder 12 --class-weight-power 0.25     --rul-from reports/model_selection_rul_20261004T212405Z.json
+$PY app.py finetune $D --run real --epochs 8 --threads 8                     # IMS ft_train B1/B2/B3
+for k in $(seq 0 14); do $PY app.py robustness $D --run real --fold $k --epochs 10 --threads 2; done
+$PY app.py robustness $D --run real                                          # aggregate SECONDARY LOBO
+$PY app.py export $D --run real                                              # models/ (pretrained = XJTU-SY)
+$PY app.py evaluate $D --run real --tag real --robustness --threads 8
+$PY app.py demo-payloads $D                                                  # models/demo_payloads.bin
+```
+Seed 20261004. Splits frozen in `splits.json` before any real-data training (DESIGN.md change log).
+
 ## Results
 
-**Current results are SYNTHETIC only** (pipeline proof). Copied from
-`reports/spec_check_20261004T192939Z_synthetic.md`. They are not a measurement of any real bearing.
-Real-data results (XJTU-SY / MaFaulDa / IMS) will replace this table once those caches exist.
+**[MEASURED on XJTU-SY / IMS public bearing datasets, not the team rig.]** Copied from
+`reports/spec_check_20261004T214921Z_real.md` (JSON alongside; per-window predictions in
+`*.tft_preds.csv.gz` / `*.rul_preds.csv.gz`). Test bearings: XJTU-SY Bearing1_4 (cage), 2_5 (outer),
+3_4 (inner) with the pretrained model; IMS test1 B4 (ball) with the IMS-fine-tuned model.
 
-| Spec | Target | Measured [SYNTHETIC] | Verdict |
+| Spec | Target | Measured | Verdict |
 |---|---|---|---|
-| S7 RUL MAPE (pre-registered) | <= 15 % | 18.9 % | FAIL |
-| S8 TFT latency p95 (1 thread, ONNX) | < 200 ms | 1.7 ms | PASS |
-| IS3a macro-F1 | >= 0.85 | 0.860 | PASS |
-| IS3b stage within +/-1 | >= 0.95 | 1.000 | PASS |
-| IS3c caught by stage 3 | 1.00 | 1.000 | PASS |
-| IS1 ICS leg p95 | < 500 ms | 2.3 ms | PASS |
+| S7 RUL MAPE (pre-registered, 4 test bearings) | <= 15 % | 259.5 % (XJTU-only 189.9 %; per bearing 1_4 464 %, 2_5 51 %, 3_4 55 %, IMS B4 469 %) | FAIL |
+| S8 TFT latency p95 (1 thread, ONNX) | < 200 ms | 11.4 ms | PASS |
+| IS3a macro-F1, testable classes {healthy, outer, inner, cage} (primary) | >= 0.85 | 0.566 | FAIL |
+| IS3a macro-F1, all 5 classes (ball: 1987 test windows, 0 training bearings) | >= 0.85 | 0.288 | FAIL |
+| IS3b stage error, max abs (literal) | <= 1 | 4 (mean 0.90; 72.1 % of windows within ±1) | FAIL |
+| IS3c caught by stage 3 | 4/4 | 2/4 (2_5 at stage 2, 3_4 at stage 3; 1_4 cage and IMS B4 ball never caught) | FAIL |
+| IS1 ICS leg p95 (features+TFT+N-HiTS+RUL) | < 500 ms | 14.8 ms | PASS |
+
+SECONDARY robustness (`reports/model_selection_robustness_lobo_20261004T214321Z.json`, LOBO over all 15
+XJTU-SY bearings, TFT + N-HiTS retrained and the estimator selected inside each fold): S7 median 73.7 %,
+mean 221.7 %, 0/15 bearings ≤ 15 %. Fine-tune demonstration (IMS B4): S7 406.4 % before fine-tuning,
+468.6 % after; B4 classification is untestable (ball has no output channel).
+
+Synthetic pipeline-proof results (superseded): `reports/spec_check_20261004T192939Z_synthetic.md`.

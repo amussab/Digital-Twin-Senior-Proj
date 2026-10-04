@@ -1,0 +1,595 @@
+{
+  "generated_utc": "20261004T214921Z",
+  "provenance": {
+    "datasets": [
+      "xjtu_sy",
+      "ims"
+    ],
+    "real_data": [
+      "xjtu_sy",
+      "ims"
+    ],
+    "synthetic": false,
+    "seed": 20261004,
+    "git_commit": "170bd1c",
+    "git_dirty": true,
+    "command": "app.py evaluate --datasets xjtu_sy ims --run real --tag real --robustness --threads 8",
+    "run": "real",
+    "host": "Windows 10, Intel64 Family 6 Model 183 Stepping 1, GenuineIntel, torch 2.14.0+cpu",
+    "counts": {
+      "ims": {
+        "ft_test": {
+          "units": 1,
+          "windows": 2156
+        },
+        "ft_train": {
+          "units": 3,
+          "windows": 6468
+        }
+      },
+      "xjtu_sy": {
+        "test": {
+          "units": 3,
+          "windows": 1976
+        },
+        "train": {
+          "units": 9,
+          "windows": 6807
+        },
+        "val": {
+          "units": 3,
+          "windows": 433
+        }
+      }
+    }
+  },
+  "verdicts": [
+    {
+      "spec": "S7",
+      "requirement": "RUL MAPE on held-out degradation window (N-HiTS)",
+      "op": "<=",
+      "target": 15.0,
+      "measured": 259.5477758593874,
+      "unit": "%",
+      "status": "FAIL"
+    },
+    {
+      "spec": "S8",
+      "requirement": "TFT classification latency per window, p95 single-window",
+      "op": "<",
+      "target": 200.0,
+      "measured": 11.355700000603974,
+      "unit": "ms",
+      "status": "PASS"
+    },
+    {
+      "spec": "IS3a",
+      "requirement": "macro-F1 over the testable classes (train AND test support; primary)",
+      "op": ">=",
+      "target": 0.85,
+      "measured": 0.5656833612677822,
+      "unit": "",
+      "status": "FAIL"
+    },
+    {
+      "spec": "IS3a-5",
+      "requirement": "macro-F1 over all 5 classes (ball has no training bearing -> F1 0)",
+      "op": ">=",
+      "target": 0.85,
+      "measured": 0.2881585139359715,
+      "unit": "",
+      "status": "FAIL"
+    },
+    {
+      "spec": "IS3b",
+      "requirement": "stage error <= 1, literal reading: MAX abs stage error over test windows",
+      "op": "<=",
+      "target": 1,
+      "measured": 4.0,
+      "unit": "",
+      "status": "FAIL"
+    },
+    {
+      "spec": "IS3c",
+      "requirement": "run-to-failure faults caught (3 consecutive correct) by stage 3",
+      "op": ">=",
+      "target": 1.0,
+      "measured": 0.5,
+      "unit": "",
+      "status": "FAIL"
+    },
+    {
+      "spec": "IS1 (ICS leg)",
+      "requirement": "features + TFT + N-HiTS + RUL per window, p95",
+      "op": "<",
+      "target": 500.0,
+      "measured": 14.8342,
+      "unit": "ms",
+      "status": "PASS"
+    }
+  ],
+  "metrics": {
+    "classification": {
+      "n": 4124,
+      "macro_f1": 0.5656833612677822,
+      "macro_f1_testable_classes": [
+        "healthy",
+        "outer_race",
+        "inner_race",
+        "cage"
+      ],
+      "macro_f1_n": 2137,
+      "macro_f1_all5": 0.2881585139359715,
+      "trained_classes": [
+        "healthy",
+        "outer_race",
+        "inner_race",
+        "cage"
+      ],
+      "untestable_note": {
+        "ball": "test support 1987 windows, 0 training support (no output channel)"
+      },
+      "classes_present": [
+        "healthy",
+        "outer_race",
+        "inner_race",
+        "ball",
+        "cage"
+      ],
+      "accuracy": 0.4692046556741028,
+      "per_class_f1": {
+        "healthy": 0.6903790087463557,
+        "outer_race": 0.5229885057471264,
+        "inner_race": 0.21303656597774245,
+        "ball": 0.0,
+        "cage": 0.014388489208633094
+      },
+      "per_class_support": {
+        "healthy": 1777,
+        "outer_race": 219,
+        "inner_race": 98,
+        "ball": 1987,
+        "cage": 43
+      },
+      "confusion": {
+        "labels": [
+          "healthy",
+          "outer_race",
+          "inner_race",
+          "ball",
+          "cage"
+        ],
+        "matrix": [
+          [
+            1776,
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            19,
+            91,
+            14,
+            0,
+            95
+          ],
+          [
+            9,
+            22,
+            67,
+            0,
+            0
+          ],
+          [
+            1539,
+            0,
+            448,
+            0,
+            0
+          ],
+          [
+            25,
+            16,
+            1,
+            0,
+            1
+          ]
+        ]
+      },
+      "missed_fault_rate": 0.6783127396676608,
+      "false_alarm_rate": 0.0005627462014631402,
+      "per_dataset": {
+        "ims": {
+          "n": 2154,
+          "classes_present": [
+            "healthy",
+            "ball"
+          ],
+          "macro_f1": 0.08916177255739455,
+          "accuracy": 0.07753017641597029,
+          "recall": {
+            "healthy": 1.0,
+            "ball": 0.0
+          }
+        },
+        "xjtu_sy": {
+          "n": 1970,
+          "classes_present": [
+            "healthy",
+            "outer_race",
+            "inner_race",
+            "cage"
+          ],
+          "macro_f1": 0.565301204796701,
+          "accuracy": 0.8974619289340101,
+          "recall": {
+            "healthy": 0.9993788819875776,
+            "outer_race": 0.4155251141552511,
+            "inner_race": 0.6836734693877551,
+            "cage": 0.023255813953488372
+          }
+        }
+      }
+    },
+    "detection": {
+      "per_unit": [
+        {
+          "unit_id": "ims:test1:B4",
+          "dataset": "ims",
+          "fault_class": "ball",
+          "run_to_failure": true,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": false
+        },
+        {
+          "unit_id": "xjtu_sy:Bearing1_4",
+          "dataset": "xjtu_sy",
+          "fault_class": "cage",
+          "run_to_failure": true,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": false
+        },
+        {
+          "unit_id": "xjtu_sy:Bearing2_5",
+          "dataset": "xjtu_sy",
+          "fault_class": "outer_race",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 127,
+          "caught_at_stage": 2,
+          "caught_by_stage3": true
+        },
+        {
+          "unit_id": "xjtu_sy:Bearing3_4",
+          "dataset": "xjtu_sy",
+          "fault_class": "inner_race",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 1452,
+          "caught_at_stage": 3,
+          "caught_by_stage3": true
+        }
+      ],
+      "rtf_units": 4,
+      "caught_by_stage3_frac": 0.5,
+      "seeded_records": 0,
+      "seeded_caught_frac": NaN
+    },
+    "rul": {
+      "S7_mape_pct": 259.5477758593874,
+      "per_bearing_mape_pct": {
+        "ims:test1:B4": 468.5598570567735,
+        "xjtu_sy:Bearing1_4": 464.17882424224297,
+        "xjtu_sy:Bearing2_5": 50.922442755116684,
+        "xjtu_sy:Bearing3_4": 54.52997938341652
+      },
+      "mape_full_degradation_pct": 604.7615638376117,
+      "per_bearing_mape_full_pct": {
+        "ims:test1:B4": 1093.738072311663,
+        "xjtu_sy:Bearing1_4": 1014.4769865876059,
+        "xjtu_sy:Bearing2_5": 176.99187770163755,
+        "xjtu_sy:Bearing3_4": 133.83931874954035
+      },
+      "n_windows": 2056,
+      "n_bearings": 4,
+      "rmse_hours": 1010.2748455864914,
+      "phm2012_score": 0.04752677238038085,
+      "percent_of_life_error_pts": 93.92459963450844,
+      "S7_mape_trend_only_pct": 588.5291427275276,
+      "S7_mape_onset_only_pct": 941.1690061860771,
+      "per_dataset": {
+        "ims": 468.5598570567735,
+        "xjtu_sy": 189.8770821269254
+      },
+      "stage_within1_frac": 0.7212003872216844,
+      "stage_mae": 0.8993223620522749,
+      "stage_max_error": 4,
+      "stage_n": 4132,
+      "note": "Headline S7 = all held-out run-to-failure test bearings, each scored by the model deployed for its domain (pretrained for xjtu_sy/synthetic, fine-tuned for ims)."
+    },
+    "latency": {
+      "torch_threads": 1,
+      "tft_torch": {
+        "p50_ms": 58.14914999973553,
+        "p95_ms": 62.916275001407485,
+        "max_ms": 66.53790000200388,
+        "mean_ms": 58.252502999918455,
+        "n": 300
+      },
+      "nhits_torch": {
+        "p50_ms": 11.670099998809746,
+        "p95_ms": 13.077275001887758,
+        "max_ms": 15.698100000008708,
+        "mean_ms": 11.663370000035988,
+        "n": 300
+      },
+      "tft_onnx": {
+        "p50_ms": 9.956450001482153,
+        "p95_ms": 11.355700000603974,
+        "max_ms": 13.385400001425296,
+        "mean_ms": 9.997511999924123,
+        "n": 300
+      },
+      "nhits_onnx": {
+        "p50_ms": 0.41914999928849284,
+        "p95_ms": 0.7869100001698826,
+        "max_ms": 2.2333999986585695,
+        "mean_ms": 0.46882933330683346,
+        "n": 300
+      },
+      "engine_step": {
+        "p50_ms": 13.373,
+        "p95_ms": 14.8342,
+        "max_ms": 16.53,
+        "mean_ms": 13.394032258064517,
+        "n": 217,
+        "note": "per bearing-window, features+TFT+N-HiTS+RUL via ONNX Runtime"
+      }
+    },
+    "source_check": {
+      "cage": {
+        "xjtu_sy": 406
+      },
+      "healthy": {
+        "xjtu_sy": 3538
+      },
+      "inner_race": {
+        "xjtu_sy": 67
+      },
+      "outer_race": {
+        "xjtu_sy": 248
+      }
+    },
+    "extra_tracks": {
+      "ims_finetuned": {
+        "rul": {
+          "S7_mape_pct": 468.5598570567735,
+          "per_bearing_mape_pct": {
+            "ims:test1:B4": 468.5598570567735
+          },
+          "mape_full_degradation_pct": 1093.738072311663,
+          "per_bearing_mape_full_pct": {
+            "ims:test1:B4": 1093.738072311663
+          },
+          "n_windows": 1730,
+          "n_bearings": 1,
+          "rmse_hours": 1101.3567128634877,
+          "phm2012_score": 0.018542219260205293,
+          "percent_of_life_error_pts": 108.49248554822253,
+          "S7_mape_trend_only_pct": 1317.0457488226962,
+          "S7_mape_onset_only_pct": 1484.901391686723,
+          "per_dataset": {
+            "ims": 468.5598570567735
+          },
+          "stage_within1_frac": 0.48840445269016697,
+          "stage_mae": 1.592300556586271,
+          "stage_max_error": 4,
+          "stage_n": 2156
+        },
+        "classification": {
+          "macro_f1_testable": 1.0,
+          "testable_classes": [
+            "healthy"
+          ],
+          "macro_f1_all5": 0.03566470902295782,
+          "untestable": {
+            "outer_race": "0 test support",
+            "inner_race": "0 test support",
+            "ball": "test support 1987 windows, 0 training support (no output channel)",
+            "cage": "0 test support"
+          },
+          "per_dataset_recall": {
+            "ims": {
+              "healthy": 1.0,
+              "ball": 0.0
+            }
+          },
+          "note": "IMS B4 = ball only after onset; ball has no output channel, so the testable set is {healthy} alone and macro_f1_testable is NOT informative here; read macro_f1_all5/recall."
+        },
+        "detection": {
+          "rtf_units": 1,
+          "caught_by_stage3_frac": 0.0,
+          "seeded_records": 0,
+          "seeded_caught_frac": NaN
+        }
+      },
+      "ims_zero_shot_pretrained": {
+        "rul": {
+          "S7_mape_pct": 406.44963692064425,
+          "per_bearing_mape_pct": {
+            "ims:test1:B4": 406.44963692064425
+          },
+          "mape_full_degradation_pct": 710.2582186912636,
+          "per_bearing_mape_full_pct": {
+            "ims:test1:B4": 710.2582186912636
+          },
+          "n_windows": 1730,
+          "n_bearings": 1,
+          "rmse_hours": 1035.3297758951849,
+          "phm2012_score": 0.020135645201889308,
+          "percent_of_life_error_pts": 105.05581849875647,
+          "S7_mape_trend_only_pct": 796.8855064378359,
+          "S7_mape_onset_only_pct": 1196.474340810318,
+          "per_dataset": {
+            "ims": 406.44963692064425
+          },
+          "stage_within1_frac": 0.5426716141001855,
+          "stage_mae": 1.4512987012987013,
+          "stage_max_error": 3,
+          "stage_n": 2156
+        },
+        "classification": {
+          "macro_f1_testable": 1.0,
+          "testable_classes": [
+            "healthy"
+          ],
+          "macro_f1_all5": 0.08339575530586767,
+          "untestable": {
+            "outer_race": "0 test support",
+            "inner_race": "0 test support",
+            "ball": "test support 1987 windows, 0 training support (no output channel)",
+            "cage": "0 test support"
+          },
+          "per_dataset_recall": {
+            "ims": {
+              "healthy": 1.0,
+              "ball": 0.0
+            }
+          },
+          "note": "IMS B4 = ball only after onset; ball has no output channel, so the testable set is {healthy} alone and macro_f1_testable is NOT informative here; read macro_f1_all5/recall."
+        }
+      },
+      "pretrain_test_only_rul": {
+        "S7_mape_pct": 189.8770821269254,
+        "per_bearing_mape_pct": {
+          "xjtu_sy:Bearing1_4": 464.17882424224297,
+          "xjtu_sy:Bearing2_5": 50.922442755116684,
+          "xjtu_sy:Bearing3_4": 54.52997938341652
+        }
+      },
+      "pretrain_test_only_classification": {
+        "macro_f1": 0.565301204796701,
+        "n": 1970
+      },
+      "SECONDARY_xjtu_lobo_robustness": {
+        "file": "model_selection_robustness_lobo_20261004T214321Z.json",
+        "note": "SECONDARY robustness table (LOBO over all eligible XJTU-SY run-to-failure bearings, incl. the frozen test bearings). Not the pre-registered S7 headline.",
+        "mean_S7_mape_pct": 221.70976897739655,
+        "median_S7_mape_pct": 73.70040964965521,
+        "frac_bearings_meeting_15pct": 0.0,
+        "per_bearing": {
+          "xjtu_sy:Bearing1_1": {
+            "S7_mape_pct": 96.79257295965705,
+            "split": "train",
+            "class": "outer_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.926829268292683
+          },
+          "xjtu_sy:Bearing1_2": {
+            "S7_mape_pct": 70.96451545439184,
+            "split": "train",
+            "class": "outer_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9254658385093167
+          },
+          "xjtu_sy:Bearing1_3": {
+            "S7_mape_pct": 82.72509803841076,
+            "split": "val",
+            "class": "outer_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9746835443037974
+          },
+          "xjtu_sy:Bearing1_4": {
+            "S7_mape_pct": 569.8906349504728,
+            "split": "test",
+            "class": "cage",
+            "stage_max_error": 4,
+            "stage_within1_frac": 0.7786885245901639
+          },
+          "xjtu_sy:Bearing1_5": {
+            "S7_mape_pct": 153.65251332648117,
+            "split": "train",
+            "class": "mixed",
+            "stage_max_error": 3,
+            "stage_within1_frac": 0.8461538461538461
+          },
+          "xjtu_sy:Bearing2_1": {
+            "S7_mape_pct": 32.57592123501094,
+            "split": "train",
+            "class": "inner_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9938900203665988
+          },
+          "xjtu_sy:Bearing2_2": {
+            "S7_mape_pct": 73.70040964965521,
+            "split": "val",
+            "class": "outer_race",
+            "stage_max_error": 3,
+            "stage_within1_frac": 0.6459627329192547
+          },
+          "xjtu_sy:Bearing2_3": {
+            "S7_mape_pct": 79.74074335463808,
+            "split": "train",
+            "class": "cage",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9474671669793621
+          },
+          "xjtu_sy:Bearing2_4": {
+            "S7_mape_pct": 27.108239016303198,
+            "split": "train",
+            "class": "outer_race",
+            "stage_max_error": 5,
+            "stage_within1_frac": 0.8095238095238095
+          },
+          "xjtu_sy:Bearing2_5": {
+            "S7_mape_pct": 68.49399946315712,
+            "split": "test",
+            "class": "outer_race",
+            "stage_max_error": 3,
+            "stage_within1_frac": 0.8348082595870207
+          },
+          "xjtu_sy:Bearing3_1": {
+            "S7_mape_pct": 46.69304462773424,
+            "split": "train",
+            "class": "outer_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9980299448384555
+          },
+          "xjtu_sy:Bearing3_2": {
+            "S7_mape_pct": 1174.4020011293787,
+            "split": "train",
+            "class": "mixed",
+            "stage_max_error": 4,
+            "stage_within1_frac": 0.8653846153846154
+          },
+          "xjtu_sy:Bearing3_3": {
+            "S7_mape_pct": 72.63970354868185,
+            "split": "train",
+            "class": "inner_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9730458221024259
+          },
+          "xjtu_sy:Bearing3_4": {
+            "S7_mape_pct": 64.59191658690962,
+            "split": "test",
+            "class": "inner_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9953795379537954
+          },
+          "xjtu_sy:Bearing3_5": {
+            "S7_mape_pct": 711.6752213200659,
+            "split": "val",
+            "class": "outer_race",
+            "stage_max_error": 4,
+            "stage_within1_frac": 0.868421052631579
+          }
+        }
+      }
+    }
+  }
+}

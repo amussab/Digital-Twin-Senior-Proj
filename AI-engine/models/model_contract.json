@@ -1,32 +1,46 @@
 {
   "contract_version": 2,
-  "generated_utc": "2026-10-04T19:29:20+00:00",
+  "generated_utc": "2026-10-04T21:36:32+00:00",
   "generated_by": "AI-engine/aiengine/export.py",
   "provenance": {
     "datasets": [
-      "synthetic_rig"
+      "xjtu_sy",
+      "ims"
     ],
-    "real_data": [],
-    "synthetic": true,
+    "real_data": [
+      "xjtu_sy",
+      "ims"
+    ],
+    "synthetic": false,
     "seed": 20261004,
-    "git_commit": "2b7a1cd",
+    "git_commit": "170bd1c",
     "git_dirty": true,
-    "command": "app.py export --datasets synthetic_rig --run synthetic",
-    "run": "synthetic",
+    "command": "app.py export --datasets xjtu_sy ims --run real",
+    "run": "real",
     "host": "Windows 10, Intel64 Family 6 Model 183 Stepping 1, GenuineIntel, torch 2.14.0+cpu",
     "counts": {
-      "synthetic_rig": {
+      "ims": {
+        "ft_test": {
+          "units": 1,
+          "windows": 2156
+        },
+        "ft_train": {
+          "units": 3,
+          "windows": 6468
+        }
+      },
+      "xjtu_sy": {
         "test": {
-          "units": 20,
-          "windows": 8928
+          "units": 3,
+          "windows": 1976
         },
         "train": {
-          "units": 60,
-          "windows": 23568
+          "units": 9,
+          "windows": 6807
         },
         "val": {
-          "units": 16,
-          "windows": 6970
+          "units": 3,
+          "windows": 433
         }
       }
     }
@@ -142,13 +156,14 @@
   },
   "onset": {
     "sigmas": 3.0,
-    "consecutive": 3,
-    "sigma_floor": 0.02,
-    "baseline_windows": 24
+    "consecutive": 12,
+    "sigma_floor": 0.01,
+    "baseline_windows": 24,
+    "run_in_skip_windows": 6,
+    "rule": "threshold = mean + sigmas*max(std, sigma_floor) of HI windows [skip, skip+baseline); onset = first window of the first run of `consecutive` windows above it"
   },
   "classes": {
     "labels": [
-      "ball",
       "cage",
       "healthy",
       "inner_race",
@@ -160,7 +175,7 @@
   "models": {
     "tft": {
       "onnx": "tft.onnx",
-      "encoder_length": 6,
+      "encoder_length": 12,
       "decoder_length": 1,
       "columns": [
         "hi",
@@ -187,114 +202,114 @@
       ],
       "scalers": {
         "hi": {
-          "center": 0.1927848498397915,
-          "scale": 0.19457914469515195,
+          "center": 0.0949509899185021,
+          "scale": 0.1816767020087079,
           "kind": "standard"
         },
         "log_env_ratio": {
-          "center": 0.4922410259524788,
-          "scale": 0.5455549601105024,
+          "center": 0.046177318376689896,
+          "scale": 0.5390388443835927,
           "kind": "standard"
         },
         "log_bp_ratio": {
-          "center": 0.4011021156677014,
-          "scale": 0.42655532090458653,
+          "center": 0.046644565154506774,
+          "scale": 0.5377448296457069,
           "kind": "standard"
         },
         "kurtosis_max": {
-          "center": 5.12915877295811,
-          "scale": 2.4941798593334705,
+          "center": 3.31637004642706,
+          "scale": 0.6111522544192111,
           "kind": "standard"
         },
         "crest_max": {
-          "center": 5.3366347706831805,
-          "scale": 1.3717987280069124,
+          "center": 4.751457434076746,
+          "scale": 0.9472604003637238,
           "kind": "standard"
         },
         "kurtosis_rise": {
-          "center": 1.6789351660214773,
-          "scale": 2.2782968835983106,
+          "center": 0.17792674710039197,
+          "scale": 0.444511049522849,
           "kind": "standard"
         },
         "axis_asymmetry": {
-          "center": -0.000856794385192276,
-          "scale": 0.06141307219428941,
+          "center": -0.012460947258530034,
+          "scale": 0.06821793873874188,
           "kind": "standard"
         },
         "ftf_share": {
-          "center": 0.23488346296024318,
-          "scale": 0.06814754697584068,
+          "center": 0.22604309652463375,
+          "scale": 0.07401571775683807,
           "kind": "standard"
         },
         "bsf_share": {
-          "center": 0.24571502953736163,
-          "scale": 0.08278873029387124,
+          "center": 0.25031896399994025,
+          "scale": 0.07216004718003399,
           "kind": "standard"
         },
         "bpfo_share": {
-          "center": 0.2674076914545768,
-          "scale": 0.10329939394238816,
+          "center": 0.2711922405897717,
+          "scale": 0.09938594468722232,
           "kind": "standard"
         },
         "bpfi_share": {
-          "center": 0.25199381598364373,
-          "scale": 0.09015364097370879,
+          "center": 0.2524456985891355,
+          "scale": 0.07715884825066595,
           "kind": "standard"
         },
         "family_contrast": {
-          "center": 0.12817070981725778,
-          "scale": 0.13731429444624182,
+          "center": 0.08628390223290941,
+          "scale": 0.0881037037490859,
           "kind": "standard"
         },
         "log_ftf_ratio": {
-          "center": 0.5188564812470218,
-          "scale": 0.5082653775045262,
+          "center": 0.1281961698066544,
+          "scale": 0.6546204535580172,
           "kind": "standard"
         },
         "log_bsf_ratio": {
-          "center": 0.5533902609529749,
-          "scale": 0.5836705946619032,
+          "center": 0.2197622624997189,
+          "scale": 0.6564615575209768,
           "kind": "standard"
         },
         "log_bpfo_ratio": {
-          "center": 0.6259823268151482,
-          "scale": 0.7242412107708627,
+          "center": 0.3469226893455145,
+          "scale": 0.8704907843397767,
           "kind": "standard"
         },
         "log_bpfi_ratio": {
-          "center": 0.5732708959700844,
-          "scale": 0.6260849450788074,
+          "center": 0.24204802620650928,
+          "scale": 0.6077087504487387,
           "kind": "standard"
         },
         "raw_ftf_share": {
-          "center": 0.23409944703772118,
-          "scale": 0.06692976711515489,
+          "center": 0.26301272789790026,
+          "scale": 0.07145506548851797,
           "kind": "standard"
         },
         "raw_bsf_share": {
-          "center": 0.246074561341378,
-          "scale": 0.0828307192938002,
+          "center": 0.255230289446787,
+          "scale": 0.06353475538987213,
           "kind": "standard"
         },
         "raw_bpfo_share": {
-          "center": 0.2677058042033379,
-          "scale": 0.10366342247433268,
+          "center": 0.28293857776305575,
+          "scale": 0.10064546715859037,
           "kind": "standard"
         },
         "raw_bpfi_share": {
-          "center": 0.2521201778552258,
-          "scale": 0.08932823787344148,
+          "center": 0.19881838774227653,
+          "scale": 0.056031338006283724,
           "kind": "standard"
         },
         "rpm_norm": {
-          "center": 0.09674143212046335,
-          "scale": 0.9954375394668787,
+          "center": -0.35951212894527473,
+          "scale": 0.09861661966858484,
           "kind": "standard"
         }
       },
-      "warmup_windows": 7,
+      "warmup_windows": 13,
       "path": "tft.onnx",
-      "size_kb": 1581.6,
+      "size_kb": 1581.4,
       "onnx_inputs": [
         "encoder_cont",
         "decoder_cont"
@@ -304,13 +319,13 @@
         "variable_weights"
       ],
       "parity_max_abs_diff": [
-        2.86102294921875e-06,
-        8.940696716308594e-08
+        1.9073486328125e-06,
+        2.980232238769531e-07
       ],
       "parity_ok": true,
       "parity_samples": 64,
       "batch_dim": "dynamic",
-      "builder_vs_dataset_max_abs_diff": 4.76837158203125e-07
+      "builder_vs_dataset_max_abs_diff": 9.5367431640625e-07
     },
     "nhits": {
       "onnx": "nhits.onnx",
@@ -331,28 +346,28 @@
           "kind": "target_identity"
         },
         "log_env_ratio": {
-          "center": 0.7690205441035295,
-          "scale": 0.663650457219967,
+          "center": 0.22654845775964008,
+          "scale": 0.5498629261743674,
           "kind": "standard"
         },
         "log_bp_ratio": {
-          "center": 0.6120516959793777,
-          "scale": 0.5158860317459679,
+          "center": 0.2252364335596204,
+          "scale": 0.5480930096927964,
           "kind": "standard"
         },
         "kurtosis_max": {
-          "center": 6.824182367299903,
-          "scale": 2.9850161562349857,
+          "center": 3.8253628621634466,
+          "scale": 1.9881520629178866,
           "kind": "standard"
         },
         "kurtosis_rise": {
-          "center": 3.002905231333849,
-          "scale": 2.9209530758701954,
+          "center": 0.3525377330323136,
+          "scale": 1.3660676266276126,
           "kind": "standard"
         },
         "family_contrast": {
-          "center": 0.20196385770724345,
-          "scale": 0.15548690255835124,
+          "center": 0.10393302502141424,
+          "scale": 0.10125765085939088,
           "kind": "standard"
         }
       },
@@ -372,7 +387,7 @@
       "parity_ok": true,
       "parity_samples": 64,
       "batch_dim": "fixed at 1 (call once per bearing-window)",
-      "builder_vs_dataset_max_abs_diff": 2.384185791015625e-07
+      "builder_vs_dataset_max_abs_diff": 4.76837158203125e-07
     }
   },
   "rul": {
@@ -381,24 +396,23 @@
     "blend_w": 0.5,
     "u_min": 0.05,
     "class_thresholds": {
-      "ball": 0.8650969415903091,
-      "cage": 0.7099644690752029,
-      "inner_race": 0.9399676322937012,
-      "outer_race": 1.0126953721046448
+      "outer_race": 0.5476463437080383,
+      "inner_race": 0.754078671336174,
+      "cage": 0.8223191499710083
     },
-    "pooled_threshold": 0.7893182635307312,
+    "pooled_threshold": 0.616191104054451,
     "max_rul_factor": 20.0,
     "loglin_coef": [
-      2.3504758723448713,
-      0.0876884441084064,
-      0.4673873063491223,
-      0.3994718788330779,
-      -2.916463417524825
+      2.573474576815094,
+      1.1483451800742281,
+      -0.20044309139407068,
+      0.3101069722787147,
+      -4.616932462041901
     ],
     "threshold_quantile": 0.25,
-    "selected_by": "model_selection_rul_20261004T192906Z_synthetic.json",
-    "lobo_mape": 25.965082840749833,
-    "interval_rel": 0.37605202054362713,
+    "selected_by": "model_selection_rul_20261004T212405Z.json",
+    "lobo_mape": 139.48105386236648,
+    "interval_rel": 0.8804683156284505,
     "fit_split": "train+val (LOBO)",
     "procedure": "aiengine/rul.py::estimate; class for threshold = argmax of mean fault probability over the last 5 windows if mean p(healthy) < 0.5, else pooled",
     "class_smoothing_windows": 5

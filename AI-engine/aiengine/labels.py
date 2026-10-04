@@ -1,9 +1,11 @@
 """Labels (DESIGN.md section 6): causal onset, ground-truth health stage 1-6, observable class.
 
-- Onset (first predicting time): HI exceeds the baseline windows' mu + 3 sigma for 3 consecutive
-  windows. Causal: window k is declared only once k, k+1, k+2 are all seen, so the same rule runs
-  at runtime (`OnlineOnset`). Search starts after the baseline windows (the baseline has to
-  exist before anything can exceed it). sigma has a floor (SIGMA_FLOOR, HI units) -- with a
+- Onset (first predicting time): HI exceeds the onset-baseline windows' mu + 3 sigma for
+  ONSET_CONSECUTIVE consecutive windows (onset = first window of that run). Onset baseline = HI
+  windows [ONSET_RUN_IN_SKIP, ONSET_RUN_IN_SKIP + 24). Causal: declared only once the whole run has
+  been seen, so the same rule runs at runtime (`OnlineOnset`). Search starts after the baseline
+  windows (the baseline has to exist before anything can exceed it). Constants tuned on XJTU-SY
+  train/val bearings only, DESIGN.md change log 2026-10-04. sigma has a floor (SIGMA_FLOOR, HI units) -- with a
   median baseline about half the baseline windows have HI exactly 0, so the raw sigma can be ~0
   and one noisy window would trigger. [CLAUDE-SYNTHESIS] engineering guard, documented.
 - Ground-truth stage for run-to-failure units: 1 before onset; [t_onset, T_fail] split into 5
@@ -21,8 +23,12 @@ import pandas as pd
 from .features import BASELINE_WINDOWS
 
 ONSET_SIGMAS = 3.0
-ONSET_CONSECUTIVE = 3
-SIGMA_FLOOR = 0.02
+# Tuned 2026-10-04 on XJTU-SY train/val bearings ONLY (DESIGN.md section 6 change log):
+# rule = fewest false onsets (post-onset fraction of windows back under the threshold > 10%),
+# then fewest bearings with no onset, then earliest mean onset. Was 3 / 0.02 / 0.
+ONSET_CONSECUTIVE = 12
+SIGMA_FLOOR = 0.01
+ONSET_RUN_IN_SKIP = 6                  # windows skipped before the onset-baseline windows
 CLASSIFIABLE = ("healthy", "outer_race", "inner_race", "ball", "cage")
 DEGRADATION_TAIL_EXCLUDED = 0.10       # S7 pre-registered: last 10% of degradation excluded
 
@@ -32,10 +38,14 @@ def onset_threshold(hi_baseline: np.ndarray) -> float:
     return float(hi_baseline.mean() + ONSET_SIGMAS * max(hi_baseline.std(), SIGMA_FLOOR))
 
 
-def detect_onset(hi: np.ndarray, search_from: int = BASELINE_WINDOWS) -> int | None:
-    """Index of the first window of the first run of 3 consecutive exceedances (or None)."""
+def detect_onset(hi: np.ndarray, search_from: int | None = None) -> int | None:
+    """Index of the first window of the first run of ONSET_CONSECUTIVE exceedances (or None).
+    Onset baseline = HI windows [ONSET_RUN_IN_SKIP, ONSET_RUN_IN_SKIP + BASELINE_WINDOWS)."""
     hi = np.asarray(hi, dtype=float)
-    thr = onset_threshold(hi[:BASELINE_WINDOWS])
+    b0 = ONSET_RUN_IN_SKIP
+    thr = onset_threshold(hi[b0:b0 + BASELINE_WINDOWS])
+    if search_from is None:
+        search_from = b0 + BASELINE_WINDOWS
     streak = 0
     for k in range(search_from, len(hi)):
         streak = streak + 1 if hi[k] > thr else 0
@@ -58,6 +68,8 @@ class OnlineOnset:
         k = self.n
         self.n += 1
         if self.threshold is None:
+            if k < ONSET_RUN_IN_SKIP:
+                return self.onset_index
             self.base.append(float(hi))
             if len(self.base) >= BASELINE_WINDOWS:
                 self.threshold = onset_threshold(np.asarray(self.base))

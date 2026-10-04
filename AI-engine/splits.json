@@ -120,6 +120,32 @@
     "synthetic_rig:run047:B1": "test",
     "synthetic_rig:run047:B2": "test"
    }
+  },
+  "xjtu_sy": {
+   "counts": {
+    "test": 3,
+    "train": 9,
+    "val": 3
+   },
+   "created_utc": "2026-10-04T20:46:16+00:00",
+   "policy": "_split_xjtu",
+   "units": {
+    "xjtu_sy:Bearing1_1": "train",
+    "xjtu_sy:Bearing1_2": "train",
+    "xjtu_sy:Bearing1_3": "val",
+    "xjtu_sy:Bearing1_4": "test",
+    "xjtu_sy:Bearing1_5": "train",
+    "xjtu_sy:Bearing2_1": "train",
+    "xjtu_sy:Bearing2_2": "val",
+    "xjtu_sy:Bearing2_3": "train",
+    "xjtu_sy:Bearing2_4": "train",
+    "xjtu_sy:Bearing2_5": "test",
+    "xjtu_sy:Bearing3_1": "train",
+    "xjtu_sy:Bearing3_2": "train",
+    "xjtu_sy:Bearing3_3": "train",
+    "xjtu_sy:Bearing3_4": "test",
+    "xjtu_sy:Bearing3_5": "val"
+   }
   }
  },
  "seed": 20261004,

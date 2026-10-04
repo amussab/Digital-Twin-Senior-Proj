@@ -4,23 +4,22 @@
   "blend_w": 0.5,
   "u_min": 0.05,
   "class_thresholds": {
-    "ball": 0.8650969415903091,
-    "cage": 0.7099644690752029,
-    "inner_race": 0.9399676322937012,
-    "outer_race": 1.0126953721046448
+    "outer_race": 0.5476463437080383,
+    "inner_race": 0.754078671336174,
+    "cage": 0.8223191499710083
   },
-  "pooled_threshold": 0.7893182635307312,
+  "pooled_threshold": 0.616191104054451,
   "max_rul_factor": 20.0,
   "loglin_coef": [
-    2.3504758723448713,
-    0.0876884441084064,
-    0.4673873063491223,
-    0.3994718788330779,
-    -2.916463417524825
+    2.573474576815094,
+    1.1483451800742281,
+    -0.20044309139407068,
+    0.3101069722787147,
+    -4.616932462041901
   ],
   "threshold_quantile": 0.25,
-  "selected_by": "model_selection_rul_20261004T192906Z_synthetic.json",
-  "lobo_mape": 25.965082840749833,
-  "interval_rel": 0.37605202054362713,
+  "selected_by": "model_selection_rul_20261004T212405Z.json",
+  "lobo_mape": 139.48105386236648,
+  "interval_rel": 0.8804683156284505,
   "fit_split": "train+val (LOBO)"
 }

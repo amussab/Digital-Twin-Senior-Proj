@@ -6,8 +6,8 @@ recorded). Test units are never used for training, early stopping, model selecti
 threshold calibration.
 
 Policies
-- xjtu_sy: by bearing, stratified by operating condition (BearingC_k -> condition C):
-  per condition 1 test, 1 val, rest train.
+- xjtu_sy: by bearing, stratified by operating condition (BearingC_k -> condition C); see
+  `_split_xjtu` (policy v2: 1 test per condition, outer/inner/cage each in train AND test).
 - ims: the fine-tuning demonstration domain. Kept out of pretraining entirely. Within IMS:
   run-to-failure bearings -> one held out as `ft_test`, the rest `ft_train`; non-failing
   bearings -> `ft_train`.
@@ -55,13 +55,52 @@ def _xjtu_condition(unit_id: str) -> str:
     return m.group(1) if m else "?"
 
 
+XJTU_TEST_MIN_WINDOWS = 60          # a test bearing needs a scorable degradation window
+XJTU_REQUIRED_TEST_CLASSES = ("outer_race", "inner_race", "cage")
+
+
 def _split_xjtu(units: pd.DataFrame, rng) -> dict[str, str]:
-    out = {}
-    for cond, g in units.groupby(units["unit_id"].map(_xjtu_condition)):
-        ids = sorted(g["unit_id"])
-        rng.shuffle(ids)
-        for i, u in enumerate(ids):
-            out[u] = "test" if i == 0 else ("val" if i == 1 else "train")
+    """Policy v2 (2026-10-04, coordinator decision 1), frozen BEFORE any test result existed.
+
+    Test = exactly one bearing per operating condition (stratified by condition) such that
+    outer_race, inner_race and cage each have >=1 test bearing AND >=1 training bearing
+    (cage, with 2 bearings, gets exactly 1 train + 1 test). Mixed-fault bearings and bearings with
+    < XJTU_TEST_MIN_WINDOWS windows are not test-eligible. Among all valid assignments one is drawn
+    with the seeded rng. Val = one more bearing per condition (seeded), never taking the last
+    training bearing of a class. Everything else = train.
+    """
+    import itertools
+    u = units.set_index("unit_id")
+    cond = {i: _xjtu_condition(i) for i in u.index}
+    conds = sorted(set(cond.values()))
+    elig = {c: sorted(i for i in u.index if cond[i] == c and u.loc[i, "fault_class"] != "mixed"
+                      and u.loc[i, "n"] >= XJTU_TEST_MIN_WINDOWS) for c in conds}
+    by_cls = {}
+    for i in u.index:
+        by_cls.setdefault(u.loc[i, "fault_class"], set()).add(i)
+    valid = []
+    for combo in itertools.product(*[elig[c] for c in conds]):
+        cls = {u.loc[i, "fault_class"] for i in combo}
+        if not set(XJTU_REQUIRED_TEST_CLASSES) <= cls:
+            continue
+        if all(len(by_cls[k] - set(combo)) >= 1 for k in XJTU_REQUIRED_TEST_CLASSES):
+            valid.append(combo)
+    test = list(valid[int(rng.integers(0, len(valid)))])
+    out = {i: "train" for i in u.index}
+    for i in test:
+        out[i] = "test"
+    for c in conds:
+        cands = []
+        for i in sorted(u.index):
+            if cond[i] != c or out[i] != "train":
+                continue
+            k = u.loc[i, "fault_class"]
+            left = [j for j in by_cls[k] if out[j] == "train" and j != i]
+            if k in XJTU_REQUIRED_TEST_CLASSES and len(left) < 1:
+                continue
+            cands.append(i)
+        if cands:
+            out[cands[int(rng.integers(0, len(cands)))]] = "val"
     return out
 
 

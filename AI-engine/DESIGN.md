@@ -102,8 +102,10 @@ if validation supports it, but every input must stay arithmetic on (window, base
 
 ## 6. Labels
 
-- **Onset** (first predicting time): HI exceeds baseline μ+3σ (from the 24 baseline windows) for
-  3 consecutive windows. The onset detector runs causally, so the same rule works at runtime.
+- **Onset** (first predicting time): HI exceeds μ+3·max(σ, 0.01) of the 24 onset-baseline windows
+  (HI windows 6–29, i.e. after a 6-window run-in skip) for 12 consecutive windows; onset = the
+  first window of that run. The detector runs causally, so the same rule works at runtime.
+  (Was μ+3σ, σ floor 0.02, 3 consecutive, no skip; changed 2026-10-04, see change log.)
 - **Ground-truth health stage (1–6) for run-to-failure units:** stage 1 before onset. The
   degradation interval [t_onset, T_fail] is split into 5 equal-time parts → stages 2–6.
   `[CLAUDE-SYNTHESIS]` A defined labelling, documented as such.
@@ -141,3 +143,32 @@ parity tests.
 
 ## Change log
 - 2026-10-04: initial contract (coordinator).
+- 2026-10-04 (ml-engineer, coordinator decision 1): `splits.py::_split_xjtu` policy v2, frozen in
+  `splits.json` before any real-data model was trained or scored. One test bearing per operating
+  condition; outer_race, inner_race and cage each get ≥1 test AND ≥1 training bearing; mixed and
+  <60-window bearings not test-eligible; seeded draw among all valid assignments. Result:
+  test = Bearing1_4 (cage), Bearing2_5 (outer), Bearing3_4 (inner); val = 1_3, 2_2, 3_5;
+  train = the other 9. IMS: B1/B2/B3 ft_train, B4 ft_test (unchanged).
+- 2026-10-04 (ml-engineer, coordinator decision 3): §6 onset rule tuned on XJTU-SY **train+val
+  bearings only** (12 bearings; test bearings and IMS never looked at for this). Grid: σ floor
+  {0.01…0.08} × consecutive {3,5,8,12} × run-in skip {0,6,12} windows. Pre-declared selection rule:
+  (1) fewest false onsets, a false onset being a bearing whose post-onset windows fall back under
+  the threshold more than 10% of the time; (2) fewest bearings with no onset; (3) earliest mean
+  onset (fraction of life). Winner: σ floor 0.01, 12 consecutive, 6-window skip (0 false onsets,
+  mean onset at 0.64 of life, mean post-onset reversion 0.8%). The old rule (0.02 / 3 / 0) had 1
+  false onset (Bearing3_2, 19% reversion). Applied unchanged to every dataset.
+  **Effect on IMS (reported, not tuned):** IMS test1 onsets still fire at window ~170 (~171 h) on
+  B3 and B4. The HI of all four IMS bearings, including the healthy B1, steps up to a new plateau
+  around that point, so this is a machine-level level shift after the 24-window baseline, not a
+  bearing-level run-in that a per-bearing σ floor or a few-window skip can remove. Next lever:
+  take the baseline after the run-in/settling period (the rig's commissioning capture, spec M5,
+  is exactly that), or recalibrate the onset rule on the new machine's own ft_train data as part
+  of fine-tuning (not done here: coordinator decision 3 forbids per-dataset retuning).
+- 2026-10-05 (ml-engineer): TFT selected on XJTU-SY VAL bearings (`select tft`, grid encoder {6,12} ×
+  class-weight power {0.25,0.5}; the original run used encoder 6 / power 1.0): encoder 12, power 0.25,
+  val macro-F1 0.773 (`reports/model_selection_tft_20261004T210533Z.json`). Val holds only outer_race +
+  healthy, so this choice is weakly informed for cage/inner. Ball: its only bearing (IMS B4) is the IMS
+  fine-tune test bearing, so no training data has ball and the TFT has 4 output channels (cage,
+  healthy, inner_race, outer_race). IS3 primary macro-F1 = the classes with train AND test support;
+  the 5-class figure (ball F1 = 0) is reported alongside. `train.tft_predict` maps target labels the
+  model has no channel for to a placeholder (the target is not an input; truth is merged afterwards).

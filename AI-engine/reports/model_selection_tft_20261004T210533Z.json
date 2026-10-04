@@ -1,0 +1,104 @@
+{
+  "generated_utc": "20261004T210533Z",
+  "provenance": {
+    "datasets": [
+      "xjtu_sy",
+      "ims"
+    ],
+    "real_data": [
+      "xjtu_sy",
+      "ims"
+    ],
+    "synthetic": false,
+    "seed": 20261004,
+    "git_commit": "170bd1c",
+    "git_dirty": true,
+    "command": "app.py select tft --datasets xjtu_sy ims --run real --epochs 20 --threads 8 --tft-encoders 6 12 --weight-powers 0.25 0.5",
+    "run": "real",
+    "host": "Windows 10, Intel64 Family 6 Model 183 Stepping 1, GenuineIntel, torch 2.14.0+cpu",
+    "counts": {
+      "ims": {
+        "ft_test": {
+          "units": 1,
+          "windows": 2156
+        },
+        "ft_train": {
+          "units": 3,
+          "windows": 6468
+        }
+      },
+      "xjtu_sy": {
+        "test": {
+          "units": 3,
+          "windows": 1976
+        },
+        "train": {
+          "units": 9,
+          "windows": 6807
+        },
+        "val": {
+          "units": 3,
+          "windows": 433
+        }
+      }
+    }
+  },
+  "grid": [
+    {
+      "config": {
+        "max_encoder_length": 6,
+        "class_weight_power": 0.25,
+        "max_epochs": 20
+      },
+      "val_macro_f1": 0.6696242819437976,
+      "val_per_dataset_f1": {
+        "xjtu_sy": 0.6696242819437976
+      },
+      "epochs": 6,
+      "val_loss": 0.8937286734580994,
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real\\select_tft\\tft_00\\tft.ckpt"
+    },
+    {
+      "config": {
+        "max_encoder_length": 6,
+        "class_weight_power": 0.5,
+        "max_epochs": 20
+      },
+      "val_macro_f1": 0.74914859437751,
+      "val_per_dataset_f1": {
+        "xjtu_sy": 0.74914859437751
+      },
+      "epochs": 6,
+      "val_loss": 0.599453866481781,
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real\\select_tft\\tft_01\\tft.ckpt"
+    },
+    {
+      "config": {
+        "max_encoder_length": 12,
+        "class_weight_power": 0.25,
+        "max_epochs": 20
+      },
+      "val_macro_f1": 0.7731196901549225,
+      "val_per_dataset_f1": {
+        "xjtu_sy": 0.7731196901549225
+      },
+      "epochs": 7,
+      "val_loss": 0.8114445805549622,
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real\\select_tft\\tft_02\\tft.ckpt"
+    },
+    {
+      "config": {
+        "max_encoder_length": 12,
+        "class_weight_power": 0.5,
+        "max_epochs": 20
+      },
+      "val_macro_f1": 0.74995004995005,
+      "val_per_dataset_f1": {
+        "xjtu_sy": 0.74995004995005
+      },
+      "epochs": 6,
+      "val_loss": 0.567478597164154,
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real\\select_tft\\tft_03\\tft.ckpt"
+    }
+  ]
+}

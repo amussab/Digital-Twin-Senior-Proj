@@ -1,0 +1,563 @@
+{
+  "generated_utc": "20261004T214321Z",
+  "provenance": {
+    "datasets": [
+      "xjtu_sy",
+      "ims"
+    ],
+    "real_data": [
+      "xjtu_sy",
+      "ims"
+    ],
+    "synthetic": false,
+    "seed": 20261004,
+    "git_commit": "170bd1c",
+    "git_dirty": true,
+    "command": "app.py robustness --datasets xjtu_sy ims --run real",
+    "run": "real",
+    "host": "Windows 10, Intel64 Family 6 Model 183 Stepping 1, GenuineIntel, torch 2.14.0+cpu",
+    "counts": {
+      "ims": {
+        "ft_test": {
+          "units": 1,
+          "windows": 2156
+        },
+        "ft_train": {
+          "units": 3,
+          "windows": 6468
+        }
+      },
+      "xjtu_sy": {
+        "test": {
+          "units": 3,
+          "windows": 1976
+        },
+        "train": {
+          "units": 9,
+          "windows": 6807
+        },
+        "val": {
+          "units": 3,
+          "windows": 433
+        }
+      }
+    }
+  },
+  "folds": [
+    {
+      "unit_id": "xjtu_sy:Bearing1_1",
+      "fault_class": "outer_race",
+      "frozen_split": "train",
+      "S7_mape_pct": 96.79257295965705,
+      "mape_full_degradation_pct": 206.34209407933213,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 135.02031539915663,
+        "loglin_coef": [
+          1.1656912429132575,
+          1.1210280098991665,
+          -0.06762373243644744,
+          -0.39439485664776186,
+          -1.703901832712397
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 135.02031539915663,
+      "stage_within1_frac": 0.926829268292683,
+      "stage_mae": 0.3902439024390244,
+      "stage_max_error": 2,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing1_2",
+      "fault_class": "outer_race",
+      "frozen_split": "train",
+      "S7_mape_pct": 70.96451545439184,
+      "mape_full_degradation_pct": 200.4628764150454,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 130.7962884584076,
+        "loglin_coef": [
+          0.8494879621131186,
+          1.0665981971249736,
+          0.012710360011094803,
+          -0.28569461236059845,
+          -1.2257556392052906
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 130.7962884584076,
+      "stage_within1_frac": 0.9254658385093167,
+      "stage_mae": 0.515527950310559,
+      "stage_max_error": 2,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing1_3",
+      "fault_class": "outer_race",
+      "frozen_split": "val",
+      "S7_mape_pct": 82.72509803841076,
+      "mape_full_degradation_pct": 149.66158577908865,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 127.6555162191382,
+        "loglin_coef": [
+          1.183205474361526,
+          1.071702562322683,
+          0.014422951517410146,
+          -0.2318941951781154,
+          -1.6086688850705007
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 127.6555162191382,
+      "stage_within1_frac": 0.9746835443037974,
+      "stage_mae": 0.37341772151898733,
+      "stage_max_error": 2,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing1_4",
+      "fault_class": "cage",
+      "frozen_split": "test",
+      "S7_mape_pct": 569.8906349504728,
+      "mape_full_degradation_pct": 1149.4989278461355,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 92.35141619023797,
+        "loglin_coef": [
+          2.4549187765392166,
+          0.9242374288651936,
+          -0.05973113357042217,
+          0.2755455941240227,
+          -4.120754028164739
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 92.35141619023797,
+      "stage_within1_frac": 0.7786885245901639,
+      "stage_mae": 0.7377049180327869,
+      "stage_max_error": 4,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing1_5",
+      "fault_class": "mixed",
+      "frozen_split": "train",
+      "S7_mape_pct": 153.65251332648117,
+      "mape_full_degradation_pct": 198.3866413702009,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 124.09600267561564,
+        "loglin_coef": [
+          1.0512542474596354,
+          0.8937246193586749,
+          0.09138537279361066,
+          0.49978143097211264,
+          -1.9947064998077177
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 124.09600267561564,
+      "stage_within1_frac": 0.8461538461538461,
+      "stage_mae": 0.5576923076923077,
+      "stage_max_error": 3,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing2_1",
+      "fault_class": "inner_race",
+      "frozen_split": "train",
+      "S7_mape_pct": 32.57592123501094,
+      "mape_full_degradation_pct": 66.01915439563449,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 129.15097262043406,
+        "loglin_coef": [
+          1.1242653090645616,
+          1.0613045861727555,
+          -0.004213897813044243,
+          -0.2649858258029828,
+          -1.581236053505452
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 129.15097262043406,
+      "stage_within1_frac": 0.9938900203665988,
+      "stage_mae": 0.054989816700611,
+      "stage_max_error": 2,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing2_2",
+      "fault_class": "outer_race",
+      "frozen_split": "val",
+      "S7_mape_pct": 73.70040964965521,
+      "mape_full_degradation_pct": 78.64188544587911,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 127.43525123285767,
+        "loglin_coef": [
+          0.9130528958240539,
+          1.0655214442134466,
+          0.014194148521008193,
+          -0.46486156312776933,
+          -1.1336793823301077
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 127.43525123285767,
+      "stage_within1_frac": 0.6459627329192547,
+      "stage_mae": 0.9937888198757764,
+      "stage_max_error": 3,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing2_3",
+      "fault_class": "cage",
+      "frozen_split": "train",
+      "S7_mape_pct": 79.74074335463808,
+      "mape_full_degradation_pct": 82.2903879569129,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 86.27016692643996,
+        "loglin_coef": [
+          2.6542409574725325,
+          0.9111991908841393,
+          -0.007498574434310193,
+          0.9378412773607343,
+          -4.696015986660188
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 86.27016692643996,
+      "stage_within1_frac": 0.9474671669793621,
+      "stage_mae": 0.450281425891182,
+      "stage_max_error": 2,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing2_4",
+      "fault_class": "outer_race",
+      "frozen_split": "train",
+      "S7_mape_pct": 27.108239016303198,
+      "mape_full_degradation_pct": 39.87138511380142,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 122.68470285301166,
+        "loglin_coef": [
+          1.1995843126506271,
+          1.047836873901295,
+          0.020097746476168535,
+          -0.16008476779518002,
+          -1.732957157114363
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 122.68470285301166,
+      "stage_within1_frac": 0.8095238095238095,
+      "stage_mae": 0.7142857142857143,
+      "stage_max_error": 5,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing2_5",
+      "fault_class": "outer_race",
+      "frozen_split": "test",
+      "S7_mape_pct": 68.49399946315712,
+      "mape_full_degradation_pct": 68.9401265435654,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 135.20568298453276,
+        "loglin_coef": [
+          0.9988722369864624,
+          1.013669062991083,
+          0.03860189928999833,
+          -0.19857615512876678,
+          -1.4639788897344006
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 135.20568298453276,
+      "stage_within1_frac": 0.8348082595870207,
+      "stage_mae": 0.6519174041297935,
+      "stage_max_error": 3,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing3_1",
+      "fault_class": "outer_race",
+      "frozen_split": "train",
+      "S7_mape_pct": 46.69304462773424,
+      "mape_full_degradation_pct": 81.44098305187511,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 123.05548993358462,
+        "loglin_coef": [
+          1.1256359499026143,
+          1.068417722665412,
+          0.009801795996288803,
+          -0.19538359912428177,
+          -1.6000432077642301
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 123.05548993358462,
+      "stage_within1_frac": 0.9980299448384555,
+      "stage_mae": 0.019700551615445233,
+      "stage_max_error": 2,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing3_2",
+      "fault_class": "mixed",
+      "frozen_split": "train",
+      "S7_mape_pct": 1174.4020011293787,
+      "mape_full_degradation_pct": 2050.529967813362,
+      "selected_in_fold": {
+        "method": "trend",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 99.66810793855345
+      },
+      "selection_in_fold_mape_pct": 99.66810793855345,
+      "stage_within1_frac": 0.8653846153846154,
+      "stage_mae": 0.48517628205128205,
+      "stage_max_error": 4,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing3_3",
+      "fault_class": "inner_race",
+      "frozen_split": "train",
+      "S7_mape_pct": 72.63970354868185,
+      "mape_full_degradation_pct": 151.74661273362574,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 125.16205862150676,
+        "loglin_coef": [
+          1.1657065369294102,
+          1.1286423765296043,
+          -0.07136024878590415,
+          -0.767233334493818,
+          -1.3315884364917334
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 125.16205862150676,
+      "stage_within1_frac": 0.9730458221024259,
+      "stage_mae": 0.09164420485175202,
+      "stage_max_error": 2,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing3_4",
+      "fault_class": "inner_race",
+      "frozen_split": "test",
+      "S7_mape_pct": 64.59191658690962,
+      "mape_full_degradation_pct": 168.157656222536,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 122.47120180662365,
+        "loglin_coef": [
+          1.0342555372505722,
+          1.0696514163667434,
+          0.0186725130193471,
+          -0.3671713411767223,
+          -1.3647110540314662
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 122.47120180662365,
+      "stage_within1_frac": 0.9953795379537954,
+      "stage_mae": 0.047524752475247525,
+      "stage_max_error": 2,
+      "epochs": 10
+    },
+    {
+      "unit_id": "xjtu_sy:Bearing3_5",
+      "fault_class": "outer_race",
+      "frozen_split": "val",
+      "S7_mape_pct": 711.6752213200659,
+      "mape_full_degradation_pct": 1012.5008051036975,
+      "selected_in_fold": {
+        "method": "loglin",
+        "history": 48,
+        "blend_w": 0.5,
+        "u_min": 0.05,
+        "q": 0.25,
+        "lobo_mape": 92.84078049400516,
+        "loglin_coef": [
+          0.32779252258416564,
+          0.8974261766022543,
+          -0.07817457720002731,
+          -3.5686318540624367,
+          2.072203682463702
+        ],
+        "loglin_features": [
+          "1",
+          "log(tau_h + cadence_h)",
+          "log(trend_rul_h + cadence_h)",
+          "clip(u_raw, -1, 2)",
+          "hi_now / threshold"
+        ],
+        "note": "nested LOBO: coefficients for each held-out bearing fitted on the others only"
+      },
+      "selection_in_fold_mape_pct": 92.84078049400516,
+      "stage_within1_frac": 0.868421052631579,
+      "stage_mae": 0.38596491228070173,
+      "stage_max_error": 4,
+      "epochs": 10
+    }
+  ],
+  "n_folds": 15,
+  "mean_S7_mape_pct": 221.70976897739655,
+  "median_S7_mape_pct": 73.70040964965521,
+  "frac_bearings_meeting_15pct": 0.0,
+  "note": "SECONDARY robustness table (LOBO over all eligible XJTU-SY run-to-failure bearings, incl. the frozen test bearings). Not the pre-registered S7 headline."
+}

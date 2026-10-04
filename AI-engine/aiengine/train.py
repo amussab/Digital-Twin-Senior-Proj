@@ -241,6 +241,11 @@ def tft_predict(model, df: pd.DataFrame) -> pd.DataFrame:
     frame = d[["unit_id", "window_index", "observable_class"] + cols].copy()
     frame["unit_id"] = frame["unit_id"].astype(str)
     frame["observable_class"] = frame["observable_class"].astype(str)
+    # The target column is not a model input; a class the model has no output channel for (e.g.
+    # `ball`, which has no training bearing) is mapped to a known placeholder so the dataset can be
+    # built. Truth is always merged from the original table afterwards, never from this frame.
+    known = set(params["target_normalizer"].classes_)
+    frame.loc[~frame["observable_class"].isin(known), "observable_class"] = sorted(known)[0]
     ds = TimeSeriesDataSet.from_parameters(params, frame, predict=False, stop_randomization=True)
     order = models.class_order(ds)
     out = model.predict(ds.to_dataloader(train=False, batch_size=2048, num_workers=0),

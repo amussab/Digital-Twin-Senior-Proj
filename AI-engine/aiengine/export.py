@@ -173,7 +173,10 @@ def run(run_dir: Path, df: pd.DataFrame, tft_ckpt=None, nhits_ckpt=None, calib_f
             "reference_impl": "aiengine/features.py::engineer_arrays",
         },
         "onset": {"sigmas": labels.ONSET_SIGMAS, "consecutive": labels.ONSET_CONSECUTIVE,
-                  "sigma_floor": labels.SIGMA_FLOOR, "baseline_windows": feat.BASELINE_WINDOWS},
+                  "sigma_floor": labels.SIGMA_FLOOR, "baseline_windows": feat.BASELINE_WINDOWS,
+                  "run_in_skip_windows": labels.ONSET_RUN_IN_SKIP,
+                  "rule": "threshold = mean + sigmas*max(std, sigma_floor) of HI windows [skip, skip+baseline); "
+                          "onset = first window of the first run of `consecutive` windows above it"},
         "classes": {"labels": order, "index_is_output_channel": True,
                     "note": "alphabetical (label encoder) order; apply softmax to logits"},
         "models": {

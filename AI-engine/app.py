@@ -240,6 +240,33 @@ def cmd_select(args) -> int:
     return 0
 
 
+def cmd_robustness(args) -> int:
+    """SECONDARY: LOBO over all eligible XJTU-SY run-to-failure bearings (see aiengine/robustness.py)."""
+    from aiengine import models, robustness, select, train
+    train.set_threads(args.threads)
+    names = _datasets(args)
+    df = train.prepare(names)
+    run = _run_dir(args)
+    work = run / "robustness_lobo"
+    nc = models.NHiTSConfig(encoder_length=args.nhits_encoder, prediction_length=args.nhits_horizon)
+    tc = models.TFTConfig(max_encoder_length=args.tft_encoder)
+    units = robustness.eligible(df, nc)
+    if args.list:
+        print(" ".join(str(i) for i in range(len(units))))
+        return 0
+    if args.fold is not None:
+        r = robustness.run_fold(df, units[args.fold], args.fold, nc, tc, work, args.epochs)
+        print(json.dumps({k: v for k, v in r.items() if k != "selected_in_fold"}, default=str))
+        return 0
+    agg = robustness.aggregate(work)
+    p = select.write("robustness_lobo", agg, _meta(args, names, df))
+    print(f"{agg['n_folds']} folds, mean S7 {agg['mean_S7_mape_pct']:.1f} %, median {agg['median_S7_mape_pct']:.1f} % -> {p}")
+    for r in agg["folds"]:
+        print(f"  {r['unit_id']:<22} {r['fault_class']:<11} {r['frozen_split']:<6} S7 {r['S7_mape_pct']:6.1f} %  "
+              f"stage<=1 {r['stage_within1_frac']:.2f} max {r['stage_max_error']}  [{r['selected_in_fold']['method']}]")
+    return 0
+
+
 def cmd_finetune(args) -> int:
     from aiengine import train
     train.set_threads(args.threads)
@@ -292,10 +319,15 @@ def cmd_evaluate(args) -> int:
                                    nhits_ckpt=run / "nhits_ft.ckpt", calib_file=run / "rul_calibration_ft.json",
                                    latency_n=0)
         m0, _, _ = evaluate.score(run, ims, "ft_test", latency_n=0)
-        extra["ims_finetuned"] = {"rul": mf.get("rul"), "classification_macro_f1": mf["classification"].get("macro_f1"),
+        def _cls(c):
+            return {"macro_f1_testable": c.get("macro_f1"), "testable_classes": c.get("macro_f1_testable_classes"),
+                    "macro_f1_all5": c.get("macro_f1_all5"), "untestable": c.get("untestable_note"),
+                    "per_dataset_recall": {k: v.get("recall") for k, v in c.get("per_dataset", {}).items()},
+                    "note": "IMS B4 = ball only after onset; ball has no output channel, so the testable set is "
+                            "{healthy} alone and macro_f1_testable is NOT informative here; read macro_f1_all5/recall."}
+        extra["ims_finetuned"] = {"rul": mf.get("rul"), "classification": _cls(mf["classification"]),
                                   "detection": {k: v for k, v in mf["detection"].items() if k != "per_unit"}}
-        extra["ims_zero_shot_pretrained"] = {"rul": m0.get("rul"),
-                                             "classification_macro_f1": m0["classification"].get("macro_f1")}
+        extra["ims_zero_shot_pretrained"] = {"rul": m0.get("rul"), "classification": _cls(m0["classification"])}
         scored_all.append(sf)
         preds_all.append(pf)
         truth_all.append(ims[ims["split"] == "ft_test"])
@@ -313,8 +345,23 @@ def cmd_evaluate(args) -> int:
         m["classification"] = evaluate.classification_metrics(P, T)
         m["detection"] = evaluate.caught_by_stage3(P, T)
         preds = P
+    rob = sorted(Path(evaluate.REPORTS_DIR).glob("model_selection_robustness_lobo_*.json"))
+    if args.robustness and rob:
+        r = json.loads(rob[-1].read_text())
+        extra["SECONDARY_xjtu_lobo_robustness"] = {
+            "file": rob[-1].name, "note": r["note"], "mean_S7_mape_pct": r["mean_S7_mape_pct"],
+            "median_S7_mape_pct": r["median_S7_mape_pct"],
+            "frac_bearings_meeting_15pct": r["frac_bearings_meeting_15pct"],
+            "per_bearing": {f["unit_id"]: {"S7_mape_pct": f["S7_mape_pct"], "split": f["frozen_split"],
+                                           "class": f["fault_class"], "stage_max_error": f["stage_max_error"],
+                                           "stage_within1_frac": f["stage_within1_frac"]} for f in r["folds"]}}
     m["extra_tracks"] = extra
     jp, mp = evaluate.write_report(m, meta, tag=args.tag)
+    T_all = pd.concat(truth_all, ignore_index=True)
+    tcols = ["unit_id", "window_index", "dataset", "t_hours", "observable_class", "fault_class",
+             "health_stage", "rul_hours", "in_degradation_window", "split"]
+    preds = preds.merge(T_all[tcols], on=["unit_id", "window_index"], how="left")
+    preds["model"] = np.where(preds["dataset"] == "ims", "finetuned", "pretrained")
     preds.to_csv(Path(jp).with_suffix(".tft_preds.csv.gz"), index=False)
     if len(allsc):
         allsc.drop(columns=["hi_hist", "forecast"]).to_csv(Path(jp).with_suffix(".rul_preds.csv.gz"), index=False)
@@ -333,6 +380,13 @@ def cmd_export(args) -> int:
         res["tft"]["builder_vs_dataset_max_abs_diff"] < 1e-4 and res["nhits"]["builder_vs_dataset_max_abs_diff"] < 1e-4
     print("EXPORT", "OK" if ok else "PARITY PROBLEM")
     return 0 if ok else 1
+
+
+def cmd_demo_payloads(args) -> int:
+    from aiengine import demo_stream, train
+    df = train.prepare(_datasets(args))
+    print(json.dumps(demo_stream.build(df, args.bearing1, args.bearing2), indent=1))
+    return 0
 
 
 def cmd_demo(args) -> int:
@@ -404,6 +458,14 @@ def main(argv=None) -> int:
     sl.add_argument("--nhits-covariates")
     sl.add_argument("--tft-encoders", type=int, nargs="+", default=[4, 6, 8])
     sl.add_argument("--weight-powers", type=float, nargs="+", default=[0.5, 1.0])
+    rb = sub.add_parser("robustness", help="SECONDARY LOBO over all eligible XJTU-SY bearings")
+    common(rb)
+    rb.add_argument("--fold", type=int)
+    rb.add_argument("--list", action="store_true")
+    rb.add_argument("--epochs", type=int, default=12)
+    rb.add_argument("--tft-encoder", type=int, default=6)
+    rb.add_argument("--nhits-encoder", type=int, default=24)
+    rb.add_argument("--nhits-horizon", type=int, default=12)
     f = sub.add_parser("finetune", help="fine-tune on IMS ft_train bearings")
     common(f)
     f.add_argument("--epochs", type=int, default=15)
@@ -413,6 +475,7 @@ def main(argv=None) -> int:
     common(e)
     e.add_argument("--latency-n", type=int, default=300)
     e.add_argument("--tag", default="")
+    e.add_argument("--robustness", action="store_true", help="attach the latest LOBO robustness file")
     x = sub.add_parser("export", help="ONNX + contract + golden vectors to models/")
     common(x)
     d = sub.add_parser("demo", help="stream a test unit through HybridEngine")
@@ -420,11 +483,16 @@ def main(argv=None) -> int:
     d.add_argument("--unit")
     d.add_argument("--lines", type=int, default=40)
     d.add_argument("--pause", type=float, default=0.0)
+    dp = sub.add_parser("demo-payloads", help="write models/demo_payloads.bin (real held-out replay stream)")
+    common(dp, run=False)
+    dp.add_argument("--bearing1", default="xjtu_sy:Bearing2_5")
+    dp.add_argument("--bearing2", default="xjtu_sy:Bearing3_4")
     a = p.parse_args(argv)
     if not hasattr(a, "run"):
         a.run = "main"
     return {"selftest": cmd_selftest, "data": cmd_data, "train": cmd_train, "finetune": cmd_finetune,
-            "evaluate": cmd_evaluate, "export": cmd_export, "demo": cmd_demo, "select": cmd_select}[a.command](a)
+            "evaluate": cmd_evaluate, "export": cmd_export, "demo": cmd_demo, "select": cmd_select,
+            "robustness": cmd_robustness, "demo-payloads": cmd_demo_payloads}[a.command](a)
 
 
 if __name__ == "__main__":

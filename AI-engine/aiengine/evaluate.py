@@ -43,10 +43,20 @@ def classification_metrics(preds: pd.DataFrame, truth: pd.DataFrame) -> dict:
         return {"n": 0}
     y, p = j["observable_class"].astype(str).to_numpy(), j["pred_class"].to_numpy()
     present = [c for c in CLASSES if (y == c).any()]
+    trained = [c for c in CLASSES if f"p_{c}" in preds.columns]
+    # Testable = classes with BOTH training support (a model output channel) and test support.
+    testable = [c for c in present if c in trained]
+    m = np.isin(y, testable)
     out = {
         "n": int(len(j)),
-        "macro_f1": float(f1_score(y, p, labels=present, average="macro", zero_division=0)),
+        "macro_f1": float(f1_score(y[m], p[m], labels=testable, average="macro", zero_division=0)),
+        "macro_f1_testable_classes": testable,
+        "macro_f1_n": int(m.sum()),
         "macro_f1_all5": float(f1_score(y, p, labels=CLASSES, average="macro", zero_division=0)),
+        "trained_classes": trained,
+        "untestable_note": {c: ("test support %d windows, 0 training support (no output channel)" % int((y == c).sum())
+                                if (y == c).any() else "0 test support" + ("" if c in trained else ", 0 training support"))
+                            for c in CLASSES if c not in testable},
         "classes_present": present,
         "accuracy": float((y == p).mean()),
         "per_class_f1": {c: float(f1_score(y, p, labels=[c], average="macro", zero_division=0)) for c in present},
@@ -224,19 +234,22 @@ def verdicts(m: dict) -> list[dict]:
         ("S7", "RUL MAPE on held-out degradation window (N-HiTS)", "<=", T["S7_rul_mape_pct"],
          m.get("rul", {}).get("S7_mape_pct", float("nan")), "%"),
         ("S8", "TFT classification latency per window, p95 single-window", "<", T["S8_tft_latency_ms"], s8, "ms"),
-        ("IS3a", "macro-F1 over 5 classes (test windows)", ">=", T["IS3_macro_f1"],
+        ("IS3a", "macro-F1 over the testable classes (train AND test support; primary)", ">=", T["IS3_macro_f1"],
          m.get("classification", {}).get("macro_f1", float("nan")), ""),
-        ("IS3b", f"stage error <= 1 (fraction of windows, target {STAGE_WITHIN1_TARGET})", ">=",
-         STAGE_WITHIN1_TARGET, m.get("rul", {}).get("stage_within1_frac", float("nan")), ""),
+        ("IS3a-5", "macro-F1 over all 5 classes (ball has no training bearing -> F1 0)", ">=", T["IS3_macro_f1"],
+         m.get("classification", {}).get("macro_f1_all5", float("nan")), ""),
+        ("IS3b", "stage error <= 1, literal reading: MAX abs stage error over test windows", "<=",
+         T["IS3_stage_error_max"], m.get("rul", {}).get("stage_max_error", float("nan")), ""),
         ("IS3c", "run-to-failure faults caught (3 consecutive correct) by stage 3", ">=", 1.0,
          m.get("detection", {}).get("caught_by_stage3_frac", float("nan")), ""),
         ("IS1 (ICS leg)", "features + TFT + N-HiTS + RUL per window, p95", "<", T["IS1_e2e_latency_ms"], eng, "ms"),
     ]
     out = []
     for sid, desc, op, target, val, unit in rows:
-        if not np.isfinite(val):
+        if val is None or not np.isfinite(float(val)):
             status = "NOT MEASURED"
         else:
+            val = float(val)
             ok = {"<=": val <= target, "<": val < target, ">=": val >= target}[op]
             status = "PASS" if ok else "FAIL"
         out.append({"spec": sid, "requirement": desc, "op": op, "target": target, "measured": val,
@@ -250,10 +263,10 @@ def provenance_banner(datasets: list[str]) -> str:
         return ("> **SYNTHETIC DATA ONLY.** Every number below comes from `synthetic_rig`, generated "
                 "data. It proves the pipeline runs end to end; it is NOT a measurement of any real "
                 "bearing and must not be quoted as one.")
-    s = (f"> **[MEASURED on {', '.join(real)}]** -- public laboratory bearing datasets, scored on "
-         "held-out test bearings/records never used for training, early stopping, model selection "
-         "or calibration. These are measurements of THOSE datasets' bearings, not of the team's "
-         "rig (no rig data exists yet).")
+    s = ("> **MEASURED on XJTU-SY / IMS public bearing datasets, not the team rig.** "
+         f"[MEASURED on {', '.join(real)}] -- scored on held-out test bearings never used for training, "
+         "early stopping, model selection or calibration. These are measurements of THOSE datasets' "
+         "bearings; no rig data exists yet.")
     if "synthetic_rig" in datasets:
         s += " Rows tagged `synthetic_rig` are SYNTHETIC."
     return s
@@ -289,15 +302,17 @@ def write_report(metrics: dict, meta: dict, tag: str = "") -> tuple[Path, Path]:
           f"percent-of-life error: {f(r.get('percent_of_life_error_pts'), 'pts')}",
           f"- Estimator components: trend-only {f(r.get('S7_mape_trend_only_pct'), '%')}, "
           f"onset-only {f(r.get('S7_mape_onset_only_pct'), '%')}",
-          f"- Stage: within +/-1 {f(r.get('stage_within1_frac'))}, mean abs error {f(r.get('stage_mae'))}, "
-          f"max {r.get('stage_max_error', 'n/a')}", "", "| Test bearing | MAPE (S7 window) | MAPE (full window) |",
+          f"- Stage (IS3b): max abs error {r.get('stage_max_error', 'n/a')}, mean abs error {f(r.get('stage_mae'))}, "
+          f"fraction within +/-1 {f(r.get('stage_within1_frac'))} over {r.get('stage_n')} windows", "", "| Test bearing | MAPE (S7 window) | MAPE (full window) |",
           "|---|---|---|"]
     for k, v in r.get("per_bearing_mape_pct", {}).items():
         L.append(f"| {k} | {v:.1f} % | {r.get('per_bearing_mape_full_pct', {}).get(k, float('nan')):.1f} % |")
     c = metrics.get("classification", {})
     L += ["", "## IS3 -- classification", "",
-          f"- Test windows: {c.get('n')}; macro-F1 over classes present {c.get('classes_present')}: "
-          f"**{f(c.get('macro_f1'))}** (over all 5 incl. absent: {f(c.get('macro_f1_all5'))})",
+          f"- Test windows: {c.get('n')}. **Primary IS3a macro-F1 over the testable classes "
+          f"{c.get('macro_f1_testable_classes')} ({c.get('macro_f1_n')} windows): {f(c.get('macro_f1'))}**",
+          f"- macro-F1 over all 5 classes: {f(c.get('macro_f1_all5'))}. Classes the model was trained on: "
+          f"{c.get('trained_classes')}. Not testable: {c.get('untestable_note')}",
           f"- Missed-fault rate {f(c.get('missed_fault_rate'))}, false-alarm rate {f(c.get('false_alarm_rate'))}",
           "", "| Class | F1 | Support |", "|---|---|---|"]
     for k, v in c.get("per_class_f1", {}).items():
