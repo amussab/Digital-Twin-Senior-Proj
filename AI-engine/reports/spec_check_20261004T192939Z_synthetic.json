@@ -1,0 +1,384 @@
+{
+  "generated_utc": "20261004T192939Z",
+  "provenance": {
+    "datasets": [
+      "synthetic_rig"
+    ],
+    "real_data": [],
+    "synthetic": true,
+    "seed": 20261004,
+    "git_commit": "2b7a1cd",
+    "git_dirty": true,
+    "command": "app.py evaluate --datasets synthetic_rig --run synthetic --tag synthetic",
+    "run": "synthetic",
+    "host": "Windows 10, Intel64 Family 6 Model 183 Stepping 1, GenuineIntel, torch 2.14.0+cpu",
+    "counts": {
+      "synthetic_rig": {
+        "test": {
+          "units": 20,
+          "windows": 8928
+        },
+        "train": {
+          "units": 60,
+          "windows": 23568
+        },
+        "val": {
+          "units": 16,
+          "windows": 6970
+        }
+      }
+    }
+  },
+  "verdicts": [
+    {
+      "spec": "S7",
+      "requirement": "RUL MAPE on held-out degradation window (N-HiTS)",
+      "op": "<=",
+      "target": 15.0,
+      "measured": 18.853776123113505,
+      "unit": "%",
+      "status": "FAIL"
+    },
+    {
+      "spec": "S8",
+      "requirement": "TFT classification latency per window, p95 single-window",
+      "op": "<",
+      "target": 200.0,
+      "measured": 1.6598200005319086,
+      "unit": "ms",
+      "status": "PASS"
+    },
+    {
+      "spec": "IS3a",
+      "requirement": "macro-F1 over 5 classes (test windows)",
+      "op": ">=",
+      "target": 0.85,
+      "measured": 0.8599698503727347,
+      "unit": "",
+      "status": "PASS"
+    },
+    {
+      "spec": "IS3b",
+      "requirement": "stage error <= 1 (fraction of windows, target 0.95)",
+      "op": ">=",
+      "target": 0.95,
+      "measured": 1.0,
+      "unit": "",
+      "status": "PASS"
+    },
+    {
+      "spec": "IS3c",
+      "requirement": "run-to-failure faults caught (3 consecutive correct) by stage 3",
+      "op": ">=",
+      "target": 1.0,
+      "measured": 1.0,
+      "unit": "",
+      "status": "PASS"
+    },
+    {
+      "spec": "IS1 (ICS leg)",
+      "requirement": "features + TFT + N-HiTS + RUL per window, p95",
+      "op": "<",
+      "target": 500.0,
+      "measured": 2.2721999999999998,
+      "unit": "ms",
+      "status": "PASS"
+    }
+  ],
+  "metrics": {
+    "classification": {
+      "n": 8888,
+      "macro_f1": 0.8599698503727347,
+      "macro_f1_all5": 0.8599698503727347,
+      "classes_present": [
+        "healthy",
+        "outer_race",
+        "inner_race",
+        "ball",
+        "cage"
+      ],
+      "accuracy": 0.8931143114311431,
+      "per_class_f1": {
+        "healthy": 0.918426927700498,
+        "outer_race": 0.8496196606202457,
+        "inner_race": 0.7993779160186625,
+        "ball": 0.8368794326241135,
+        "cage": 0.8955453149001537
+      },
+      "per_class_support": {
+        "healthy": 6209,
+        "outer_race": 740,
+        "inner_race": 517,
+        "ball": 795,
+        "cage": 627
+      },
+      "confusion": {
+        "labels": [
+          "healthy",
+          "outer_race",
+          "inner_race",
+          "ball",
+          "cage"
+        ],
+        "matrix": [
+          [
+            5348,
+            243,
+            255,
+            271,
+            92
+          ],
+          [
+            14,
+            726,
+            0,
+            0,
+            0
+          ],
+          [
+            3,
+            0,
+            514,
+            0,
+            0
+          ],
+          [
+            28,
+            0,
+            0,
+            767,
+            0
+          ],
+          [
+            44,
+            0,
+            0,
+            0,
+            583
+          ]
+        ]
+      },
+      "missed_fault_rate": 0.033221351250466595,
+      "false_alarm_rate": 0.1386696730552424,
+      "per_dataset": {
+        "synthetic_rig": {
+          "n": 8888,
+          "classes_present": [
+            "healthy",
+            "outer_race",
+            "inner_race",
+            "ball",
+            "cage"
+          ],
+          "macro_f1": 0.8599698503727347,
+          "accuracy": 0.8931143114311431,
+          "recall": {
+            "healthy": 0.8613303269447576,
+            "outer_race": 0.981081081081081,
+            "inner_race": 0.9941972920696325,
+            "ball": 0.9647798742138365,
+            "cage": 0.9298245614035088
+          }
+        }
+      }
+    },
+    "detection": {
+      "per_unit": [
+        {
+          "unit_id": "synthetic_rig:run000:B1",
+          "dataset": "synthetic_rig",
+          "fault_class": "inner_race",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 88,
+          "caught_at_stage": 1,
+          "caught_by_stage3": true
+        },
+        {
+          "unit_id": "synthetic_rig:run003:B2",
+          "dataset": "synthetic_rig",
+          "fault_class": "cage",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 225,
+          "caught_at_stage": 2,
+          "caught_by_stage3": true
+        },
+        {
+          "unit_id": "synthetic_rig:run009:B1",
+          "dataset": "synthetic_rig",
+          "fault_class": "cage",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 131,
+          "caught_at_stage": 2,
+          "caught_by_stage3": true
+        },
+        {
+          "unit_id": "synthetic_rig:run032:B1",
+          "dataset": "synthetic_rig",
+          "fault_class": "ball",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 110,
+          "caught_at_stage": 2,
+          "caught_by_stage3": true
+        },
+        {
+          "unit_id": "synthetic_rig:run033:B2",
+          "dataset": "synthetic_rig",
+          "fault_class": "outer_race",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 58,
+          "caught_at_stage": 1,
+          "caught_by_stage3": true
+        },
+        {
+          "unit_id": "synthetic_rig:run035:B1",
+          "dataset": "synthetic_rig",
+          "fault_class": "ball",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 49,
+          "caught_at_stage": 1,
+          "caught_by_stage3": true
+        },
+        {
+          "unit_id": "synthetic_rig:run042:B1",
+          "dataset": "synthetic_rig",
+          "fault_class": "inner_race",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 30,
+          "caught_at_stage": 1,
+          "caught_by_stage3": true
+        },
+        {
+          "unit_id": "synthetic_rig:run047:B1",
+          "dataset": "synthetic_rig",
+          "fault_class": "outer_race",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 45,
+          "caught_at_stage": 1,
+          "caught_by_stage3": true
+        }
+      ],
+      "rtf_units": 8,
+      "caught_by_stage3_frac": 1.0,
+      "seeded_records": 0,
+      "seeded_caught_frac": NaN
+    },
+    "rul": {
+      "S7_mape_pct": 18.853776123113505,
+      "per_bearing_mape_pct": {
+        "synthetic_rig:run000:B1": 21.373928871769987,
+        "synthetic_rig:run003:B2": 22.040834132586074,
+        "synthetic_rig:run009:B1": 11.559226527197334,
+        "synthetic_rig:run032:B1": 18.708820787757237,
+        "synthetic_rig:run033:B2": 19.739984788002577,
+        "synthetic_rig:run035:B1": 17.87943518312357,
+        "synthetic_rig:run042:B1": 25.17243704084801,
+        "synthetic_rig:run047:B1": 14.355541653623243
+      },
+      "mape_full_degradation_pct": 24.483845341930234,
+      "per_bearing_mape_full_pct": {
+        "synthetic_rig:run000:B1": 23.51588548266326,
+        "synthetic_rig:run003:B2": 21.468192530118678,
+        "synthetic_rig:run009:B1": 16.761550811538285,
+        "synthetic_rig:run032:B1": 22.486069623442628,
+        "synthetic_rig:run033:B2": 23.600027597549055,
+        "synthetic_rig:run035:B1": 22.17404328208912,
+        "synthetic_rig:run042:B1": 41.892750929321004,
+        "synthetic_rig:run047:B1": 23.972242478719824
+      },
+      "n_windows": 2409,
+      "n_bearings": 8,
+      "rmse_hours": 10.013363999590535,
+      "phm2012_score": 0.5015801621287681,
+      "percent_of_life_error_pts": 8.926924929527418,
+      "S7_mape_trend_only_pct": 31.50291244680111,
+      "S7_mape_onset_only_pct": 145.26617098360583,
+      "per_dataset": {
+        "synthetic_rig": 18.853776123113505
+      },
+      "stage_within1_frac": 1.0,
+      "stage_mae": 0.12239583333333333,
+      "stage_max_error": 1,
+      "stage_n": 3456,
+      "note": "Headline S7 = all held-out run-to-failure test bearings, each scored by the model deployed for its domain (pretrained for xjtu_sy/synthetic, fine-tuned for ims)."
+    },
+    "latency": {
+      "torch_threads": 1,
+      "tft_torch": {
+        "p50_ms": 6.13104999956704,
+        "p95_ms": 7.264260000010837,
+        "max_ms": 10.312300000805408,
+        "mean_ms": 6.341014999931455,
+        "n": 300
+      },
+      "nhits_torch": {
+        "p50_ms": 1.477550000345218,
+        "p95_ms": 1.8669400001272152,
+        "max_ms": 2.69769999977143,
+        "mean_ms": 1.5283470000334394,
+        "n": 300
+      },
+      "tft_onnx": {
+        "p50_ms": 1.4120499999989988,
+        "p95_ms": 1.6598200005319086,
+        "max_ms": 2.3148000000219326,
+        "mean_ms": 1.4549476665888506,
+        "n": 300
+      },
+      "nhits_onnx": {
+        "p50_ms": 0.05980000059935264,
+        "p95_ms": 0.06940500088603585,
+        "max_ms": 0.15440000061062165,
+        "mean_ms": 0.061666666630723434,
+        "n": 300
+      },
+      "engine_step": {
+        "p50_ms": 1.876,
+        "p95_ms": 2.2721999999999998,
+        "max_ms": 2.945,
+        "mean_ms": 1.9369861751152075,
+        "n": 217,
+        "note": "per bearing-window, features+TFT+N-HiTS+RUL via ONNX Runtime"
+      }
+    },
+    "source_check": {
+      "ball": {
+        "synthetic_rig": 1692
+      },
+      "cage": {
+        "synthetic_rig": 1280
+      },
+      "healthy": {
+        "synthetic_rig": 16094
+      },
+      "inner_race": {
+        "synthetic_rig": 1971
+      },
+      "outer_race": {
+        "synthetic_rig": 2531
+      }
+    },
+    "extra_tracks": {
+      "pretrain_test_only_rul": {
+        "S7_mape_pct": 18.853776123113505,
+        "per_bearing_mape_pct": {
+          "synthetic_rig:run000:B1": 21.373928871769987,
+          "synthetic_rig:run003:B2": 22.040834132586074,
+          "synthetic_rig:run009:B1": 11.559226527197334,
+          "synthetic_rig:run032:B1": 18.708820787757237,
+          "synthetic_rig:run033:B2": 19.739984788002577,
+          "synthetic_rig:run035:B1": 17.87943518312357,
+          "synthetic_rig:run042:B1": 25.17243704084801,
+          "synthetic_rig:run047:B1": 14.355541653623243
+        }
+      }
+    }
+  }
+}

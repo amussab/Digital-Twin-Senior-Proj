@@ -53,3 +53,13 @@ through and note what replaced it.
 - feature/dashboard belongs to Mussab. **Never commit to, rebase or force-push it.** Read it
   only, or merge it INTO our own integration branch.
 - AI work: feature/ai-engine (cut from feature/ai-test + origin/main, 2026-10-04).
+
+## PPR rubric arithmetic (coordinator, 2026-10-04)
+- The team table has 6 constraints + 9 specs + 3 integrated = 18 items. Exemplary needs more
+  than 50%, i.e. at least 10 items met with satisfactory-or-better evidence.
+- ICS Exemplary target: C5 (LAN-only) + C4 (offline AI/processing) = more than 1 constraint, plus
+  S8 (TFT latency) and S7 (RUL) as specs. Extra ICS-reachable items toward the 10: S9 (≥10 Hz
+  dashboard), IS1 (<500 ms), IS3 (F1/stage/early catch), IS2 (physics-AI residual, simulation
+  only).
+- Evidence deliverable: `AI-engine/notebooks/PPR_ICS_Evidence.ipynb`. It is a live, executed
+  scorecard: every claim is recomputed in a cell from data on disk (Rank 9 when run at the PPR).
