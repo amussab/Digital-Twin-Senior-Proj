@@ -1,0 +1,172 @@
+@page "/"
+@implements IAsyncDisposable
+@inject IDashboardDataSource DataSource
+
+<PageTitle>Digital Twin Dashboard</PageTitle>
+
+<header class="topbar">
+    <div>
+        <p class="eyebrow">OH-2 PUMP MONITORING</p>
+        <h1>Machine Health Overview</h1>
+    </div>
+
+    <div class="header-status">
+        <span class="connection-dot @(Snapshot?.IsConnected == true ? "online" : "offline")"></span>
+        <span>@(Snapshot?.IsConnected == true ? "Live" : "Disconnected")</span>
+        <span class="divider"></span>
+        <span>@(Snapshot?.MachineId ?? "Waiting...")</span>
+    </div>
+</header>
+
+@if (Snapshot is null)
+{
+    <section class="loading-state">
+        Waiting for the first monitoring window…
+    </section>
+}
+else
+{
+    <section class="metrics-grid">
+        <MetricCard Label="Health Index"
+                    Value="@($"{Snapshot.HealthIndexPercent:F0}%")"
+                    Detail="Overall estimated condition"
+                    AccentClass="accent-cyan" />
+
+        <MetricCard Label="AI Remaining Life"
+                    Value="@($"{Snapshot.AiRulHours:F0} h")"
+                    Detail="N-HiTS estimate"
+                    AccentClass="accent-violet" />
+
+        <MetricCard Label="Fault State"
+                    Value="@Snapshot.FaultClass"
+                    Detail="@($"{Snapshot.FaultConfidencePercent:F1}% confidence")"
+                    AccentClass="@(Snapshot.FaultClass == "Healthy"
+                                ? "accent-green"
+                                : "accent-orange")" />
+
+        <MetricCard Label="Shaft Speed"
+                    Value="@($"{Snapshot.Rpm:F0} RPM")"
+                    Detail="20-revolution window"
+                    AccentClass="accent-blue" />
+    </section>
+
+    <section class="content-grid" id="trends">
+        <TrendChart Title="AI RUL Trend"
+                    CurrentValue="@($"{Snapshot.AiRulHours:F0} hours")"
+                    Values="RulHistory" />
+
+        <article class="system-panel">
+            <div class="panel-heading">
+                <span>Digital Twin</span>
+                <strong>@($"{Snapshot.HealthIndexPercent:F0}%")</strong>
+            </div>
+
+            <PumpTwin />
+
+            <div class="health-bar">
+                <span style="width: @($"{Snapshot.HealthIndexPercent}%")"></span>
+            </div>
+
+            <p>
+                Current operating condition based on the latest accepted sensor window.
+            </p>
+        </article>
+    </section>
+
+    <section class="lower-grid" id="diagnostics">
+        <article class="system-panel">
+            <div class="panel-heading">
+                <span>Physics Comparison</span>
+                <span class="tag">Optional input</span>
+            </div>
+
+            @if (Snapshot.PhysicsRulHours is double physicsRul)
+            {
+                <div class="comparison-row">
+                    <span>Physics RUL</span>
+                    <strong>@physicsRul.ToString("F0") h</strong>
+                </div>
+
+                <div class="comparison-row">
+                    <span>AI RUL</span>
+                    <strong>@Snapshot.AiRulHours.ToString("F0") h</strong>
+                </div>
+
+                <div class="comparison-row">
+                    <span>Residual</span>
+                    <strong>@Snapshot.RulResidualPercent?.ToString("F1")%</strong>
+                </div>
+            }
+            else
+            {
+                <p>Physics estimator is not connected.</p>
+            }
+        </article>
+
+        <article class="system-panel">
+            <div class="panel-heading">
+                <span>System Diagnostics</span>
+                <span class="tag success">Nominal</span>
+            </div>
+
+            <div class="comparison-row">
+                <span>Processing latency</span>
+                <strong>@Snapshot.ProcessingLatencyMs.ToString("F0") ms</strong>
+            </div>
+
+            <div class="comparison-row">
+                <span>Last data</span>
+                <strong>@Snapshot.TimestampUtc.ToLocalTime().ToString("HH:mm:ss")</strong>
+            </div>
+
+            <div class="comparison-row">
+                <span>Contract version</span>
+                <strong>@($"v{Snapshot.SchemaVersion}")</strong>
+            </div>
+        </article>
+    </section>
+}
+
+@code {
+    private readonly CancellationTokenSource _cancellation = new();
+    private readonly List<double> _rulHistory = [];
+
+    private DashboardSnapshot? Snapshot { get; set; }
+    private IReadOnlyList<double> RulHistory => _rulHistory;
+
+    protected override void OnInitialized()
+    {
+        _ = ConsumeSnapshotsAsync();
+    }
+
+    private async Task ConsumeSnapshotsAsync()
+    {
+        try
+        {
+            await foreach (
+                var snapshot in DataSource.StreamAsync(_cancellation.Token))
+            {
+                Snapshot = snapshot;
+                _rulHistory.Add(snapshot.AiRulHours);
+
+                if (_rulHistory.Count > 40)
+                {
+                    _rulHistory.RemoveAt(0);
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _cancellation.Cancel();
+        _cancellation.Dispose();
+
+        return ValueTask.CompletedTask;
+    }
+}

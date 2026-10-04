@@ -1,0 +1,364 @@
+:root {
+    color-scheme: dark;
+    font-family: Inter, "Segoe UI", system-ui, sans-serif;
+    background: #07111f;
+    color: #e8f0f8;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-width: 320px;
+    background: radial-gradient(circle at 70% 0%, #102840 0, #07111f 42%);
+}
+
+a {
+    color: inherit;
+}
+
+.app-shell {
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    min-height: 100vh;
+}
+
+.sidebar {
+    padding: 24px 12px;
+    border-right: 1px solid #1d3448;
+    background: rgba(4, 13, 24, 0.86);
+}
+
+.brand-mark {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    margin: 0 auto 42px;
+    border: 1px solid #22d3ee;
+    border-radius: 12px;
+    color: #22d3ee;
+    font-weight: 700;
+}
+
+.sidebar nav {
+    display: grid;
+    gap: 12px;
+}
+
+.nav-link {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    color: #7290a8;
+    font-size: 21px;
+    text-decoration: none;
+}
+
+    .nav-link:hover,
+    .nav-link.active {
+        background: #102a3d;
+        color: #67e8f9;
+    }
+
+.main-content {
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 34px 40px 48px;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: #22d3ee;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+}
+
+h1 {
+    margin: 0;
+    font-size: clamp(24px, 3vw, 36px);
+}
+
+.header-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border: 1px solid #20394f;
+    border-radius: 12px;
+    background: #0c1a29;
+    color: #b4c4d3;
+    font-size: 13px;
+}
+
+.connection-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+    .connection-dot.online {
+        background: #34d399;
+        box-shadow: 0 0 10px #34d399;
+    }
+
+    .connection-dot.offline {
+        background: #fb7185;
+    }
+
+.divider {
+    width: 1px;
+    height: 18px;
+    margin: 0 4px;
+    background: #30495e;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.metric-card,
+.system-panel,
+.trend-chart {
+    border: 1px solid #1c354a;
+    border-radius: 16px;
+    background: linear-gradient( 145deg, rgba(15, 34, 51, 0.96), rgba(7, 20, 33, 0.96) );
+    box-shadow: 0 20px 55px rgba(0, 0, 0, 0.14);
+}
+
+.metric-card {
+    position: relative;
+    min-height: 126px;
+    padding: 20px;
+    overflow: hidden;
+}
+
+    .metric-card::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 3px;
+        content: "";
+        background: var(--accent);
+    }
+
+.accent-cyan {
+    --accent: #22d3ee;
+}
+
+.accent-violet {
+    --accent: #a78bfa;
+}
+
+.accent-green {
+    --accent: #34d399;
+}
+
+.accent-orange {
+    --accent: #fb923c;
+}
+
+.accent-blue {
+    --accent: #60a5fa;
+}
+
+.metric-label {
+    margin-bottom: 14px;
+    color: #8ea4b7;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    overflow: hidden;
+    color: #f5f9fc;
+    font-size: clamp(20px, 2.1vw, 29px);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.metric-detail {
+    margin-top: 8px;
+    color: #6f879a;
+    font-size: 12px;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.85fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.lower-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.trend-chart,
+.system-panel {
+    padding: 20px;
+}
+
+.panel-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    color: #a9bac8;
+    font-size: 13px;
+}
+
+    .panel-heading strong {
+        color: #f2f7fa;
+        font-size: 16px;
+    }
+
+.trend-chart svg {
+    width: 100%;
+    height: 230px;
+    overflow: visible;
+}
+
+.grid-line {
+    stroke: #1e384c;
+    stroke-width: 1;
+}
+
+.trend-line {
+    fill: none;
+    stroke: #22d3ee;
+    stroke-width: 3;
+    vector-effect: non-scaling-stroke;
+}
+
+.tag {
+    padding: 5px 8px;
+    border-radius: 20px;
+    background: #23394a;
+    color: #9eb0bf;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+    .tag.success {
+        background: rgba(52, 211, 153, 0.12);
+        color: #6ee7b7;
+    }
+
+.pump-twin-svg {
+    display: block;
+    width: 100%;
+    min-height: 180px;
+    max-height: 245px;
+}
+
+.health-bar {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: #182b3a;
+}
+
+    .health-bar span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #22d3ee, #34d399);
+        transition: width 0.4s ease;
+    }
+
+.system-panel p {
+    color: #7890a3;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.comparison-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-top: 1px solid #1a3347;
+    color: #8299ab;
+    font-size: 13px;
+}
+
+    .comparison-row strong {
+        color: #e3ebf2;
+    }
+
+.loading-state,
+.boot-screen {
+    display: grid;
+    place-items: center;
+    min-height: 60vh;
+    color: #8fa6b8;
+}
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    background: #7f1d1d;
+}
+
+@media (max-width: 1000px) {
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 680px) {
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .main-content {
+        padding: 24px 16px;
+    }
+
+    .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .metrics-grid,
+    .lower-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .header-status {
+        width: 100%;
+    }
+}

@@ -1,0 +1,15 @@
+<article class="metric-card @AccentClass">
+    <div class="metric-label">@Label</div>
+    <div class="metric-value">@Value</div>
+    @if (!string.IsNullOrWhiteSpace(Detail))
+    {
+        <div class="metric-detail">@Detail</div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter] public string? Detail { get; set; }
+    [Parameter] public string AccentClass { get; set; } = "accent-blue";
+}
