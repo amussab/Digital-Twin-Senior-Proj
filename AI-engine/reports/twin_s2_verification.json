@@ -1,0 +1,370 @@
+{
+  "label": "[SIMULATION] Rank 6 evidence: forward-model synthetic data + noise. NOT a rig measurement. Same model family generates and identifies (inverse crime).",
+  "spec": "S2: K identification error <= 10 % vs known-stiffness reference",
+  "seed": 20261004,
+  "git_commit": "2b7a1cd",
+  "command": "cd AI-engine && python -m aiengine.twin.demo_twin",
+  "noise_model": {
+    "amp_uniform_rel": 0.05,
+    "phase_uniform_rad": 0.05,
+    "n_trials": 40
+  },
+  "params": {
+    "E": 200000000000.0,
+    "rho": 7850.0,
+    "shaft_d": 0.01,
+    "length": 0.56,
+    "n_elem": 28,
+    "bearing_nodes": [
+      3,
+      25
+    ],
+    "probe_nodes": [
+      5,
+      23
+    ],
+    "disk_node": 11,
+    "disk_mass": 0.8,
+    "k_nominal": [
+      50000.0,
+      50000.0
+    ],
+    "c_bearing": [
+      200.0,
+      200.0
+    ],
+    "unbalance_nominal": 1e-05,
+    "unbalance_phase_nominal": 0.5,
+    "failure_drop": 0.25,
+    "rel_noise": 0.05,
+    "n_commission": 20,
+    "min_rul_points": 8,
+    "rul_fit_points": 200,
+    "max_rel_std": 0.15
+  },
+  "cases": [
+    {
+      "case": "healthy",
+      "k1_true": 50000.0,
+      "k2_true": 50000.0,
+      "rpm": 1750.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 0.0,
+      "err_p95_pct": 0.0,
+      "err_max_pct": 0.0,
+      "predicted_rel_std_pct": 7.412283498266479
+    },
+    {
+      "case": "healthy",
+      "k1_true": 50000.0,
+      "k2_true": 50000.0,
+      "rpm": 1750.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 5.107611949108721,
+      "err_p95_pct": 11.009629535125322,
+      "err_max_pct": 15.512040883712222,
+      "predicted_rel_std_pct": 7.4059672509641015
+    },
+    {
+      "case": "healthy",
+      "k1_true": 50000.0,
+      "k2_true": 50000.0,
+      "rpm": 3600.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 0.0,
+      "err_p95_pct": 0.0,
+      "err_max_pct": 0.0,
+      "predicted_rel_std_pct": 26.12400757810367
+    },
+    {
+      "case": "healthy",
+      "k1_true": 50000.0,
+      "k2_true": 50000.0,
+      "rpm": 3600.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 18.715799168608992,
+      "err_p95_pct": 37.71433685046842,
+      "err_max_pct": 57.85472610976446,
+      "predicted_rel_std_pct": 25.823173334315083
+    },
+    {
+      "case": "K1 -10%",
+      "k1_true": 45000.0,
+      "k2_true": 50000.0,
+      "rpm": 1750.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 1.5451385277426905e-09,
+      "err_p95_pct": 1.5451385277426905e-09,
+      "err_max_pct": 1.5451385277426905e-09,
+      "predicted_rel_std_pct": 7.293200474279369
+    },
+    {
+      "case": "K1 -10%",
+      "k1_true": 45000.0,
+      "k2_true": 50000.0,
+      "rpm": 1750.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 5.645740364546848,
+      "err_p95_pct": 11.680772505069404,
+      "err_max_pct": 13.157201345320749,
+      "predicted_rel_std_pct": 7.345847174562598
+    },
+    {
+      "case": "K1 -10%",
+      "k1_true": 45000.0,
+      "k2_true": 50000.0,
+      "rpm": 3600.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 8.244678610935808e-10,
+      "err_p95_pct": 8.244678610935808e-10,
+      "err_max_pct": 8.244678610935808e-10,
+      "predicted_rel_std_pct": 27.391263568347213
+    },
+    {
+      "case": "K1 -10%",
+      "k1_true": 45000.0,
+      "k2_true": 50000.0,
+      "rpm": 3600.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 18.929234554147435,
+      "err_p95_pct": 41.2169345179006,
+      "err_max_pct": 43.631361845104,
+      "predicted_rel_std_pct": 27.46723850503735
+    },
+    {
+      "case": "K2 -15%",
+      "k1_true": 50000.0,
+      "k2_true": 42500.0,
+      "rpm": 1750.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 6.465415935963392e-10,
+      "err_p95_pct": 6.465415935963392e-10,
+      "err_max_pct": 6.465415935963392e-10,
+      "predicted_rel_std_pct": 7.562066070812145
+    },
+    {
+      "case": "K2 -15%",
+      "k1_true": 50000.0,
+      "k2_true": 42500.0,
+      "rpm": 1750.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 6.446085169402499,
+      "err_p95_pct": 13.603269073921286,
+      "err_max_pct": 15.005532345216318,
+      "predicted_rel_std_pct": 7.5171948704651275
+    },
+    {
+      "case": "K2 -15%",
+      "k1_true": 50000.0,
+      "k2_true": 42500.0,
+      "rpm": 3600.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 1.1641823220998048e-09,
+      "err_p95_pct": 1.1641823220998048e-09,
+      "err_max_pct": 1.1641823220998048e-09,
+      "predicted_rel_std_pct": 25.587216652526646
+    },
+    {
+      "case": "K2 -15%",
+      "k1_true": 50000.0,
+      "k2_true": 42500.0,
+      "rpm": 3600.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 22.614024906321216,
+      "err_p95_pct": 40.5131790524114,
+      "err_max_pct": 53.02236202284178,
+      "predicted_rel_std_pct": 26.357584005303217
+    },
+    {
+      "case": "both -20%",
+      "k1_true": 40000.0,
+      "k2_true": 40000.0,
+      "rpm": 1750.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 1.2406599125824868e-09,
+      "err_p95_pct": 1.2406599125824868e-09,
+      "err_max_pct": 1.2406599125824868e-09,
+      "predicted_rel_std_pct": 7.583505247588057
+    },
+    {
+      "case": "both -20%",
+      "k1_true": 40000.0,
+      "k2_true": 40000.0,
+      "rpm": 1750.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 5.683963304298605,
+      "err_p95_pct": 11.79851511657316,
+      "err_max_pct": 14.190568134202202,
+      "predicted_rel_std_pct": 7.545625098874768
+    },
+    {
+      "case": "both -20%",
+      "k1_true": 40000.0,
+      "k2_true": 40000.0,
+      "rpm": 3600.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 7.2764487413223824e-09,
+      "err_p95_pct": 7.2764487413223824e-09,
+      "err_max_pct": 7.2764487413223824e-09,
+      "predicted_rel_std_pct": 29.04115299033066
+    },
+    {
+      "case": "both -20%",
+      "k1_true": 40000.0,
+      "k2_true": 40000.0,
+      "rpm": 3600.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 24.225264515123975,
+      "err_p95_pct": 44.472533584463946,
+      "err_max_pct": 47.544908555253876,
+      "predicted_rel_std_pct": 29.18559403522007
+    },
+    {
+      "case": "asym -25%/-5%",
+      "k1_true": 37500.0,
+      "k2_true": 47500.0,
+      "rpm": 1750.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 1.0969846411363074e-09,
+      "err_p95_pct": 1.0969846411363074e-09,
+      "err_max_pct": 1.0969846411363074e-09,
+      "predicted_rel_std_pct": 7.081872569982141
+    },
+    {
+      "case": "asym -25%/-5%",
+      "k1_true": 37500.0,
+      "k2_true": 47500.0,
+      "rpm": 1750.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 4.837365863886814,
+      "err_p95_pct": 9.970893410172227,
+      "err_max_pct": 13.31542999903552,
+      "predicted_rel_std_pct": 7.058126691241915
+    },
+    {
+      "case": "asym -25%/-5%",
+      "k1_true": 37500.0,
+      "k2_true": 47500.0,
+      "rpm": 3600.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 4.7639283972481885e-09,
+      "err_p95_pct": 4.7639283972481885e-09,
+      "err_max_pct": 4.7639283972481885e-09,
+      "predicted_rel_std_pct": 29.741530469361294
+    },
+    {
+      "case": "asym -25%/-5%",
+      "k1_true": 37500.0,
+      "k2_true": 47500.0,
+      "rpm": 3600.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 22.83640187347309,
+      "err_p95_pct": 44.023838292023825,
+      "err_max_pct": 47.94085040269682,
+      "predicted_rel_std_pct": 30.658546127160513
+    },
+    {
+      "case": "K1 -30%",
+      "k1_true": 35000.0,
+      "k2_true": 50000.0,
+      "rpm": 1750.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 4.204644937999546e-09,
+      "err_p95_pct": 4.204644937999546e-09,
+      "err_max_pct": 4.204644937999546e-09,
+      "predicted_rel_std_pct": 6.870026321507725
+    },
+    {
+      "case": "K1 -30%",
+      "k1_true": 35000.0,
+      "k2_true": 50000.0,
+      "rpm": 1750.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 5.4103558834547645,
+      "err_p95_pct": 10.300614275598761,
+      "err_max_pct": 12.325054669837817,
+      "predicted_rel_std_pct": 6.899150814959119
+    },
+    {
+      "case": "K1 -30%",
+      "k1_true": 35000.0,
+      "k2_true": 50000.0,
+      "rpm": 3600.0,
+      "noise": "none",
+      "n_trials": 1,
+      "err_mean_pct": 3.352657326364092e-09,
+      "err_p95_pct": 3.352657326364092e-09,
+      "err_max_pct": 3.352657326364092e-09,
+      "predicted_rel_std_pct": 30.265008346509454
+    },
+    {
+      "case": "K1 -30%",
+      "k1_true": 35000.0,
+      "k2_true": 50000.0,
+      "rpm": 3600.0,
+      "noise": "+/-5% amp, +/-0.05 rad phase",
+      "n_trials": 40,
+      "err_mean_pct": 23.308304321822014,
+      "err_p95_pct": 49.67097008074039,
+      "err_max_pct": 64.81688022841115,
+      "predicted_rel_std_pct": 29.98654090943736
+    }
+  ],
+  "physics_rul": {
+    "seeds": [
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109
+    ],
+    "decay_per_hour": 0.0016,
+    "checkpoints": [
+      {
+        "life_fraction": 0.5,
+        "n_runs": 10,
+        "err_mean_pct": 15.797235976071878,
+        "err_max_pct": 59.715904590097544
+      },
+      {
+        "life_fraction": 0.7,
+        "n_runs": 10,
+        "err_mean_pct": 10.85395427748026,
+        "err_max_pct": 37.13007936403883
+      },
+      {
+        "life_fraction": 0.85,
+        "n_runs": 10,
+        "err_mean_pct": 23.743970356633007,
+        "err_max_pct": 38.39643844087351
+      }
+    ]
+  }
+}
