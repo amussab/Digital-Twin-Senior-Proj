@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DigitalTwin.Backend/DigitalTwin.Backend.csproj" />
+    <Project Path="src/DigitalTwin.Dashboard.SignalR/DigitalTwin.Dashboard.SignalR.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DigitalTwin.Backend.Tests/DigitalTwin.Backend.Tests.csproj" />
+  </Folder>
+</Solution>
