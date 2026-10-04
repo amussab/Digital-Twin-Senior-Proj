@@ -29,7 +29,9 @@ public sealed record BearingResult(
 /// <summary>Extra per-bearing engine output (stage, forecast, threshold class, RUL interval) for the API and parity tests.</summary>
 public sealed record BearingDetails(
     int HealthStage, bool OnsetDetected, string RulThresholdClass, double[] HiForecast,
-    double RulLoHours, double RulHiHours, double TftMs, double NhitsMs, double[]? TftEncoder = null, double[]? TftDecoder = null);
+    double RulLoHours, double RulHiHours, double TftMs, double NhitsMs,
+    [property: System.Text.Json.Serialization.JsonIgnore] double[]? TftEncoder = null,
+    [property: System.Text.Json.Serialization.JsonIgnore] double[]? TftDecoder = null);
 
 public sealed record PipelineState(
     WindowPayload? Window,

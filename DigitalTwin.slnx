@@ -4,6 +4,9 @@
     <Project Path="src/DigitalTwin.Dashboard/DigitalTwin.Dashboard.csproj" />
     <Project Path="src/DigitalTwin.Twin/DigitalTwin.Twin.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/DemoMeasure/DemoMeasure.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DigitalTwin.Backend.Tests/DigitalTwin.Backend.Tests.csproj" />
     <Project Path="tests/DigitalTwin.Twin.Tests/DigitalTwin.Twin.Tests.csproj" />

@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Client;
 using Xunit;
+using Microsoft.Extensions.DependencyInjection;
+using DigitalTwin.Backend;
 using Xunit.Abstractions;
 
 namespace DigitalTwin.Backend.Tests;
@@ -48,6 +50,7 @@ public class BackendFactory : WebApplicationFactory<Program>
         b.UseSetting("Backend:Udp:Enabled", "false");
         b.UseSetting("Backend:Replay:Enabled", "false");
         b.UseSetting("Backend:BaselineWindowsOverride", "3");
+        b.UseSetting("Backend:PhysicsTwin", "None");
         b.UseSetting("Backend:ModelContractPath", "does-not-exist/model_contract.json");
         b.UseSetting("Urls", "http://127.0.0.1:0");
     }
@@ -257,5 +260,106 @@ public class FeatureEngineerTests
         Assert.True(healthy[c.Index("hi")] < 0.1);
         Assert.True(worn[c.Index("hi")] > healthy[c.Index("hi")] + 0.3);
         Assert.True(worn[c.Index("bpfo_share")] > 0.5);
+    }
+}
+
+/// <summary>C5: the remote-address guard returns 403 for any non-private address.</summary>
+public class LanOnlyTests
+{
+    private static async Task<int> Status(string ip)
+    {
+        var ctx = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        ctx.Connection.RemoteIpAddress = IPAddress.Parse(ip);
+        ctx.Response.Body = new MemoryStream();
+        var guard = new DigitalTwin.Backend.Services.PrivateNetworkGuard(c => Task.CompletedTask,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<DigitalTwin.Backend.Services.PrivateNetworkGuard>.Instance);
+        await guard.Invoke(ctx);
+        return ctx.Response.StatusCode;
+    }
+
+    [Theory]
+    [InlineData("8.8.8.8")]
+    [InlineData("203.0.113.9")]
+    [InlineData("172.32.0.1")]
+    [InlineData("2001:4860:4860::8888")]
+    public async Task NonPrivateRemote_Gets403(string ip) => Assert.Equal(403, await Status(ip));
+
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("10.1.2.3")]
+    [InlineData("172.20.0.5")]
+    [InlineData("192.168.1.50")]
+    [InlineData("fe80::1")]
+    public async Task PrivateRemote_Passes(string ip) => Assert.Equal(200, await Status(ip));
+}
+
+public class RealEngineIntegrationTests : IClassFixture<RealEngineFactory>
+{
+    private readonly RealEngineFactory _f; private readonly ITestOutputHelper _out;
+    public RealEngineIntegrationTests(RealEngineFactory f, ITestOutputHelper o) { _f = f; _out = o; }
+
+    private (DigitalTwin.Backend.Services.Pipeline Pipe, DigitalTwin.Backend.Services.StateStore Store, DigitalTwin.Backend.Services.SnapshotFactory Snap) Get()
+    {
+        _ = _f.Server;
+        var sp = _f.Services;
+        return (sp.GetRequiredService<DigitalTwin.Backend.Services.Pipeline>(), sp.GetRequiredService<DigitalTwin.Backend.Services.StateStore>(), sp.GetRequiredService<DigitalTwin.Backend.Services.SnapshotFactory>());
+    }
+
+    [Fact]
+    public async Task DemoReplay_Bearing1_ReachesFault_Bearing2_StaysHealthy_RealOnnx()
+    {
+        var (pipe, store, snap) = Get();
+        pipe.Reset();
+        Assert.False(pipe.Engine.IsSimulated);
+        var recs = ReplaySource.Load(DigitalTwin.Backend.Config.Paths.Resolve("AI-engine/models/demo_payloads.bin"));
+        Assert.Equal(339, recs.Count);
+        int b1Fault = 0, b2Fault = 0, ready = 0; var lat = new List<double>();
+        foreach (var r in recs)
+        {
+            var t0 = Stopwatch.GetTimestamp();
+            await pipe.IngestAsync(PayloadCodec.Encode(r), "test");
+            lat.Add((Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency);
+            var s = snap.Build(store.Current, DateTimeOffset.UtcNow);
+            if (store.Current.Bearings.All(b => b.State == BearingStates.Ready)) { ready++; if (s.Bearing1Fault != null) b1Fault++; if (s.Bearing2Fault != null) b2Fault++; }
+            Assert.Null(s.PhysicsRulHours);   // public data has no displacement probes: physics stays null, not fabricated
+        }
+        _out.WriteLine($"ready windows {ready}: bearing1 fault alerts {b1Fault}, bearing2 fault alerts {b2Fault}");
+        var last = snap.Build(store.Current, DateTimeOffset.UtcNow);
+        Assert.NotNull(last.Bearing1Fault);                    // run-to-failure bearing flagged by the end
+        Assert.True(b1Fault > ready * 0.4, "bearing 1 should be flagged for a large part of the degraded run");
+        Assert.True(b2Fault < ready * 0.1, "healthy stream bearing 2 should rarely alarm");
+        lat.Sort();
+        _out.WriteLine($"MEASURED in-process ingest->snapshot (real ONNX) p50={lat[lat.Count / 2]:F1} ms p95={lat[(int)(lat.Count * 0.95)]:F1} ms");
+        Assert.True(lat[(int)(lat.Count * 0.95)] < 500);
+    }
+
+    [Fact]
+    public async Task TwinSim_PopulatesPhysicsRulAndResidual_AsSimulation()
+    {
+        var (pipe, store, snap) = Get();
+        pipe.Reset();
+        var recs = SyntheticWindows.DegradingRun(240, hoursPerWindow: 0.05);
+        DigitalTwin.Backend.Models.DashboardSnapshot? last = null; var withPhys = 0;
+        foreach (var r in recs)
+        {
+            await pipe.IngestAsync(PayloadCodec.Encode(r), "test");
+            last = snap.Build(store.Current, DateTimeOffset.UtcNow);
+            if (last.PhysicsRulHours is not null) withPhys++;
+        }
+        _out.WriteLine($"[SIMULATION] windows with physics RUL: {withPhys}; last ai={last!.AiRulHours:F2} h physics={last.PhysicsRulHours:F2} h residual={last.RulResidualPercent:F1} %");
+        Assert.True(withPhys > 60);
+        Assert.NotNull(last.RulResidualPercent);
+    }
+}
+
+public class RealEngineFactory : WebApplicationFactory<Program>
+{
+    protected override void ConfigureWebHost(IWebHostBuilder b)
+    {
+        b.UseSetting("Backend:Udp:Enabled", "false");
+        b.UseSetting("Backend:Replay:Enabled", "false");
+        b.UseSetting("Backend:ModelContractPath", "AI-engine/models/model_contract.json");
+        b.UseSetting("Backend:DashboardPath", "");
+        b.UseSetting("Urls", "http://127.0.0.1:0");
     }
 }

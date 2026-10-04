@@ -69,6 +69,8 @@ if (serveDash)
     var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
     provider.Mappings[".dat"] = "application/octet-stream";
     provider.Mappings[".blat"] = "application/octet-stream";
+    provider.Mappings[".glb"] = "model/gltf-binary";   // 3D pump viewer asset
+    provider.Mappings[".gltf"] = "model/gltf+json";
     var fp = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(Path.GetFullPath(dashDir));
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fp });
     app.UseStaticFiles(new StaticFileOptions { FileProvider = fp, ContentTypeProvider = provider });

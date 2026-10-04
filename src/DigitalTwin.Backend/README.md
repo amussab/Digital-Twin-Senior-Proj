@@ -66,11 +66,8 @@ curl http://localhost:5080/api/metrics                                       # l
 Test numbers are in-process (no network, stub engine) and `[SYNTHETIC]`; re-measure on the chosen server
 hardware with the real ONNX engine before quoting them.
 
-## Pending the final `model_contract.json`
+## Status after integration (see /INTEGRATION.md)
 
-- `TensorMapper` is written against the AI-test contract shape; re-check once the per-bearing engine lands.
-- RUL procedure (exponential trend to class threshold) follows `rul_procedure`; the population-prior blend and the
-  exact `rul_calibration` threshold keys are not yet mirrored.
-- `golden_vectors.json` parity test is skipped until the file exists (assumed schema documented in the test).
-- Persisted per-machine baselines are not implemented; baselines are re-collected at each start.
-- `IPhysicsTwin` has only the null implementation (PhysicsRulHours = null).
+- `OnnxInferenceEngine` mirrors `AI-engine/aiengine/engine.py` + `rul.py` for contract v2 (per-bearing, 21 engineered
+  features, class-conditioned RUL threshold, loglin RUL). Golden parity test runs and passes.
+- Not implemented: persisted per-machine baselines (re-collected at each start).
