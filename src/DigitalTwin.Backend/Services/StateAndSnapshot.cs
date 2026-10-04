@@ -33,7 +33,8 @@ public sealed class SnapshotFactory
 
         var rul = w.RulHours ?? -1;
         double? residual = null;
-        if (s.PhysicsRulHours is { } p && p > 0 && w.RulHours is { } a) residual = Math.Abs(a - p) / p * 100;
+        // IS2 residual (twin README): |physics - AI| / AI x 100.
+        if (s.PhysicsRulHours is { } p && w.RulHours is { } a && a > 0) residual = Math.Abs(p - a) / a * 100;
         return new DashboardSnapshot("1.0", now, _o.MachineId, s.Window.Rpm, rul, w.FaultClass,
             Math.Round(w.ConfidencePercent, 2), Math.Round(Math.Clamp((w.HealthIndex ?? 0) * 100, 0, 100), 2),
             Math.Round(s.LastProcessingMs, 3), connected, s.PhysicsRulHours, residual);

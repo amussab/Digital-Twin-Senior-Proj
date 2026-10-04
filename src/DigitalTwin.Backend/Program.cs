@@ -31,7 +31,18 @@ builder.Services.AddSingleton<IInferenceEngine>(sp =>
     log.LogWarning("*** USING SIMULATED STUB INFERENCE ENGINE (IsSimulated=true): outputs are NOT model predictions ***");
     return new StubInferenceEngine(opt.HoursPerWindow);
 });
-builder.Services.AddSingleton<IPhysicsTwin, NullPhysicsTwin>();
+builder.Services.AddSingleton<IPhysicsTwin>(sp =>
+{
+    var opt = sp.GetRequiredService<IOptions<BackendOptions>>().Value;
+    var log = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Twin");
+    if (string.Equals(opt.PhysicsTwin, "FeBeam", StringComparison.OrdinalIgnoreCase))
+    {
+        log.LogWarning("Physics twin: FE-beam (INITIAL, assumed rotor geometry, [SIMULATION]-verified only)");
+        return new FeBeamPhysicsTwinAdapter(opt.HoursPerWindow);
+    }
+    log.LogInformation("Physics twin disabled (Backend:PhysicsTwin={V}); PhysicsRulHours = null", opt.PhysicsTwin);
+    return new NullPhysicsTwin();
+});
 builder.Services.AddSingleton<StateStore>();
 builder.Services.AddSingleton<SnapshotFactory>();
 builder.Services.AddSingleton<SnapshotPublisher>();
@@ -47,6 +58,20 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
 var app = builder.Build();
 app.UseMiddleware<PrivateNetworkGuard>();
 app.UseCors();
+
+// Serve the published Blazor WASM dashboard from this process (one LAN URL).
+var dashDir = app.Services.GetRequiredService<IOptions<BackendOptions>>().Value.DashboardPath;
+var serveDash = !string.IsNullOrWhiteSpace(dashDir) && Directory.Exists(dashDir);
+if (serveDash)
+{
+    var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+    provider.Mappings[".dat"] = "application/octet-stream";
+    provider.Mappings[".blat"] = "application/octet-stream";
+    var fp = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(Path.GetFullPath(dashDir));
+    app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fp });
+    app.UseStaticFiles(new StaticFileOptions { FileProvider = fp, ContentTypeProvider = provider });
+    app.Logger.LogInformation("Serving dashboard from {Dir}", Path.GetFullPath(dashDir));
+}
 
 app.MapHub<DashboardHub>("/hubs/dashboard");
 
@@ -81,6 +106,9 @@ app.MapGet("/api/metrics", (LatencyRecorder l, IInferenceEngine e) =>
     Results.Ok(new { isSimulated = e.IsSimulated, rejects = l.Rejects, stages = l.Snapshot() }));
 
 app.MapGet("/api/health", (IInferenceEngine e) => Results.Ok(new { status = "ok", isSimulated = e.IsSimulated }));
+
+if (serveDash)
+    app.MapFallbackToFile("index.html", new StaticFileOptions { FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(Path.GetFullPath(dashDir)) });
 
 app.Logger.LogInformation("C5: LAN-only. Make sure Urls binds to a LAN address and no outbound calls are configured.");
 app.Run();

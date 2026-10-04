@@ -9,6 +9,9 @@
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.*" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DigitalTwin.Twin\DigitalTwin.Twin.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="DigitalTwin.Backend.Tests" />
   </ItemGroup>
 </Project>

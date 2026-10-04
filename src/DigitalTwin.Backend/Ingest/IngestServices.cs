@@ -90,10 +90,20 @@ public static class SyntheticWindows
     public static List<WindowPayload> DegradingRun(int n, int healthyWindows = 60, int seed = 7)
     {
         var rng = new Random(seed); var list = new List<WindowPayload>(n);
+        var beam = new DigitalTwin.Twin.FeBeam(); var unb = System.Numerics.Complex.FromPolarCoordinates(1e-5, 0.5);
         for (var i = 0; i < n; i++)
         {
             var g = i < healthyWindows ? 1.0 : Math.Exp(3.0 * (i - healthyWindows) / Math.Max(1, n - healthyWindows));
-            list.Add(Make(i, 1750f, g, 1.0, rng));
+            var w = Make(i, 1750f, g, 1.0, rng);
+            // Displacements from the FE-beam forward model with bearing-1 stiffness decaying to a 30 % drop
+            // at the end of the run (SYNTHETIC; +/-5 % amplitude, +/-0.05 rad phase noise, assumed unbalance).
+            var prog = i < healthyWindows ? 0.0 : (double)(i - healthyWindows) / Math.Max(1, n - healthyWindows);
+            var k0 = beam.P.KNominal;
+            var pr = beam.Probes(k0[0] * Math.Exp(Math.Log(0.70) * prog), k0[1], 1750, unb);
+            double N(double v, double rel) => v * (1 + rel * (2 * rng.NextDouble() - 1));
+            double Np(double v) => v + 0.05 * (2 * rng.NextDouble() - 1);
+            var disp = new[] { (float)N(pr.A1, 0.05), (float)Np(pr.Ph1), (float)N(pr.A2, 0.05), (float)Np(pr.Ph2) };
+            list.Add(w with { Displacements = disp });
         }
         return list;
     }

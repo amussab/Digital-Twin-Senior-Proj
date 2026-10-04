@@ -16,6 +16,10 @@ public sealed class BackendOptions
     public int BaselineWindowsOverride { get; set; }
     /// <summary>Operating hours represented by one window step, used to convert window counts to RUL hours.</summary>
     public double HoursPerWindow { get; set; } = 0.05;
+    /// <summary>"FeBeam" = FE-beam physics twin (DigitalTwin.Twin); "None" = no physics estimate (PhysicsRulHours null). Fallback while the twin is not commissioned on the real rig.</summary>
+    public string PhysicsTwin { get; set; } = "FeBeam";
+    /// <summary>Folder holding the published Blazor WASM dashboard (wwwroot). Served from the backend if it exists (one process, one LAN URL).</summary>
+    public string DashboardPath { get; set; } = "";
     public UdpOptions Udp { get; set; } = new();
     public ReplayOptions Replay { get; set; } = new();
 }
@@ -30,7 +34,8 @@ public sealed class UdpOptions
 public sealed class ReplayOptions
 {
     public bool Enabled { get; set; }
-    /// <summary>.bin (concatenated 152-byte records) or .csv (rpm + 32 features + 4 disp). Empty + Synthetic=true generates a SYNTHETIC degrading run.</summary>
+    /// <summary>RECORDED PAYLOAD FILE. .bin (concatenated 152-byte records) or .csv (rpm + 32 features + 4 disp).
+    /// AI-engine will produce AI-engine/models/demo_payloads.bin; set Backend:Replay:Path to it. Empty + Synthetic=true generates a SYNTHETIC degrading run.</summary>
     public string Path { get; set; } = "";
     public bool Synthetic { get; set; }
     public double RateHz { get; set; } = 1;
