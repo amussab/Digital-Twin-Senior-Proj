@@ -26,105 +26,122 @@
 }
 else
 {
-    <section class="metrics-grid">
-        <MetricCard Label="Health Index"
-                    Value="@($"{Snapshot.HealthIndexPercent:F0}%")"
-                    Detail="Overall estimated condition"
-                    AccentClass="accent-cyan" />
+    <div class="dashboard-workspace">
 
-        <MetricCard Label="AI Remaining Life"
-                    Value="@($"{Snapshot.AiRulHours:F0} h")"
-                    Detail="N-HiTS estimate"
-                    AccentClass="accent-violet" />
+        <section class="dashboard-main">
 
-        <MetricCard Label="Fault State"
-                    Value="@Snapshot.FaultClass"
-                    Detail="@($"{Snapshot.FaultConfidencePercent:F1}% confidence")"
-                    AccentClass="@(Snapshot.FaultClass == "Healthy"
-                                ? "accent-green"
-                                : "accent-orange")" />
+            <section class="metrics-grid">
+                <MetricCard Label="Health Index"
+                            Value="@($"{Snapshot.HealthIndexPercent:F0}%")"
+                            Detail="Overall estimated condition"
+                            AccentClass="accent-cyan" />
 
-        <MetricCard Label="Shaft Speed"
-                    Value="@($"{Snapshot.Rpm:F0} RPM")"
-                    Detail="20-revolution window"
-                    AccentClass="accent-blue" />
-    </section>
+                <MetricCard Label="AI Remaining Life"
+                            Value="@($"{Snapshot.AiRulHours:F0} h")"
+                            Detail="N-HiTS estimate"
+                            AccentClass="accent-violet" />
 
-    <section class="content-grid" id="trends">
-        <TrendChart Title="AI RUL Trend"
-                    CurrentValue="@($"{Snapshot.AiRulHours:F0} hours")"
-                    Values="RulHistory" />
+                <MetricCard Label="Fault State"
+                            Value="@Snapshot.FaultClass"
+                            Detail="@($"{Snapshot.FaultConfidencePercent:F1}% confidence")"
+                            AccentClass="@(Snapshot.FaultClass == "Healthy"
+                                                ? "accent-green"
+                                                : "accent-orange")" />
 
-        <article class="system-panel">
+                <MetricCard Label="Shaft Speed"
+                            Value="@($"{Snapshot.Rpm:F0} RPM")"
+                            Detail="20-revolution window"
+                            AccentClass="accent-blue" />
+            </section>
+
+            <TrendChart Title="AI RUL Trend"
+                        CurrentValue="@($"{Snapshot.AiRulHours:F0} hours")"
+                        Values="RulHistory" />
+
+            <section class="lower-grid">
+                <article class="system-panel">
+                    <div class="panel-heading">
+                        <span>Physics Comparison</span>
+                        <span class="tag">Optional input</span>
+                    </div>
+
+                    @if (Snapshot.PhysicsRulHours is double physicsRul)
+                    {
+                        <div class="comparison-row">
+                            <span>Physics RUL</span>
+                            <strong>@physicsRul.ToString("F0") h</strong>
+                        </div>
+
+                        <div class="comparison-row">
+                            <span>AI RUL</span>
+                            <strong>@Snapshot.AiRulHours.ToString("F0") h</strong>
+                        </div>
+
+                        <div class="comparison-row">
+                            <span>Residual</span>
+                            <strong>@Snapshot.RulResidualPercent?.ToString("F1")%</strong>
+                        </div>
+                    }
+                </article>
+
+                <article class="system-panel">
+                    <div class="panel-heading">
+                        <span>System Diagnostics</span>
+                        <span class="tag success">Nominal</span>
+                    </div>
+
+                    <div class="comparison-row">
+                        <span>Processing latency</span>
+                        <strong>@Snapshot.ProcessingLatencyMs.ToString("F0") ms</strong>
+                    </div>
+
+                    <div class="comparison-row">
+                        <span>Last data</span>
+                        <strong>@Snapshot.TimestampUtc.ToLocalTime().ToString("HH:mm:ss")</strong>
+                    </div>
+
+                    <div class="comparison-row">
+                        <span>Contract version</span>
+                        <strong>@($"v{Snapshot.SchemaVersion}")</strong>
+                    </div>
+                </article>
+            </section>
+
+        </section>
+
+        <aside class="system-panel inspection-panel">
             <div class="panel-heading">
-                <span>Digital Twin</span>
-                <strong>@($"{Snapshot.HealthIndexPercent:F0}%")</strong>
+                <span>3D Pump Inspection</span>
+                <strong>@($"{Snapshot.HealthIndexPercent:F0}% health")</strong>
             </div>
 
-            <PumpTwin />
+            <PumpViewer3D Bearing1Fault="@Snapshot.Bearing1Fault"
+                          Bearing2Fault="@Snapshot.Bearing2Fault"
+                          FaultConfidencePercent="@Snapshot.FaultConfidencePercent" />
 
             <div class="health-bar">
                 <span style="width: @($"{Snapshot.HealthIndexPercent}%")"></span>
             </div>
 
-            <p>
-                Current operating condition based on the latest accepted sensor window.
-            </p>
-        </article>
-    </section>
-
-    <section class="lower-grid" id="diagnostics">
-        <article class="system-panel">
-            <div class="panel-heading">
-                <span>Physics Comparison</span>
-                <span class="tag">Optional input</span>
-            </div>
-
-            @if (Snapshot.PhysicsRulHours is double physicsRul)
-            {
+            <div class="inspection-details">
                 <div class="comparison-row">
-                    <span>Physics RUL</span>
-                    <strong>@physicsRul.ToString("F0") h</strong>
+                    <span>Machine</span>
+                    <strong>@Snapshot.MachineId</strong>
                 </div>
 
                 <div class="comparison-row">
-                    <span>AI RUL</span>
-                    <strong>@Snapshot.AiRulHours.ToString("F0") h</strong>
+                    <span>Detected condition</span>
+                    <strong>@Snapshot.FaultClass</strong>
                 </div>
 
                 <div class="comparison-row">
-                    <span>Residual</span>
-                    <strong>@Snapshot.RulResidualPercent?.ToString("F1")%</strong>
+                    <span>Confidence</span>
+                    <strong>@Snapshot.FaultConfidencePercent.ToString("F1")%</strong>
                 </div>
-            }
-            else
-            {
-                <p>Physics estimator is not connected.</p>
-            }
-        </article>
-
-        <article class="system-panel">
-            <div class="panel-heading">
-                <span>System Diagnostics</span>
-                <span class="tag success">Nominal</span>
             </div>
+        </aside>
 
-            <div class="comparison-row">
-                <span>Processing latency</span>
-                <strong>@Snapshot.ProcessingLatencyMs.ToString("F0") ms</strong>
-            </div>
-
-            <div class="comparison-row">
-                <span>Last data</span>
-                <strong>@Snapshot.TimestampUtc.ToLocalTime().ToString("HH:mm:ss")</strong>
-            </div>
-
-            <div class="comparison-row">
-                <span>Contract version</span>
-                <strong>@($"v{Snapshot.SchemaVersion}")</strong>
-            </div>
-        </article>
-    </section>
+    </div>
 }
 
 @code {
