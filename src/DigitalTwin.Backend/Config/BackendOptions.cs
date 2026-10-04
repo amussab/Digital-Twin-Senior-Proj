@@ -7,7 +7,9 @@ public sealed class BackendOptions
     /// <summary>Path to model_contract.json (the ONLY source of model metadata).</summary>
     public string ModelContractPath { get; set; } = "AI-engine/models/model_contract.json";
     /// <summary>Re-broadcast period; 100 ms = 10 Hz (spec S9).</summary>
-    public int BroadcastIntervalMs { get; set; } = 100;
+    // 50 ms (20 Hz nominal): Windows timer granularity (~15.6 ms) stretches a 100 ms period to
+    // ~9.9 Hz measured, which would fail S9 (>=10 Hz). 20 Hz gives 2x margin.
+    public int BroadcastIntervalMs { get; set; } = 50;
     /// <summary>IsConnected turns false if no payload arrived within this many seconds.</summary>
     public double ConnectionTimeoutSeconds { get; set; } = 5;
     /// <summary>Overrides contract baseline_windows (demo/test only). 0 = use contract.</summary>

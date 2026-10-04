@@ -22,7 +22,7 @@ and `/api/health` report `isSimulated: true`. Stub output is a heuristic, not a 
 |---|---|
 | UDP `:5005` | one datagram = one 152-byte little-endian payload |
 | `POST /api/payload` | same payload as `application/octet-stream` (fallback) |
-| `/hubs/dashboard` (SignalR) | event `snapshot` carrying `DashboardSnapshot` (camelCase JSON), pushed on every payload and re-broadcast every 100 ms |
+| `/hubs/dashboard` (SignalR) | event `snapshot` carrying `DashboardSnapshot` (camelCase JSON), pushed on every payload and re-broadcast every 50 ms (20 Hz nominal; S9 requires ≥10 Hz) |
 | `GET /api/state` | engine info, both bearings (class, confidence, HI, RUL, buffer fill), current snapshot |
 | `GET /api/metrics` | p50/p95/max per stage: `decode`, `features`, `inference`, `broadcast`, `total_ingest_to_broadcast`; reject count |
 | `GET /api/health` | liveness + `isSimulated` |
@@ -38,7 +38,7 @@ its encoder buffer.
 
 ## Config (`appsettings.json`, section `Backend`)
 
-`MachineId`, `ModelContractPath`, `BroadcastIntervalMs` (100; use 80 for margin over the 10 Hz floor on
+`MachineId`, `ModelContractPath`, `BroadcastIntervalMs` (50 = 20 Hz nominal, 2x margin over the S9 10 Hz floor given Windows timer granularity on
 Windows timers), `ConnectionTimeoutSeconds`, `BaselineWindowsOverride`, `HoursPerWindow`,
 `Udp.{Enabled,Port,BindAddress}`, `Replay.{Enabled,Path,Synthetic,RateHz,Loop}`. Replay `Path` is a `.bin`
 (concatenated 152-byte records) or `.csv` (rpm, 32 features, 4 displacements per row).
