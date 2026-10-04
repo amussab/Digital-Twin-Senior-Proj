@@ -1,0 +1,407 @@
+{
+  "contract_version": 2,
+  "generated_utc": "2026-10-04T19:29:20+00:00",
+  "generated_by": "AI-engine/aiengine/export.py",
+  "provenance": {
+    "datasets": [
+      "synthetic_rig"
+    ],
+    "real_data": [],
+    "synthetic": true,
+    "seed": 20261004,
+    "git_commit": "2b7a1cd",
+    "git_dirty": true,
+    "command": "app.py export --datasets synthetic_rig --run synthetic",
+    "run": "synthetic",
+    "host": "Windows 10, Intel64 Family 6 Model 183 Stepping 1, GenuineIntel, torch 2.14.0+cpu",
+    "counts": {
+      "synthetic_rig": {
+        "test": {
+          "units": 20,
+          "windows": 8928
+        },
+        "train": {
+          "units": 60,
+          "windows": 23568
+        },
+        "val": {
+          "units": 16,
+          "windows": 6970
+        }
+      }
+    }
+  },
+  "model_unit": "one biaxial bearing: 16 raw features = X's 8 then Y's 8 (COE C7 order)",
+  "wire_payload": {
+    "size_bytes": 152,
+    "byte_order": "little-endian",
+    "fields": [
+      {
+        "offset": 0,
+        "type": "float32",
+        "name": "rpm"
+      },
+      {
+        "offset": 4,
+        "type": "float32[32]",
+        "name": "features"
+      },
+      {
+        "offset": 132,
+        "type": "float32[4]",
+        "name": [
+          "p1_amp_um",
+          "p1_phase_rad",
+          "p2_amp_um",
+          "p2_phase_rad"
+        ]
+      },
+      {
+        "offset": 148,
+        "type": "uint32",
+        "name": "t20_ms"
+      }
+    ],
+    "bearing_slices": {
+      "1": [
+        0,
+        16
+      ],
+      "2": [
+        16,
+        32
+      ]
+    },
+    "note": "COE doc: 152 bytes; FDR deck: 168 (unreconciled)."
+  },
+  "raw_bearing_feature_order": [
+    "x_bp_rms",
+    "x_bp_kurtosis",
+    "x_bp_crest",
+    "x_env_rms",
+    "x_ftf_mag",
+    "x_bsf_mag",
+    "x_bpfo_mag",
+    "x_bpfi_mag",
+    "y_bp_rms",
+    "y_bp_kurtosis",
+    "y_bp_crest",
+    "y_env_rms",
+    "y_ftf_mag",
+    "y_bsf_mag",
+    "y_bpfo_mag",
+    "y_bpfi_mag"
+  ],
+  "feature_engineering": {
+    "engineered_order": [
+      "hi",
+      "log_env_ratio",
+      "log_bp_ratio",
+      "kurtosis_max",
+      "crest_max",
+      "kurtosis_rise",
+      "axis_asymmetry",
+      "ftf_share",
+      "bsf_share",
+      "bpfo_share",
+      "bpfi_share",
+      "family_contrast",
+      "log_ftf_ratio",
+      "log_bsf_ratio",
+      "log_bpfo_ratio",
+      "log_bpfi_ratio",
+      "raw_ftf_share",
+      "raw_bsf_share",
+      "raw_bpfo_share",
+      "raw_bpfi_share",
+      "rpm_norm"
+    ],
+    "baseline": {
+      "windows": 24,
+      "statistic": "median",
+      "rel_floor": 1e-06,
+      "rig_policy": "commissioning capture (spec M5); else median of first 24 windows"
+    },
+    "eps": 1e-09,
+    "health_index": {
+      "r_ref": 20.0,
+      "curve_k": 1.0,
+      "weights": {
+        "env_rms": 0.45,
+        "bp_rms": 0.3,
+        "family_max": 0.25
+      },
+      "clip_max": 1.5,
+      "formula": "fused = max(env_ratio_max,1)^w_env * max(bp_ratio_max,1)^w_bp * max(family_ratio_max,1)^w_fam; hi = clip(log1p(k(fused-1))/log1p(k(r_ref-1)), 0, clip_max)"
+    },
+    "rpm_norm": {
+      "center": 2675.0,
+      "scale": 925.0
+    },
+    "reference_impl": "aiengine/features.py::engineer_arrays"
+  },
+  "onset": {
+    "sigmas": 3.0,
+    "consecutive": 3,
+    "sigma_floor": 0.02,
+    "baseline_windows": 24
+  },
+  "classes": {
+    "labels": [
+      "ball",
+      "cage",
+      "healthy",
+      "inner_race",
+      "outer_race"
+    ],
+    "index_is_output_channel": true,
+    "note": "alphabetical (label encoder) order; apply softmax to logits"
+  },
+  "models": {
+    "tft": {
+      "onnx": "tft.onnx",
+      "encoder_length": 6,
+      "decoder_length": 1,
+      "columns": [
+        "hi",
+        "log_env_ratio",
+        "log_bp_ratio",
+        "kurtosis_max",
+        "crest_max",
+        "kurtosis_rise",
+        "axis_asymmetry",
+        "ftf_share",
+        "bsf_share",
+        "bpfo_share",
+        "bpfi_share",
+        "family_contrast",
+        "log_ftf_ratio",
+        "log_bsf_ratio",
+        "log_bpfo_ratio",
+        "log_bpfi_ratio",
+        "raw_ftf_share",
+        "raw_bsf_share",
+        "raw_bpfo_share",
+        "raw_bpfi_share",
+        "rpm_norm"
+      ],
+      "scalers": {
+        "hi": {
+          "center": 0.1927848498397915,
+          "scale": 0.19457914469515195,
+          "kind": "standard"
+        },
+        "log_env_ratio": {
+          "center": 0.4922410259524788,
+          "scale": 0.5455549601105024,
+          "kind": "standard"
+        },
+        "log_bp_ratio": {
+          "center": 0.4011021156677014,
+          "scale": 0.42655532090458653,
+          "kind": "standard"
+        },
+        "kurtosis_max": {
+          "center": 5.12915877295811,
+          "scale": 2.4941798593334705,
+          "kind": "standard"
+        },
+        "crest_max": {
+          "center": 5.3366347706831805,
+          "scale": 1.3717987280069124,
+          "kind": "standard"
+        },
+        "kurtosis_rise": {
+          "center": 1.6789351660214773,
+          "scale": 2.2782968835983106,
+          "kind": "standard"
+        },
+        "axis_asymmetry": {
+          "center": -0.000856794385192276,
+          "scale": 0.06141307219428941,
+          "kind": "standard"
+        },
+        "ftf_share": {
+          "center": 0.23488346296024318,
+          "scale": 0.06814754697584068,
+          "kind": "standard"
+        },
+        "bsf_share": {
+          "center": 0.24571502953736163,
+          "scale": 0.08278873029387124,
+          "kind": "standard"
+        },
+        "bpfo_share": {
+          "center": 0.2674076914545768,
+          "scale": 0.10329939394238816,
+          "kind": "standard"
+        },
+        "bpfi_share": {
+          "center": 0.25199381598364373,
+          "scale": 0.09015364097370879,
+          "kind": "standard"
+        },
+        "family_contrast": {
+          "center": 0.12817070981725778,
+          "scale": 0.13731429444624182,
+          "kind": "standard"
+        },
+        "log_ftf_ratio": {
+          "center": 0.5188564812470218,
+          "scale": 0.5082653775045262,
+          "kind": "standard"
+        },
+        "log_bsf_ratio": {
+          "center": 0.5533902609529749,
+          "scale": 0.5836705946619032,
+          "kind": "standard"
+        },
+        "log_bpfo_ratio": {
+          "center": 0.6259823268151482,
+          "scale": 0.7242412107708627,
+          "kind": "standard"
+        },
+        "log_bpfi_ratio": {
+          "center": 0.5732708959700844,
+          "scale": 0.6260849450788074,
+          "kind": "standard"
+        },
+        "raw_ftf_share": {
+          "center": 0.23409944703772118,
+          "scale": 0.06692976711515489,
+          "kind": "standard"
+        },
+        "raw_bsf_share": {
+          "center": 0.246074561341378,
+          "scale": 0.0828307192938002,
+          "kind": "standard"
+        },
+        "raw_bpfo_share": {
+          "center": 0.2677058042033379,
+          "scale": 0.10366342247433268,
+          "kind": "standard"
+        },
+        "raw_bpfi_share": {
+          "center": 0.2521201778552258,
+          "scale": 0.08932823787344148,
+          "kind": "standard"
+        },
+        "rpm_norm": {
+          "center": 0.09674143212046335,
+          "scale": 0.9954375394668787,
+          "kind": "standard"
+        }
+      },
+      "warmup_windows": 7,
+      "path": "tft.onnx",
+      "size_kb": 1581.6,
+      "onnx_inputs": [
+        "encoder_cont",
+        "decoder_cont"
+      ],
+      "outputs": [
+        "logits",
+        "variable_weights"
+      ],
+      "parity_max_abs_diff": [
+        2.86102294921875e-06,
+        8.940696716308594e-08
+      ],
+      "parity_ok": true,
+      "parity_samples": 64,
+      "batch_dim": "dynamic",
+      "builder_vs_dataset_max_abs_diff": 4.76837158203125e-07
+    },
+    "nhits": {
+      "onnx": "nhits.onnx",
+      "encoder_length": 24,
+      "prediction_length": 12,
+      "columns": [
+        "hi",
+        "log_env_ratio",
+        "log_bp_ratio",
+        "kurtosis_max",
+        "kurtosis_rise",
+        "family_contrast"
+      ],
+      "scalers": {
+        "hi": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "target_identity"
+        },
+        "log_env_ratio": {
+          "center": 0.7690205441035295,
+          "scale": 0.663650457219967,
+          "kind": "standard"
+        },
+        "log_bp_ratio": {
+          "center": 0.6120516959793777,
+          "scale": 0.5158860317459679,
+          "kind": "standard"
+        },
+        "kurtosis_max": {
+          "center": 6.824182367299903,
+          "scale": 2.9850161562349857,
+          "kind": "standard"
+        },
+        "kurtosis_rise": {
+          "center": 3.002905231333849,
+          "scale": 2.9209530758701954,
+          "kind": "standard"
+        },
+        "family_contrast": {
+          "center": 0.20196385770724345,
+          "scale": 0.15548690255835124,
+          "kind": "standard"
+        }
+      },
+      "target": "hi",
+      "left_pad": "repeat first row",
+      "path": "nhits.onnx",
+      "size_kb": 200.9,
+      "onnx_inputs": [
+        "encoder_cont"
+      ],
+      "outputs": [
+        "hi_forecast"
+      ],
+      "parity_max_abs_diff": [
+        1.1920928955078125e-07
+      ],
+      "parity_ok": true,
+      "parity_samples": 64,
+      "batch_dim": "fixed at 1 (call once per bearing-window)",
+      "builder_vs_dataset_max_abs_diff": 2.384185791015625e-07
+    }
+  },
+  "rul": {
+    "method": "loglin",
+    "history_windows": 48,
+    "blend_w": 0.5,
+    "u_min": 0.05,
+    "class_thresholds": {
+      "ball": 0.8650969415903091,
+      "cage": 0.7099644690752029,
+      "inner_race": 0.9399676322937012,
+      "outer_race": 1.0126953721046448
+    },
+    "pooled_threshold": 0.7893182635307312,
+    "max_rul_factor": 20.0,
+    "loglin_coef": [
+      2.3504758723448713,
+      0.0876884441084064,
+      0.4673873063491223,
+      0.3994718788330779,
+      -2.916463417524825
+    ],
+    "threshold_quantile": 0.25,
+    "selected_by": "model_selection_rul_20261004T192906Z_synthetic.json",
+    "lobo_mape": 25.965082840749833,
+    "interval_rel": 0.37605202054362713,
+    "fit_split": "train+val (LOBO)",
+    "procedure": "aiengine/rul.py::estimate; class for threshold = argmax of mean fault probability over the last 5 windows if mean p(healthy) < 0.5, else pooled",
+    "class_smoothing_windows": 5
+  },
+  "stage": "1 before confirmed onset; else 2 + floor(5 * tau/(tau+RUL)), max 6"
+}

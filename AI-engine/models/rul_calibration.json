@@ -1,0 +1,26 @@
+{
+  "method": "loglin",
+  "history_windows": 48,
+  "blend_w": 0.5,
+  "u_min": 0.05,
+  "class_thresholds": {
+    "ball": 0.8650969415903091,
+    "cage": 0.7099644690752029,
+    "inner_race": 0.9399676322937012,
+    "outer_race": 1.0126953721046448
+  },
+  "pooled_threshold": 0.7893182635307312,
+  "max_rul_factor": 20.0,
+  "loglin_coef": [
+    2.3504758723448713,
+    0.0876884441084064,
+    0.4673873063491223,
+    0.3994718788330779,
+    -2.916463417524825
+  ],
+  "threshold_quantile": 0.25,
+  "selected_by": "model_selection_rul_20261004T192906Z_synthetic.json",
+  "lobo_mape": 25.965082840749833,
+  "interval_rel": 0.37605202054362713,
+  "fit_split": "train+val (LOBO)"
+}
