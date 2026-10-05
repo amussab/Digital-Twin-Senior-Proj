@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+.git/
+.venv/
+**/.venv/
+AI-test/.venv/
+AI-engine/data/
+AI-engine/checkpoints/
+**/checkpoints/
+**/data/raw/
+**/__pycache__/
+artifacts/
+*.ckpt
+.claude/
+Project architecture/
+Component selection (pugh matrix)/
