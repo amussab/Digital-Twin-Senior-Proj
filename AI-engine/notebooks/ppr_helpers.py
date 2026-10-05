@@ -92,8 +92,11 @@ def resolve_checkpoint_dir() -> Path | None:
 
 def git_head() -> str:
     try:
-        return subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
+        head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
                               capture_output=True, text=True, timeout=10).stdout.strip()
+        dirty = subprocess.run(["git", "-C", str(REPO), "status", "--porcelain", "--untracked-files=no"],
+                               capture_output=True, text=True, timeout=10).stdout.strip()
+        return head + (" (+uncommitted changes)" if dirty else "")
     except Exception:  # noqa: BLE001
         return "unknown"
 
@@ -524,7 +527,8 @@ class Backend:
                 self.proc.kill()
                 self.proc.wait(10)
         self._fh.close()
-        return f"backend PID {pid} stopped (exit {self.proc.returncode})"
+        return (f"backend PID {pid} stopped (exit {self.proc.returncode}); a nonzero exit code is expected here, "
+                "the process was terminated on purpose by this notebook")
 
     def __enter__(self):
         return self.start()

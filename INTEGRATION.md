@@ -49,7 +49,7 @@ The first run publishes the dashboard (about 2 min) into `artifacts/dashboard` (
 `http://localhost:5080/` (or the LAN URL the script prints). Switch the source live, without a restart:
 `curl -X POST "http://localhost:5080/api/demo/source?name=twin-sim"` (`demo` | `twin-sim` | `synthetic`).
 
-Tests: `dotnet test DigitalTwin.slnx` (18 backend tests incl. golden parity and 4 twin tests). Measurement client:
+Tests: `dotnet test DigitalTwin.slnx` (28 backend tests incl. golden parity and the UDP guard, plus 4 twin tests). Measurement client:
 `dotnet run --project tools/DemoMeasure -- rate http://localhost:5080 30`.
 
 ## Config switches (`appsettings.json`, section `Backend`, or `--Backend:Key=Value`)
@@ -85,25 +85,33 @@ C# vs Python engine: max abs diff of engineered row, TFT tensors, class probabil
 `0.0` (identical to printed precision, tolerance 1e-4); max relative RUL diff `6.6e-16` (tolerance 1e-3); class,
 stage, threshold class and onset flag identical. [MEASURED, test output]
 
-## Measured numbers (this laptop, Release build, loopback, real ONNX in the loop) [MEASURED 2026-10-05]
+## Measured numbers (dev laptop, Release build, loopback, real v2 ONNX models in the loop) [MEASURED loopback, dev laptop; re-measure on the chosen server] (2026-10-05)
+
+Source: `evidence/integration_measurements_20261005.md` (v2 models). The notebook `AI-engine/notebooks/PPR_ICS_Evidence.ipynb`
+(sections 4 and 8) recomputes these live at every run; use its numbers over the stored ones.
 
 | Quantity | Value |
 |---|---|
-| Snapshot rate seen by a SignalR client (S9, needs >= 10 Hz), replay mode, 33 s | 990 snapshots = 30.0 Hz; per-second min 29, max 31; inter-arrival p50 38 ms, p95 63 ms, max 69 ms |
-| Same, twin-sim mode, 42 s | 25.5 Hz, per-second min 25 |
-| UDP send to client snapshot (IS1, needs < 500 ms), 339 payloads at 10 Hz, all | p50 40.6 ms, p95 46.4 ms, max 321 ms (first ONNX call) |
-| Same, ONNX-active windows only (n = 303) | p50 40.7 ms, p95 46.1 ms, max 59.6 ms |
-| `/api/metrics` p50 / p95 / max, ms | decode 0.003 / 0.016 / 7.1; features 0.040 / 0.094 / 58.6; inference (2 bearings) 38.5 / 44.3 / 260; tft_onnx (2 bearings) 36.6 / 42.2 / 162; nhits_onnx 1.9 / 3.4 / 11.5; broadcast 0.07 / 0.20 / 2.7; total_ingest_to_broadcast 38.8 / 44.5 / 320 |
-| TFT per bearing | about 18 ms p50 (S8 < 200 ms/window) |
-| In-process (no network) 339 replay payloads | p50 4.5 ms, p95 48 ms |
+| S9: snapshot rate at a SignalR client (needs >= 10 Hz), replay data, 30 s | 901 snapshots = 30 Hz. Physics RUL fields are populated only in twin-sim [SIMULATION] mode. The browser render was not verified in this run |
+| IS1 host leg: UDP send to client snapshot, all 339 payloads | p50 25.5 ms, p95 31.8 ms, max 167 ms (first ONNX call) |
+| Same, ONNX-active windows only (n = 303) | p50 25.6, p95 31.4, max 49.3 ms |
+| TFT inference per window inside the backend (S8 < 200 ms) | p50 23.2 ms, p95 31.7 ms, max 108 ms (`GET /api/metrics`) |
 
-The ~320 ms maxima are the first ONNX call of each session (JIT/session warm-up), not steady state.
+**IS1 is PARTIAL, never PASS:** the host leg (payload ingest to dashboard client) p95 is about 32 ms, measured; the COE node
+acquisition/DSP (S5 <= 333 ms) and the Wi-Fi hop are not measured; the first-call warm-up max would exceed 500 ms if added to 333 ms.
+
+Earlier measurements with the v1 models (2026-10-04, superseded): replay 30.0 Hz, twin-sim 25.5 Hz; UDP to client p50 40.6 / p95 46.4 /
+max 321 ms; TFT per bearing about 18 ms p50.
+
+The first ONNX call of each session (JIT/session warm-up) is the maximum; it is not steady state.
 
 ### C5 (LAN-only)
-- Kestrel bind: `http://0.0.0.0:5080` (logged `Now listening on: http://0.0.0.0:5080`) plus UDP 0.0.0.0:5005; use
-  `-Bind <lan ip>` to restrict to one interface.
-- `PrivateNetworkGuard` returns 403 for non-private remote addresses. Test `LanOnlyTests` [MEASURED]: 8.8.8.8,
-  203.0.113.9, 172.32.0.1, 2001:4860:4860::8888 give 403; 127.0.0.1, 10.1.2.3, 172.20.0.5, 192.168.1.50, fe80::1 pass.
+- Kestrel binds `http://0.0.0.0:5080` by default (logged `Now listening on: http://0.0.0.0:5080`) plus UDP 0.0.0.0:5005; use
+  `-Bind <lan ip>` to restrict Kestrel to one interface.
+- The guard covers HTTP **and** UDP. HTTP: `PrivateNetworkGuard` returns 403 for non-private remote addresses. UDP 5005:
+  `UdpIngestService` drops datagrams from non-private, non-loopback senders (same `PrivateNetwork.IsPrivate` logic) and counts them
+  (`udpRejectedNonLan` in `/api/metrics`). Tests [MEASURED]: `LanOnlyTests` (8.8.8.8, 203.0.113.9, 172.32.0.1, 2001:4860:4860::8888
+  give 403; 127.0.0.1, 10.1.2.3, 172.20.0.5, 192.168.1.50, fe80::1 pass) and `UdpLanGuardTests` (same addresses accepted/rejected).
 - No outbound calls in the backend; the dashboard uses only same-origin assets (Babylon.js is vendored in `wwwroot/lib`).
 - Add the firewall rules in `src/DigitalTwin.Backend/README.md`.
 
@@ -135,4 +143,4 @@ Nothing else (his UI, models, mock, 3D viewer, CSS untouched). `feature/dashboar
 - The 3D viewer logs `Yellow coupling guard mesh was not found` (his asset, harmless).
 - Dashboard load check: headless Edge (software WebGL) loaded the page from the backend, connected over SignalR, showed live snapshots, the 3D viewer and the Bearing 1 alert. A red Blazor banner "An unexpected error occurred" appeared in the headless screenshot with no console error logged; cause not isolated (possibly the headless/software-GL environment). Check once in a real browser before the demo.
 - 168-byte FDR payload is rejected until COE reconciles the layout.
-- `S7` (RUL MAPE) is not demonstrated by this live path; the contract reports LOBO MAPE 139 % (see AI-engine reports).
+- `S7` (RUL MAPE) is not demonstrated by this live path; the LOBO secondary analysis gives median MAPE 73.7 %, mean 221.7 % (`AI-engine/reports/model_selection_robustness_lobo_*.json`), and the pre-registered S7 on the 4 test bearings is 281.8 % (FAIL).
