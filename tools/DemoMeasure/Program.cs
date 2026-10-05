@@ -28,7 +28,8 @@ if (mode == "rate")
     var gaps = list.Zip(list.Skip(1), (a, b) => Ms(a.Ticks, b.Ticks)).OrderBy(x => x).ToArray();
     Console.WriteLine($"MEASURED client snapshot rate: {list.Length} snapshots in {el:F2}s = {list.Length / el:F2} Hz; inter-arrival p50={gaps[gaps.Length / 2]:F1} ms p95={gaps[(int)(gaps.Length * 0.95)]:F1} ms max={gaps[^1]:F1} ms");
     // 1-second windows: minimum rate over any 1 s window
-    var perSec = list.GroupBy(x => (int)(Ms(t0, x.Ticks) / 1000)).Select(g => g.Count()).ToArray();
+    var fullSecs = (int)el;   // only complete 1-s windows; the trailing partial bucket would read as a false low
+    var perSec = list.GroupBy(x => (int)(Ms(t0, x.Ticks) / 1000)).Where(g => g.Key < fullSecs).Select(g => g.Count()).ToArray();
     Console.WriteLine($"MEASURED per-second counts: min={perSec.Min()} max={perSec.Max()} (S9 needs >= 10 Hz)");
     string? last = null; var n = 0;
     foreach (var (ticks, s) in list)
