@@ -165,6 +165,8 @@ MaFaulDa test records are contiguous speed blocks of the same rig, and MaFaulDa 
 | S7 RUL MAPE (4 test bearings) | <= 15 % | 281.8 % (IMS B4 468.6 %, XJTU 1_4 567.2 %, 2_5 47.3 %, 3_4 44.1 %) | [MEASURED on XJTU-SY/IMS] | FAIL |
 | S7 secondary, LOBO over 15 XJTU-SY bearings | <= 15 % | median 73.7 %, mean 221.7 %, 0/15 within target | [MEASURED on XJTU-SY]; secondary analysis, each bearing is held out in its own fold, so it includes test bearings in other folds' training | FAIL |
 | S8 TFT latency p95, ONNX, 1 thread | < 200 ms | 11.1 ms | [MEASURED loopback, dev laptop; re-measure on the chosen server] | PASS |
+| Hybrid, N-HiTS ONNX inference per window (supporting) | < 200 ms per window | p50 ~0.4, p95 0.6-0.8, max 1.1-2.5 ms across runs (notebook §4b, live) | [MEASURED loopback, dev laptop] | supporting |
+| Hybrid, full per window: features + TFT + N-HiTS + RUL, Python reference engine (supporting) | < 200 ms per window | p95 15-16 ms; 99.8 % of 632 windows < 200 ms; 1 window 240-260 ms (pause outside the model calls in the notebook process). Deployed C# path incl. both models: host leg max 36-61 ms (IS1 rows) | [MEASURED loopback, dev laptop] | supporting |
 | IS3a macro-F1, 5 classes | >= 0.85 | 0.581 (MaFaulDa 0.848, XJTU-SY 0.450, IMS 0.679) | [MEASURED on XJTU-SY/IMS/MaFaulDa] | FAIL |
 | IS3b stage error | <= 1 | max 4 (mean 0.90; 72.1 % of windows within 1) | [MEASURED on XJTU-SY/IMS] | FAIL |
 | IS3c fault caught by stage 3 | all | 1 of 4 | [MEASURED on XJTU-SY/IMS] | FAIL |

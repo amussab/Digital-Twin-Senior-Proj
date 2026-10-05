@@ -374,13 +374,16 @@ class RecordingSession:
         return getattr(self.s, k)
 
 
-def run_engine(payloads: list[bytes], record_tft: bool = False):
+def run_engine(payloads: list[bytes], record_tft: bool = False, record_nhits: bool = False):
     from aiengine.engine import HybridEngine
     eng = HybridEngine(MODELS, threads=1)
     rec = None
     if record_tft:
         rec = RecordingSession(eng.tft)
         eng.tft = rec
+    if record_nhits:
+        eng.rec_nhits = RecordingSession(eng.nh)
+        eng.nh = eng.rec_nhits
     outs = []
     for i, p in enumerate(payloads):
         o = eng.process_payload(p)
@@ -404,6 +407,28 @@ def engine_frame(outs: list[dict], bearing: int) -> pd.DataFrame:
             r.update({f"p_{c}": v for c, v in b["class_probs"].items()})
         rows.append(r)
     return pd.DataFrame(rows)
+
+
+def time_onnx(model_file: str, outputs: list[str], feeds: list[dict], n_min: int = 200, warmup: int = 10) -> np.ndarray:
+    """Fresh 1-thread ORT session on models/<model_file>; times one single-window run per recorded real feed
+    (cycled if fewer than n_min). Returns ms per call. Used for N-HiTS (the TFT path keeps time_tft_onnx)."""
+    import onnxruntime as ort
+    o = ort.SessionOptions()
+    o.intra_op_num_threads = 1
+    o.inter_op_num_threads = 1
+    s = ort.InferenceSession(str(MODELS / model_file), o, providers=["CPUExecutionProvider"])
+    if not feeds:
+        raise RuntimeError(f"no recorded feeds to time for {model_file}")
+    for f in feeds[:warmup]:
+        s.run(outputs, f)
+    n = max(n_min, len(feeds))
+    ms = np.empty(n)
+    for k in range(n):
+        f = feeds[k % len(feeds)]
+        t0 = time.perf_counter()
+        s.run(outputs, f)
+        ms[k] = (time.perf_counter() - t0) * 1000
+    return ms
 
 
 def time_tft_onnx(feeds: list[dict], n_min: int = 200, warmup: int = 10) -> np.ndarray:
