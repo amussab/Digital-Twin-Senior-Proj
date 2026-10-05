@@ -169,7 +169,7 @@ MaFaulDa test records are contiguous speed blocks of the same rig, and MaFaulDa 
 | IS3b stage error | <= 1 | max 4 (mean 0.90; 72.1 % of windows within 1) | [MEASURED on XJTU-SY/IMS] | FAIL |
 | IS3c fault caught by stage 3 | all | 1 of 4 | [MEASURED on XJTU-SY/IMS] | FAIL |
 | IS1 ICS leg p95 (features+TFT+N-HiTS+RUL) | part of < 500 ms | 14.4 ms | [MEASURED loopback, dev laptop; re-measure on the chosen server] | partial (see next row) |
-| IS1 host leg, UDP payload ingest to dashboard client | < 500 ms | p50 25.5, p95 31.8 ms, max 167 ms (first ONNX call) | [MEASURED loopback, dev laptop; re-measure on the chosen server] | **PARTIAL**: COE node acquisition/DSP (S5 <= 333 ms) and the Wi-Fi hop are not measured; the first-call warm-up max would exceed 500 ms if added to 333 ms. Never PASS |
+| IS1 host leg, UDP payload ingest to dashboard client (ONNX sessions warmed up at backend start) | < 500 ms | ONNX-active windows: p50 25.1, p95 30.0, max 39.8 ms; cold-start one-off (first payload after process start) 137.5 ms | [MEASURED loopback, dev laptop; re-measure on the chosen server] | **PARTIAL: CONDITIONAL MET**. Budget: 333 (COE S5 budget, not yet measured) + 39.8 (host max) = 372.8 ms, so 127 ms are left for the Wi-Fi hop (unmeasured). Counted as MET once COE confirms its measured leg <= 333 ms and the Wi-Fi hop is measured |
 | S9 snapshot rate at a SignalR client | >= 10 Hz | 30 Hz on replay data (901 snapshots in 30 s). Physics RUL fields are populated only in twin-sim [SIMULATION] mode. The browser render was not verified in this run | [MEASURED loopback, dev laptop; re-measure on the chosen server] | PASS (rate) |
 | C# vs Python parity | tol 1e-4 | max diff 0.0; RUL rel. 6.6e-16 | [MEASURED, test output] | PASS |
 | C5 LAN-only guard | non-private senders refused | HTTP: 4 public addresses 403, 5 private pass; UDP 5005: public senders dropped and counted (`udpRejectedNonLan` in `/api/metrics`) | [MEASURED, test output] | PASS |
@@ -189,13 +189,13 @@ Timing rows are from the newer integration measurements (v2 models, 2026-10-05);
 - Ports 5080 (HTTP) and 5005 (UDP) free.
 - Kernel, Restart & Run All takes about 4 minutes. `AI-engine/notebooks/PPR_ICS_Evidence.html` is the offline fallback (saved outputs).
 - Do not claim IS3 from the live replay (the bearing-1 class flickers and alerts before the labelled onset).
-- C4 counting for ICS needs team agreement (only its AI/host part is ICS evidence).
+- C4 is counted for ICS: team decision 2026-10-05 (the system uses no cloud service; AI inference and dashboard run on the local host). C4 is COE-assigned in the spec sheet; the ICS evidence covers the AI/host part.
 - For the demo, bind to the LAN IP: `./scripts/run-demo.ps1 -Bind <LAN IP>`. Kestrel binds 0.0.0.0 by default; the C5 guard refuses
   non-private senders on HTTP and UDP either way.
 
 ## Honest status
 
-- **Passing**: S8 latency, S9 snapshot rate (replay data), C# parity, LAN-only guard (HTTP and UDP). **IS1 is PARTIAL**: only the host leg is measured. All timings are measured on a dev laptop with public-data replays, not on the chosen server hardware or the rig.
+- **Passing**: S8 latency, S9 snapshot rate (replay data), C# parity, LAN-only guard (HTTP and UDP). **IS1 is PARTIAL: CONDITIONAL MET**: the host leg is measured (ONNX-active p95 30.0 / max 39.8 ms; cold-start one-off 137.5 ms); 333 ms COE S5 budget + 39.8 ms = 372.8 ms leaves 127 ms for the unmeasured Wi-Fi hop; MET once COE confirms its measured leg and the Wi-Fi hop is measured. **C4 is counted for ICS** (team decision 2026-10-05), so ICS counts C4 + C5 (constraints) and S8 + S9 (specs): department Exemplary. All timings are measured on a dev laptop with public-data replays, not on the chosen server hardware or the rig.
 - **Failing**: S7 (RUL MAPE 282 % vs 15 %), IS3 (macro-F1 0.581, stage error max 4, 1 of 4 caught by stage 3), IS2 (simulation; the
   two RULs use different failure definitions and time bases).
 - **Why**: few run-to-failure bearings (15 XJTU-SY, 4 IMS), very small fault-class support (67 XJTU-SY inner-race and 406

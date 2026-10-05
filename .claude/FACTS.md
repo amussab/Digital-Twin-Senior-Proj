@@ -67,9 +67,12 @@ through and note what replaced it.
 ## Final PPR state (2026-10-05 ~06:30, branch feature/integration)
 - Deliverable: `AI-engine/notebooks/PPR_ICS_Evidence.ipynb` (+ .html fallback). Run-All ~226 s,
   executed at f0aa35a. Root README has the results, the presenter checklist and docker compose.
-- MET live (Rank 9): C5 (HTTP + UDP LAN guard), C4 AI/host part (needs team agreement to count
-  for ICS), S8 TFT p95 11.1 ms, S9 30 Hz (client rate, replay data).
-- PARTIAL: IS1, host leg only (p95 ~28–32 ms).
+- MET live (Rank 9): C5 (HTTP + UDP LAN guard), C4 AI/host part (COUNTED for ICS: team
+  decision 2026-10-05, no cloud service, AI + dashboard run on the local host; COE-assigned in the spec sheet), S8 TFT p95 11.1 ms, S9 30 Hz (client rate, replay data).
+- ICS department = Exemplary: constraints C4 + C5, specs S8 + S9. C3 was rejected for ICS by the reviewer.
+- PARTIAL (CONDITIONAL MET): IS1. Backend warms up ONNX at startup (2026-10-05). Host leg, ONNX-active: p50 25.1 / p95 30.0 /
+  max 39.8 ms; cold-start one-off 137.5 ms. Budget 333 (COE S5, unmeasured) + 39.8 = 372.8 ms, 127 ms left for the Wi-Fi hop
+  (unmeasured). Team decision: counted as MET once COE confirms a measured leg <= 333 ms and the Wi-Fi hop is measured.
 - NOT MET: S7 281.8 % (LOBO median 73.7 %); IS3 5-class macro-F1 0.581 (MaFaulDa 0.848,
   XJTU 0.450, IMS 0.679), stage max error 4, 1/4 caught by stage 3; IS2 (simulation residual
   ~100 %).

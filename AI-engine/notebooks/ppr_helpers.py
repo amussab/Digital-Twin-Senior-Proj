@@ -174,6 +174,29 @@ def styled_scorecard():
             .set_properties(**{"text-align": "left", "font-size": "11px"}))
 
 
+C4_DECISION = ("counted for ICS: team decision 2026-10-05 (the system uses no cloud service; AI inference and "
+               "dashboard run on the local host). C4 is COE-assigned in the spec sheet; the ICS evidence covers the "
+               "AI/host part, the node acquisition/DSP part is COE evidence")
+
+
+def is1_budget(coe_ms: float, coe_measured: bool, me_ms: float, host_p95: float, host_max: float,
+               wifi_ms: float | None = None, budget_ms: float = 500.0) -> dict:
+    """IS1 latency budget: COE leg + ME leg + host leg (+ Wi-Fi hop, unmeasured unless given)."""
+    tot_p95, tot_max = coe_ms + me_ms + host_p95, coe_ms + me_ms + host_max
+    margin = budget_ms - tot_max
+    if tot_max + (wifi_ms or 0.0) >= budget_ms:
+        status = f"NOT MET (COE+ME+host max = {tot_max:.1f} ms, with Wi-Fi {(wifi_ms or 0):.1f} ms >= {budget_ms:.0f} ms)"
+    elif coe_measured and wifi_ms is not None:
+        status = f"MET (total {tot_max + wifi_ms:.1f} ms < {budget_ms:.0f} ms)"
+    elif coe_measured:
+        status = f"PARTIAL: CONDITIONAL MET (COE and host legs measured; Wi-Fi hop unmeasured, <= {margin:.0f} ms allowed)"
+    else:
+        status = (f"PARTIAL: CONDITIONAL MET (host leg measured; COE leg at spec budget; "
+                  f"Wi-Fi hop unmeasured, <= {margin:.0f} ms allowed)")
+    return {"tot_p95": tot_p95, "tot_max": tot_max, "margin_max": margin, "margin_p95": budget_ms - tot_p95,
+            "wifi_allowed_ms": margin, "status": status}
+
+
 def ics_verdict() -> dict:
     met = lambda i: ITEMS[i].status.startswith("MET")          # noqa: E731
     cons = [i for i in ("C5", "C4") if met(i)]
