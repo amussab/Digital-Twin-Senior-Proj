@@ -117,7 +117,7 @@ gives fault localisation per bearing.
 
 ### Pretrain, then fine-tune
 `pytorch-forecasting` ships no pretrained weights, so "pretrained" means our own training on public data;
-`finetune` adapts it to a new machine. The new-machine rehearsal is IMS (fine-tune on B1-B3, test on B4). It did
+`finetune` adapts it to a new machine. The new-machine rehearsal is IMS (fine-tune on B1-B3, test on B4). It
 gave only a small gain (S7 577 % to 469 %, see results). The rig fine-tune has not been done.
 
 ### Frozen, bearing-level splits
