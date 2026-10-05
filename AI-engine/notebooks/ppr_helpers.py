@@ -214,6 +214,55 @@ def ics_verdict() -> dict:
     }
 
 
+# --------------------------------------------------------------------------- supporting evidence (not MET claims)
+def s6_feature_check(data: Path) -> pd.DataFrame:
+    """COE S6 support: the Python reference implementation of COE Components 3-7 (aiengine.dsp) gives the same
+    fixed-length, fixed-order vector at every shaft speed. Real raw records, nominal rpm from the dataset
+    (MaFaulDa filename = rotation Hz; XJTU-SY condition table). NOT the STM32 firmware."""
+    from aiengine import dsp, payload
+    from aiengine.config import FEATURE_NAMES_PER_ACCEL
+    from aiengine.datasets import common, mafaulda as M
+    from aiengine.geometry import BEARING_ORDERS
+    rows = []
+    files = sorted((data / "raw" / "mafaulda" / "normal").glob("*.csv"), key=lambda q: float(q.stem))
+    n = len(files)
+    cfg = common.pipeline(M.FS, BEARING_ORDERS["mafaulda"])
+    for f in [files[0], files[n // 4], files[n // 2], files[(3 * n) // 4], files[-1]]:
+        rpm = float(f.stem) * 60.0
+        span = dsp.cut_windows(10**9, rpm, M.FS, max_windows=1)[0][1]
+        a = pd.read_csv(f, header=None, nrows=span).to_numpy(np.float64)
+        b1 = dsp.bearing_features(a[:, 2], a[:, 3], rpm, cfg)      # underhang radial + tangential
+        b2 = dsp.bearing_features(a[:, 5], a[:, 6], rpm, cfg)      # overhang radial + tangential
+        v = np.concatenate([b1, b2])
+        assert b1.shape == (16,) and v.shape == (32,) and np.isfinite(v).all(), (f, v.shape)
+        blob = payload.encode(payload.Window(rpm=rpm, features=v.astype(np.float32), p1_amp_um=0.0, p1_phase_rad=0.0,
+                                             p2_amp_um=0.0, p2_phase_rad=0.0, t20_ms=0))
+        assert len(blob) == 152
+        rows.append({"dataset": "MaFaulDa (normal)", "rpm": round(rpm), "samples in 20-rev window": span,
+                     "per-bearing vector": b1.shape, "payload vector": v.shape, "payload bytes": len(blob)})
+    for brg in ("Bearing1_1", "Bearing2_5", "Bearing3_4"):
+        try:
+            fl, rpm = xjtu_files(data, brg)
+        except (FileNotFoundError, ValueError):
+            continue
+        f16 = raw_bearing_features(fl, rpm, n=1)
+        assert f16.shape == (1, 16) and np.isfinite(f16).all()
+        span = dsp.cut_windows(10**9, rpm, XJTU_FS, max_windows=1)[0][1]
+        rows.append({"dataset": f"XJTU-SY {brg}", "rpm": round(rpm), "samples in 20-rev window": span,
+                     "per-bearing vector": f16[0].shape, "payload vector": (32,), "payload bytes": 152})
+    assert list(FEATURE_NAMES_PER_ACCEL) == ["bp_rms", "bp_kurtosis", "bp_crest", "env_rms",
+                                             "ftf_mag", "bsf_mag", "bpfo_mag", "bpfi_mag"]
+    return pd.DataFrame(rows)
+
+
+def detect_rates(tft_preds: pd.DataFrame) -> dict:
+    """Healthy-vs-fault detection from the per-window TFT predictions (any non-healthy call = alarm)."""
+    y, p = tft_preds["observable_class"].astype(str), tft_preds["pred_class"].astype(str)
+    h = y == "healthy"
+    return {"n_healthy": int(h.sum()), "false_alarm": float((p[h] != "healthy").mean()) if h.any() else float("nan"),
+            "n_fault": int((~h).sum()), "missed": float((p[~h] == "healthy").mean()) if (~h).any() else float("nan")}
+
+
 # --------------------------------------------------------------------------- C4: no network
 class NetworkBlocked(RuntimeError):
     pass

@@ -181,6 +181,21 @@ Timing rows are from the newer integration measurements (v2 models, 2026-10-05);
 (`AI-engine/notebooks/PPR_ICS_Evidence.ipynb`, sections 4 and 8).
 <!-- RESULTS:END -->
 
+## Additional items with supporting evidence (for the reviewer's judgement)
+
+Each item below is **supporting evidence; we do not claim MET**. They are listed because our work computes something relevant to
+them and the reviewer may wish to credit it toward the team total. None is upgraded to MET in the scorecard. The same table is
+recomputed live in the notebook, section 11 ("Additional items with supporting evidence").
+
+| Item | Status | What our work shows | Not shown | Rank / provenance |
+|---|---|---|---|---|
+| IS1 (integrated) | PARTIAL: CONDITIONAL MET | Host leg, warmed-up backend, ONNX-active: p95 30.0 / max 39.8 ms (stored run; each notebook run varies by a few ms). 333 ms COE S5 budget + 39.8 = 372.8 ms, 127 ms left for the Wi-Fi hop | COE leg is the spec budget, not measured; Wi-Fi hop not measured; cold-start one-off 137.5 ms | 9 live (host leg), 2 calculation (COE leg); [MEASURED loopback, dev laptop] + [CALCULATED] |
+| S6 (COE) | SUPPORTING | The Python reference implementation of COE Components 3-7 (`aiengine/dsp.py`) gives the identical (16,) per-bearing / (32,) payload vector, in the fixed order, at 8 raw records: MaFaulDa 737 to 3686 rpm (covers 1000-3600) and XJTU-SY 2100 to 2400 rpm | STM32 firmware output; the rig's own speed range | 9 live (Python reference, not firmware); [MEASURED on public data] |
+| S2 (ME) | PARTIAL | FE-twin stiffness identification error, mean 4.8 to 6.5 % at 1750 rpm (within 10 % on the mean; p95 up to 13.6 %, above 10 %) | 3600 rpm not met (mean 18.7 to 24.2 %); assumed geometry; same model generates and identifies | 6; [SIMULATION] |
+| IS3 (integrated), sub-results | NOT MET overall | MaFaulDa macro-F1 0.848 (target 0.85, just below); healthy false-alarm 0.7 % of 1909 healthy windows over all test data (9.8 % of 132 on MaFaulDa); faulty windows called healthy 1.3 %; stage error within +/-1 on 72.1 % of windows | overall macro-F1 0.581; max stage error 4; caught by stage 3 in 1 of 4 | 9 live re-score / 6 stored predictions; [MEASURED on XJTU-SY / IMS / MaFaulDa] |
+| IS2 (integrated) | NOT MET | Physics RUL and AI RUL are computed and shown together on the dashboard in twin-sim mode | Residual target (<= 5 %) not met: median about 100 % in simulation | 9 live (simulation); [SIMULATION] |
+| S7 | NOT MET | Pipeline complete and measured: 281.8 % MAPE, independently re-scored and equal to the stored report | Target <= 15 % not met; not offered as supporting evidence | 9 live re-score / 6 stored; [MEASURED on XJTU-SY + IMS] |
+
 ## Presenter checklist
 
 - .NET 10 SDK installed. Do a Release build and the NuGet restore beforehand, while online (`dotnet build -c Release DigitalTwin.slnx`).
