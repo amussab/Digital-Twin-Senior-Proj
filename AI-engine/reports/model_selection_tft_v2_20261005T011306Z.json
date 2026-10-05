@@ -1,0 +1,1989 @@
+{
+  "generated_utc": "20261005T011306Z",
+  "provenance": {
+    "seed": 20261004,
+    "git_commit": "a4dd328",
+    "git_dirty": true,
+    "command": "v2.py aggregate",
+    "datasets": [
+      "xjtu_sy",
+      "ims",
+      "mafaulda"
+    ],
+    "data": "[MEASURED on XJTU-SY / IMS / MaFaulDa public datasets]; validation units only, test never loaded"
+  },
+  "rule": "(written before any grid result): the configuration with the highest\nPOOLED validation macro-F1 over the classes present in validation wins; ties -> lower class-weight\npower, then shorter encoder. The onset-gate post-processing (hier.py gate, run-to-failure units only)\nis adopted only if it raises that same pooled validation macro-F1.",
+  "candidates": [
+    {
+      "idx": 0,
+      "variant": "flat",
+      "max_encoder_length": 4,
+      "class_weight_power": 0.0,
+      "val_macro_f1": 0.8558786148126868,
+      "per_dataset_f1": {
+        "mafaulda": 0.9191051071335332,
+        "xjtu_sy": 0.6644049657534247
+      },
+      "per_class_f1": {
+        "ball": 0.9568,
+        "cage": 0.8501314636283961,
+        "healthy": 0.7985989492119089,
+        "outer_race": 0.8179840464104423
+      }
+    },
+    {
+      "idx": 0,
+      "variant": "flat_plus_rtf_gate",
+      "max_encoder_length": 4,
+      "class_weight_power": 0.0,
+      "val_macro_f1": 0.8965366418527709,
+      "per_dataset_f1": {
+        "mafaulda": 0.9191051071335332,
+        "xjtu_sy": 0.7795728616868818
+      },
+      "per_class_f1": {
+        "ball": 0.9568,
+        "cage": 0.8691756272401434,
+        "healthy": 0.9155555555555556,
+        "outer_race": 0.8446153846153847
+      }
+    },
+    {
+      "idx": 1,
+      "variant": "flat",
+      "max_encoder_length": 4,
+      "class_weight_power": 0.25,
+      "val_macro_f1": 0.854534354124043,
+      "per_dataset_f1": {
+        "mafaulda": 0.8907655421754921,
+        "xjtu_sy": 0.7168808403848822
+      },
+      "per_class_f1": {
+        "ball": 0.9684542586750788,
+        "cage": 0.86328125,
+        "healthy": 0.7703703703703704,
+        "outer_race": 0.8160315374507228
+      }
+    },
+    {
+      "idx": 1,
+      "variant": "flat_plus_rtf_gate",
+      "max_encoder_length": 4,
+      "class_weight_power": 0.25,
+      "val_macro_f1": 0.895318135216806,
+      "per_dataset_f1": {
+        "mafaulda": 0.8907655421754921,
+        "xjtu_sy": 0.8482995892849281
+      },
+      "per_class_f1": {
+        "ball": 0.9684542586750788,
+        "cage": 0.8692232055063913,
+        "healthy": 0.9001536098310292,
+        "outer_race": 0.843441466854725
+      }
+    },
+    {
+      "idx": 2,
+      "variant": "flat",
+      "max_encoder_length": 4,
+      "class_weight_power": 0.5,
+      "val_macro_f1": 0.8754693180419022,
+      "per_dataset_f1": {
+        "mafaulda": 0.9109104863792363,
+        "xjtu_sy": 0.7214733386390768
+      },
+      "per_class_f1": {
+        "ball": 0.978125,
+        "cage": 0.9119070667957405,
+        "healthy": 0.7720588235294118,
+        "outer_race": 0.8397863818424566
+      }
+    },
+    {
+      "idx": 2,
+      "variant": "flat_plus_rtf_gate",
+      "max_encoder_length": 4,
+      "class_weight_power": 0.5,
+      "val_macro_f1": 0.9171136258369981,
+      "per_dataset_f1": {
+        "mafaulda": 0.9109104863792363,
+        "xjtu_sy": 0.8590216618769506
+      },
+      "per_class_f1": {
+        "ball": 0.978125,
+        "cage": 0.9181286549707602,
+        "healthy": 0.8990825688073395,
+        "outer_race": 0.8731182795698925
+      }
+    },
+    {
+      "idx": 3,
+      "variant": "flat",
+      "max_encoder_length": 4,
+      "class_weight_power": 1.0,
+      "val_macro_f1": 0.8421951760316453,
+      "per_dataset_f1": {
+        "mafaulda": 0.8943018313517573,
+        "xjtu_sy": 0.6470629986088635
+      },
+      "per_class_f1": {
+        "ball": 0.9651898734177216,
+        "cage": 0.8518843120070114,
+        "healthy": 0.7729831144465291,
+        "outer_race": 0.7787234042553192
+      }
+    },
+    {
+      "idx": 3,
+      "variant": "flat_plus_rtf_gate",
+      "max_encoder_length": 4,
+      "class_weight_power": 1.0,
+      "val_macro_f1": 0.883513830085772,
+      "per_dataset_f1": {
+        "mafaulda": 0.8943018313517573,
+        "xjtu_sy": 0.7611150596225222
+      },
+      "per_class_f1": {
+        "ball": 0.9651898734177216,
+        "cage": 0.8624667258207631,
+        "healthy": 0.8981481481481481,
+        "outer_race": 0.8082505729564553
+      }
+    },
+    {
+      "idx": 4,
+      "variant": "flat",
+      "max_encoder_length": 6,
+      "class_weight_power": 0.0,
+      "val_macro_f1": 0.8472006214555843,
+      "per_dataset_f1": {
+        "mafaulda": 0.8877995308582867,
+        "xjtu_sy": 0.675979492372935
+      },
+      "per_class_f1": {
+        "ball": 0.9650793650793651,
+        "cage": 0.8694817658349329,
+        "healthy": 0.7491166077738516,
+        "outer_race": 0.8051247471341875
+      }
+    },
+    {
+      "idx": 4,
+      "variant": "flat_plus_rtf_gate",
+      "max_encoder_length": 6,
+      "class_weight_power": 0.0,
+      "val_macro_f1": 0.8946060721856712,
+      "per_dataset_f1": {
+        "mafaulda": 0.8877995308582867,
+        "xjtu_sy": 0.8371911356985984
+      },
+      "per_class_f1": {
+        "ball": 0.9650793650793651,
+        "cage": 0.877906976744186,
+        "healthy": 0.8902255639097745,
+        "outer_race": 0.8452123830093593
+      }
+    },
+    {
+      "idx": 5,
+      "variant": "flat",
+      "max_encoder_length": 6,
+      "class_weight_power": 0.25,
+      "val_macro_f1": 0.8313446267803212,
+      "per_dataset_f1": {
+        "mafaulda": 0.9116334906842105,
+        "xjtu_sy": 0.5264691079353944
+      },
+      "per_class_f1": {
+        "ball": 0.9797191887675507,
+        "cage": 0.8372497824194952,
+        "healthy": 0.7600700525394045,
+        "outer_race": 0.7483394833948339
+      }
+    },
+    {
+      "idx": 5,
+      "variant": "flat_plus_rtf_gate",
+      "max_encoder_length": 6,
+      "class_weight_power": 0.25,
+      "val_macro_f1": 0.8799725206331857,
+      "per_dataset_f1": {
+        "mafaulda": 0.9116334906842105,
+        "xjtu_sy": 0.6701419572425759
+      },
+      "per_class_f1": {
+        "ball": 0.9797191887675507,
+        "cage": 0.8446005267778753,
+        "healthy": 0.9046898638426626,
+        "outer_race": 0.7908805031446541
+      }
+    },
+    {
+      "idx": 6,
+      "variant": "flat",
+      "max_encoder_length": 6,
+      "class_weight_power": 0.5,
+      "val_macro_f1": 0.8423996413584022,
+      "per_dataset_f1": {
+        "mafaulda": 0.8900719196280364,
+        "xjtu_sy": 0.6639719423681074
+      },
+      "per_class_f1": {
+        "ball": 0.9634340222575517,
+        "cage": 0.8633594429939078,
+        "healthy": 0.7650273224043715,
+        "outer_race": 0.7777777777777778
+      }
+    },
+    {
+      "idx": 6,
+      "variant": "flat_plus_rtf_gate",
+      "max_encoder_length": 6,
+      "class_weight_power": 0.5,
+      "val_macro_f1": 0.8859927818895491,
+      "per_dataset_f1": {
+        "mafaulda": 0.8900719196280364,
+        "xjtu_sy": 0.7970871339332548
+      },
+      "per_class_f1": {
+        "ball": 0.9634340222575517,
+        "cage": 0.872471416007036,
+        "healthy": 0.899390243902439,
+        "outer_race": 0.8086754453911696
+      }
+    },
+    {
+      "idx": 7,
+      "variant": "flat",
+      "max_encoder_length": 6,
+      "class_weight_power": 1.0,
+      "val_macro_f1": 0.861139597043589,
+      "per_dataset_f1": {
+        "mafaulda": 0.9109024740955954,
+        "xjtu_sy": 0.6575781604755031
+      },
+      "per_class_f1": {
+        "ball": 0.98125,
+        "cage": 0.8854262144821264,
+        "healthy": 0.7636363636363637,
+        "outer_race": 0.8142458100558659
+      }
+    },
+    {
+      "idx": 7,
+      "variant": "flat_plus_rtf_gate",
+      "max_encoder_length": 6,
+      "class_weight_power": 1.0,
+      "val_macro_f1": 0.9050394416418353,
+      "per_dataset_f1": {
+        "mafaulda": 0.9109024740955954,
+        "xjtu_sy": 0.7927930398535572
+      },
+      "per_class_f1": {
+        "ball": 0.98125,
+        "cage": 0.8936170212765957,
+        "healthy": 0.8939393939393939,
+        "outer_race": 0.8513513513513513
+      }
+    }
+  ],
+  "results": [
+    {
+      "idx": 0,
+      "config": {
+        "max_encoder_length": 4,
+        "class_weight_power": 0.0
+      },
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real_v2\\select\\tft_00\\tft.ckpt",
+      "epochs_run": 9,
+      "best_val_loss": 0.45620235800743103,
+      "train_seconds": 872.3,
+      "class_order": [
+        "ball",
+        "cage",
+        "healthy",
+        "inner_race",
+        "outer_race"
+      ],
+      "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "train_samples": 16485,
+      "val_samples": 2280,
+      "flat": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.8558786148126868,
+        "per_class_f1": {
+          "ball": 0.9568,
+          "cage": 0.8501314636283961,
+          "healthy": 0.7985989492119089,
+          "outer_race": 0.8179840464104423
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.9191051071335332,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                299,
+                8,
+                0,
+                19
+              ],
+              [
+                0,
+                485,
+                9,
+                12
+              ],
+              [
+                0,
+                3,
+                91,
+                12
+              ],
+              [
+                0,
+                46,
+                0,
+                453
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.6644049657534247,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                17,
+                137,
+                0,
+                64
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                76,
+                10,
+                12,
+                111
+              ]
+            ]
+          }
+        }
+      },
+      "flat_plus_rtf_gate": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.8965366418527709,
+        "per_class_f1": {
+          "ball": 0.9568,
+          "cage": 0.8691756272401434,
+          "healthy": 0.9155555555555556,
+          "outer_race": 0.8446153846153847
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.9191051071335332,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                299,
+                8,
+                0,
+                19
+              ],
+              [
+                0,
+                485,
+                9,
+                12
+              ],
+              [
+                0,
+                3,
+                91,
+                12
+              ],
+              [
+                0,
+                46,
+                0,
+                453
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.7795728616868818,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                218,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                68,
+                33,
+                12,
+                96
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "idx": 1,
+      "config": {
+        "max_encoder_length": 4,
+        "class_weight_power": 0.25
+      },
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real_v2\\select\\tft_01\\tft.ckpt",
+      "epochs_run": 7,
+      "best_val_loss": 0.39285123348236084,
+      "train_seconds": 714.4,
+      "class_order": [
+        "ball",
+        "cage",
+        "healthy",
+        "inner_race",
+        "outer_race"
+      ],
+      "class_weights": [
+        1.1206077337265015,
+        1.0289453268051147,
+        0.7415483593940735,
+        1.0588042736053467,
+        1.0500942468643188
+      ],
+      "train_samples": 16485,
+      "val_samples": 2280,
+      "flat": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.854534354124043,
+        "per_class_f1": {
+          "ball": 0.9684542586750788,
+          "cage": 0.86328125,
+          "healthy": 0.7703703703703704,
+          "outer_race": 0.8160315374507228
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.8907655421754921,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                307,
+                0,
+                0,
+                19
+              ],
+              [
+                0,
+                442,
+                0,
+                64
+              ],
+              [
+                0,
+                2,
+                75,
+                29
+              ],
+              [
+                1,
+                29,
+                1,
+                468
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.7168808403848822,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                4,
+                133,
+                0,
+                81
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                41,
+                7,
+                8,
+                153
+              ]
+            ]
+          }
+        }
+      },
+      "flat_plus_rtf_gate": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.895318135216806,
+        "per_class_f1": {
+          "ball": 0.9684542586750788,
+          "cage": 0.8692232055063913,
+          "healthy": 0.9001536098310292,
+          "outer_race": 0.843441466854725
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.8907655421754921,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                307,
+                0,
+                0,
+                19
+              ],
+              [
+                0,
+                442,
+                0,
+                64
+              ],
+              [
+                0,
+                2,
+                75,
+                29
+              ],
+              [
+                1,
+                29,
+                1,
+                468
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.8482995892849281,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                218,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                38,
+                33,
+                8,
+                130
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "idx": 2,
+      "config": {
+        "max_encoder_length": 4,
+        "class_weight_power": 0.5
+      },
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real_v2\\select\\tft_02\\tft.ckpt",
+      "epochs_run": 7,
+      "best_val_loss": 0.31888511776924133,
+      "train_seconds": 714.3,
+      "class_order": [
+        "ball",
+        "cage",
+        "healthy",
+        "inner_race",
+        "outer_race"
+      ],
+      "class_weights": [
+        1.2340065240859985,
+        1.0403867959976196,
+        0.5403674244880676,
+        1.10164475440979,
+        1.083594560623169
+      ],
+      "train_samples": 16485,
+      "val_samples": 2280,
+      "flat": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.8754693180419022,
+        "per_class_f1": {
+          "ball": 0.978125,
+          "cage": 0.9119070667957405,
+          "healthy": 0.7720588235294118,
+          "outer_race": 0.8397863818424566
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.9109104863792363,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                313,
+                0,
+                0,
+                13
+              ],
+              [
+                0,
+                471,
+                0,
+                35
+              ],
+              [
+                0,
+                0,
+                76,
+                30
+              ],
+              [
+                1,
+                22,
+                3,
+                473
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.7214733386390768,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                1,
+                134,
+                0,
+                83
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                33,
+                7,
+                13,
+                156
+              ]
+            ]
+          }
+        }
+      },
+      "flat_plus_rtf_gate": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.9171136258369981,
+        "per_class_f1": {
+          "ball": 0.978125,
+          "cage": 0.9181286549707602,
+          "healthy": 0.8990825688073395,
+          "outer_race": 0.8731182795698925
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.9109104863792363,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                313,
+                0,
+                0,
+                13
+              ],
+              [
+                0,
+                471,
+                0,
+                35
+              ],
+              [
+                0,
+                0,
+                76,
+                30
+              ],
+              [
+                1,
+                22,
+                3,
+                473
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.8590216618769506,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                218,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                27,
+                33,
+                13,
+                136
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "idx": 3,
+      "config": {
+        "max_encoder_length": 4,
+        "class_weight_power": 1.0
+      },
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real_v2\\select\\tft_03\\tft.ckpt",
+      "epochs_run": 7,
+      "best_val_loss": 0.3641071915626526,
+      "train_seconds": 716.4,
+      "class_order": [
+        "ball",
+        "cage",
+        "healthy",
+        "inner_race",
+        "outer_race"
+      ],
+      "class_weights": [
+        1.4406623840332031,
+        1.0240401029586792,
+        0.2762521207332611,
+        1.1481813192367554,
+        1.1108640432357788
+      ],
+      "train_samples": 16485,
+      "val_samples": 2280,
+      "flat": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.8421951760316453,
+        "per_class_f1": {
+          "ball": 0.9651898734177216,
+          "cage": 0.8518843120070114,
+          "healthy": 0.7729831144465291,
+          "outer_race": 0.7787234042553192
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.8943018313517573,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                305,
+                1,
+                0,
+                20
+              ],
+              [
+                1,
+                486,
+                0,
+                19
+              ],
+              [
+                0,
+                0,
+                73,
+                33
+              ],
+              [
+                0,
+                58,
+                0,
+                441
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.6470629986088635,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                4,
+                133,
+                0,
+                81
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                86,
+                3,
+                12,
+                108
+              ]
+            ]
+          }
+        }
+      },
+      "flat_plus_rtf_gate": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.883513830085772,
+        "per_class_f1": {
+          "ball": 0.9651898734177216,
+          "cage": 0.8624667258207631,
+          "healthy": 0.8981481481481481,
+          "outer_race": 0.8082505729564553
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.8943018313517573,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                305,
+                1,
+                0,
+                20
+              ],
+              [
+                1,
+                486,
+                0,
+                19
+              ],
+              [
+                0,
+                0,
+                73,
+                33
+              ],
+              [
+                0,
+                58,
+                0,
+                441
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.7611150596225222,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                218,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                76,
+                33,
+                12,
+                88
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "idx": 4,
+      "config": {
+        "max_encoder_length": 6,
+        "class_weight_power": 0.0
+      },
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real_v2\\select\\tft_04\\tft.ckpt",
+      "epochs_run": 8,
+      "best_val_loss": 0.488087922334671,
+      "train_seconds": 909.2,
+      "class_order": [
+        "ball",
+        "cage",
+        "healthy",
+        "inner_race",
+        "outer_race"
+      ],
+      "class_weights": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "train_samples": 17499,
+      "val_samples": 2616,
+      "flat": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.8472006214555843,
+        "per_class_f1": {
+          "ball": 0.9650793650793651,
+          "cage": 0.8694817658349329,
+          "healthy": 0.7491166077738516,
+          "outer_race": 0.8051247471341875
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.8877995308582867,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                304,
+                1,
+                0,
+                21
+              ],
+              [
+                0,
+                453,
+                8,
+                45
+              ],
+              [
+                0,
+                0,
+                78,
+                28
+              ],
+              [
+                0,
+                32,
+                4,
+                463
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.675979492372935,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                134,
+                0,
+                84
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                50,
+                18,
+                7,
+                134
+              ]
+            ]
+          }
+        }
+      },
+      "flat_plus_rtf_gate": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.8946060721856712,
+        "per_class_f1": {
+          "ball": 0.9650793650793651,
+          "cage": 0.877906976744186,
+          "healthy": 0.8902255639097745,
+          "outer_race": 0.8452123830093593
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.8877995308582867,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                304,
+                1,
+                0,
+                21
+              ],
+              [
+                0,
+                453,
+                8,
+                45
+              ],
+              [
+                0,
+                0,
+                78,
+                28
+              ],
+              [
+                0,
+                32,
+                4,
+                463
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.8371911356985984,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                218,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                40,
+                33,
+                12,
+                124
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "idx": 5,
+      "config": {
+        "max_encoder_length": 6,
+        "class_weight_power": 0.25
+      },
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real_v2\\select\\tft_05\\tft.ckpt",
+      "epochs_run": 7,
+      "best_val_loss": 0.4491015672683716,
+      "train_seconds": 831.4,
+      "class_order": [
+        "ball",
+        "cage",
+        "healthy",
+        "inner_race",
+        "outer_race"
+      ],
+      "class_weights": [
+        1.1206077337265015,
+        1.0289453268051147,
+        0.7415483593940735,
+        1.0588042736053467,
+        1.0500942468643188
+      ],
+      "train_samples": 17499,
+      "val_samples": 2616,
+      "flat": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.8313446267803212,
+        "per_class_f1": {
+          "ball": 0.9797191887675507,
+          "cage": 0.8372497824194952,
+          "healthy": 0.7600700525394045,
+          "outer_race": 0.7483394833948339
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.9116334906842105,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                314,
+                0,
+                0,
+                1,
+                11
+              ],
+              [
+                0,
+                481,
+                0,
+                0,
+                25
+              ],
+              [
+                0,
+                0,
+                81,
+                0,
+                25
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                1,
+                44,
+                5,
+                0,
+                449
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.5264691079353944,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                3,
+                136,
+                0,
+                79
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                115,
+                25,
+                11,
+                58
+              ]
+            ]
+          }
+        }
+      },
+      "flat_plus_rtf_gate": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.8799725206331857,
+        "per_class_f1": {
+          "ball": 0.9797191887675507,
+          "cage": 0.8446005267778753,
+          "healthy": 0.9046898638426626,
+          "outer_race": 0.7908805031446541
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.9116334906842105,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                314,
+                0,
+                0,
+                1,
+                11
+              ],
+              [
+                0,
+                481,
+                0,
+                0,
+                25
+              ],
+              [
+                0,
+                0,
+                81,
+                0,
+                25
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                1,
+                44,
+                5,
+                0,
+                449
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.6701419572425759,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                218,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                108,
+                33,
+                14,
+                54
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "idx": 6,
+      "config": {
+        "max_encoder_length": 6,
+        "class_weight_power": 0.5
+      },
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real_v2\\select\\tft_06\\tft.ckpt",
+      "epochs_run": 7,
+      "best_val_loss": 0.39683419466018677,
+      "train_seconds": 831.4,
+      "class_order": [
+        "ball",
+        "cage",
+        "healthy",
+        "inner_race",
+        "outer_race"
+      ],
+      "class_weights": [
+        1.2340065240859985,
+        1.0403867959976196,
+        0.5403674244880676,
+        1.10164475440979,
+        1.083594560623169
+      ],
+      "train_samples": 17499,
+      "val_samples": 2616,
+      "flat": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.8423996413584022,
+        "per_class_f1": {
+          "ball": 0.9634340222575517,
+          "cage": 0.8633594429939078,
+          "healthy": 0.7650273224043715,
+          "outer_race": 0.7777777777777778
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.8900719196280364,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                303,
+                1,
+                0,
+                22
+              ],
+              [
+                0,
+                496,
+                0,
+                10
+              ],
+              [
+                0,
+                0,
+                77,
+                29
+              ],
+              [
+                0,
+                77,
+                4,
+                418
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.6639719423681074,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                7,
+                133,
+                0,
+                78
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                62,
+                11,
+                15,
+                121
+              ]
+            ]
+          }
+        }
+      },
+      "flat_plus_rtf_gate": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.8859927818895491,
+        "per_class_f1": {
+          "ball": 0.9634340222575517,
+          "cage": 0.872471416007036,
+          "healthy": 0.899390243902439,
+          "outer_race": 0.8086754453911696
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.8900719196280364,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                303,
+                1,
+                0,
+                22
+              ],
+              [
+                0,
+                496,
+                0,
+                10
+              ],
+              [
+                0,
+                0,
+                77,
+                29
+              ],
+              [
+                0,
+                77,
+                4,
+                418
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.7970871339332548,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                218,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                57,
+                33,
+                15,
+                104
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "idx": 7,
+      "config": {
+        "max_encoder_length": 6,
+        "class_weight_power": 1.0
+      },
+      "ckpt": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\Digital-Twin-Senior-Proj\\AI-engine\\checkpoints\\real_v2\\select\\tft_07\\tft.ckpt",
+      "epochs_run": 8,
+      "best_val_loss": 0.3186999559402466,
+      "train_seconds": 909.1,
+      "class_order": [
+        "ball",
+        "cage",
+        "healthy",
+        "inner_race",
+        "outer_race"
+      ],
+      "class_weights": [
+        1.4406623840332031,
+        1.0240401029586792,
+        0.2762521207332611,
+        1.1481813192367554,
+        1.1108640432357788
+      ],
+      "train_samples": 17499,
+      "val_samples": 2616,
+      "flat": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.861139597043589,
+        "per_class_f1": {
+          "ball": 0.98125,
+          "cage": 0.8854262144821264,
+          "healthy": 0.7636363636363637,
+          "outer_race": 0.8142458100558659
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.9109024740955954,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                314,
+                1,
+                0,
+                11
+              ],
+              [
+                0,
+                483,
+                4,
+                19
+              ],
+              [
+                0,
+                2,
+                77,
+                27
+              ],
+              [
+                0,
+                30,
+                4,
+                465
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.6575781604755031,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                1,
+                133,
+                0,
+                84
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                68,
+                8,
+                15,
+                118
+              ]
+            ]
+          }
+        }
+      },
+      "flat_plus_rtf_gate": {
+        "n": 1864,
+        "classes": [
+          "ball",
+          "cage",
+          "healthy",
+          "outer_race"
+        ],
+        "val_macro_f1": 0.9050394416418353,
+        "per_class_f1": {
+          "ball": 0.98125,
+          "cage": 0.8936170212765957,
+          "healthy": 0.8939393939393939,
+          "outer_race": 0.8513513513513513
+        },
+        "per_dataset": {
+          "mafaulda": {
+            "n": 1437,
+            "macro_f1": 0.9109024740955954,
+            "labels": [
+              "ball",
+              "cage",
+              "healthy",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                314,
+                1,
+                0,
+                11
+              ],
+              [
+                0,
+                483,
+                4,
+                19
+              ],
+              [
+                0,
+                2,
+                77,
+                27
+              ],
+              [
+                0,
+                30,
+                4,
+                465
+              ]
+            ]
+          },
+          "xjtu_sy": {
+            "n": 427,
+            "macro_f1": 0.7927930398535572,
+            "labels": [
+              "cage",
+              "healthy",
+              "inner_race",
+              "outer_race"
+            ],
+            "confusion": [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                218,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                59,
+                33,
+                15,
+                102
+              ]
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "winner": {
+    "idx": 2,
+    "variant": "flat_plus_rtf_gate",
+    "max_encoder_length": 4,
+    "class_weight_power": 0.5,
+    "val_macro_f1": 0.9171136258369981,
+    "per_dataset_f1": {
+      "mafaulda": 0.9109104863792363,
+      "xjtu_sy": 0.8590216618769506
+    },
+    "per_class_f1": {
+      "ball": 0.978125,
+      "cage": 0.9181286549707602,
+      "healthy": 0.8990825688073395,
+      "outer_race": 0.8731182795698925
+    }
+  }
+}

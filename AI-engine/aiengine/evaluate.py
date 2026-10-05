@@ -77,6 +77,9 @@ def classification_metrics(preds: pd.DataFrame, truth: pd.DataFrame) -> dict:
             "macro_f1": float(f1_score(yy, pp, labels=pres, average="macro", zero_division=0)),
             "accuracy": float((yy == pp).mean()),
             "recall": {c: float((pp[yy == c] == c).mean()) for c in pres},
+            "macro_f1_all5": float(f1_score(yy, pp, labels=CLASSES, average="macro", zero_division=0)),
+            "per_class_f1": {c: float(f1_score(yy, pp, labels=[c], average="macro", zero_division=0)) for c in pres},
+            "confusion": {"labels": CLASSES, "matrix": confusion_matrix(yy, pp, labels=CLASSES).tolist()},
         }
     return out
 
@@ -236,7 +239,7 @@ def verdicts(m: dict) -> list[dict]:
         ("S8", "TFT classification latency per window, p95 single-window", "<", T["S8_tft_latency_ms"], s8, "ms"),
         ("IS3a", "macro-F1 over the testable classes (train AND test support; primary)", ">=", T["IS3_macro_f1"],
          m.get("classification", {}).get("macro_f1", float("nan")), ""),
-        ("IS3a-5", "macro-F1 over all 5 classes (ball has no training bearing -> F1 0)", ">=", T["IS3_macro_f1"],
+        ("IS3a-5", "macro-F1 over all 5 classes (a class with no output channel scores F1 0)", ">=", T["IS3_macro_f1"],
          m.get("classification", {}).get("macro_f1_all5", float("nan")), ""),
         ("IS3b", "stage error <= 1, literal reading: MAX abs stage error over test windows", "<=",
          T["IS3_stage_error_max"], m.get("rul", {}).get("stage_max_error", float("nan")), ""),
@@ -263,7 +266,8 @@ def provenance_banner(datasets: list[str]) -> str:
         return ("> **SYNTHETIC DATA ONLY.** Every number below comes from `synthetic_rig`, generated "
                 "data. It proves the pipeline runs end to end; it is NOT a measurement of any real "
                 "bearing and must not be quoted as one.")
-    s = ("> **MEASURED on XJTU-SY / IMS public bearing datasets, not the team rig.** "
+    names = {"xjtu_sy": "XJTU-SY", "ims": "IMS", "mafaulda": "MaFaulDa"}
+    s = (f"> **MEASURED on {' / '.join(names.get(d, d) for d in real)} public bearing datasets, not the team rig.** "
          f"[MEASURED on {', '.join(real)}] -- scored on held-out test bearings never used for training, "
          "early stopping, model selection or calibration. These are measurements of THOSE datasets' "
          "bearings; no rig data exists yet.")
@@ -286,7 +290,10 @@ def write_report(metrics: dict, meta: dict, tag: str = "") -> tuple[Path, Path]:
             return "n/a"
         return f"{v:.3f}{unit}" if unit == "" else f"{v:.1f} {unit}"
 
-    L = [f"# AI-engine spec check ({stamp})", "", provenance_banner(meta["datasets"]), "",
+    L = [f"# AI-engine spec check ({stamp})", "", provenance_banner(meta["datasets"]), ""]
+    if metrics.get("disclosure"):
+        L += [f"> **{metrics['disclosure']}**", ""]
+    L += [
          f"- Seed `{meta['seed']}`, git `{meta['git_commit']}`{' (+uncommitted changes)' if meta.get('git_dirty') else ''}",
          f"- Command: `{meta['command']}`", f"- Run dir: `{meta['run']}`",
          f"- Host: {meta['host']}", "", "## Verdicts", "",
@@ -325,6 +332,12 @@ def write_report(metrics: dict, meta: dict, tag: str = "") -> tuple[Path, Path]:
     for ds, v in c.get("per_dataset", {}).items():
         rec = ", ".join(f"{k} {x:.2f}" for k, x in v["recall"].items())
         L.append(f"| {ds} | {v['n']} | {len(v['classes_present'])} | {v['macro_f1']:.3f} | {rec} |")
+    for ds, v in c.get("per_dataset", {}).items():
+        if "confusion" in v:
+            L += ["", f"Confusion, {ds} only (rows = true, cols = predicted, order " + ", ".join(CLASSES) + "):", "", "```"]
+            for lab, rowv in zip(CLASSES, v["confusion"]["matrix"]):
+                L.append(f"{lab:>11} " + " ".join(f"{x:>7d}" for x in rowv))
+            L.append("```")
     sc = metrics.get("source_check")
     if sc:
         L += ["", "Training-class sources (windows per class per dataset, train split):", "", "```",

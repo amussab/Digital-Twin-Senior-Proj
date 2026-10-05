@@ -1,22 +1,24 @@
 {
   "contract_version": 2,
-  "generated_utc": "2026-10-04T21:36:32+00:00",
+  "generated_utc": "2026-10-05T01:18:10+00:00",
   "generated_by": "AI-engine/aiengine/export.py",
   "provenance": {
     "datasets": [
       "xjtu_sy",
-      "ims"
+      "ims",
+      "mafaulda"
     ],
     "real_data": [
       "xjtu_sy",
-      "ims"
+      "ims",
+      "mafaulda"
     ],
     "synthetic": false,
     "seed": 20261004,
-    "git_commit": "170bd1c",
+    "git_commit": "a4dd328",
     "git_dirty": true,
-    "command": "app.py export --datasets xjtu_sy ims --run real",
-    "run": "real",
+    "command": "app.py export --datasets xjtu_sy ims mafaulda --run real_v2",
+    "run": "real_v2",
     "host": "Windows 10, Intel64 Family 6 Model 183 Stepping 1, GenuineIntel, torch 2.14.0+cpu",
     "counts": {
       "ims": {
@@ -27,6 +29,20 @@
         "ft_train": {
           "units": 3,
           "windows": 6468
+        }
+      },
+      "mafaulda": {
+        "test": {
+          "units": 233,
+          "windows": 1911
+        },
+        "train": {
+          "units": 701,
+          "windows": 5922
+        },
+        "val": {
+          "units": 235,
+          "windows": 1907
         }
       },
       "xjtu_sy": {
@@ -164,18 +180,24 @@
   },
   "classes": {
     "labels": [
+      "ball",
       "cage",
       "healthy",
       "inner_race",
       "outer_race"
     ],
     "index_is_output_channel": true,
-    "note": "alphabetical (label encoder) order; apply softmax to logits"
+    "note": "alphabetical (label encoder) order; apply softmax to logits",
+    "decision": {
+      "type": "rtf_onset_gate",
+      "rule": "continuous monitoring stream (rig / run-to-failure): if the causal onset (contract.onset) is NOT yet confirmed for this bearing: probs = one-hot(healthy); else probs = softmax(logits) with p(healthy) set to 0 and the rest renormalised to sum 1. Short seeded-fault records (MaFaulDa evaluation) use plain softmax.",
+      "selected_by": "validation only (aiengine/v2.py, reports/model_selection_tft_v2_*.json)"
+    }
   },
   "models": {
     "tft": {
       "onnx": "tft.onnx",
-      "encoder_length": 12,
+      "encoder_length": 4,
       "decoder_length": 1,
       "columns": [
         "hi",
@@ -202,114 +224,114 @@
       ],
       "scalers": {
         "hi": {
-          "center": 0.0949509899185021,
-          "scale": 0.1816767020087079,
+          "center": 0.1763342206632321,
+          "scale": 0.21708573178197266,
           "kind": "standard"
         },
         "log_env_ratio": {
-          "center": 0.046177318376689896,
-          "scale": 0.5390388443835927,
+          "center": 0.37345934249932866,
+          "scale": 0.6259558165864051,
           "kind": "standard"
         },
         "log_bp_ratio": {
-          "center": 0.046644565154506774,
-          "scale": 0.5377448296457069,
+          "center": 0.3725639354396211,
+          "scale": 0.6222115490324815,
           "kind": "standard"
         },
         "kurtosis_max": {
-          "center": 3.31637004642706,
-          "scale": 0.6111522544192111,
+          "center": 4.8576592954832325,
+          "scale": 18.348879608424298,
           "kind": "standard"
         },
         "crest_max": {
-          "center": 4.751457434076746,
-          "scale": 0.9472604003637238,
+          "center": 6.160039936087784,
+          "scale": 2.532809868041269,
           "kind": "standard"
         },
         "kurtosis_rise": {
-          "center": 0.17792674710039197,
-          "scale": 0.444511049522849,
+          "center": 1.1070163669330388,
+          "scale": 18.33085673775013,
           "kind": "standard"
         },
         "axis_asymmetry": {
-          "center": -0.012460947258530034,
-          "scale": 0.06821793873874188,
+          "center": 0.05617462092192106,
+          "scale": 0.18305456546304053,
           "kind": "standard"
         },
         "ftf_share": {
-          "center": 0.22604309652463375,
-          "scale": 0.07401571775683807,
+          "center": 0.22659045117207155,
+          "scale": 0.07940093685334705,
           "kind": "standard"
         },
         "bsf_share": {
-          "center": 0.25031896399994025,
-          "scale": 0.07216004718003399,
+          "center": 0.24965061350701034,
+          "scale": 0.08660758263786941,
           "kind": "standard"
         },
         "bpfo_share": {
-          "center": 0.2711922405897717,
-          "scale": 0.09938594468722232,
+          "center": 0.26455260283788107,
+          "scale": 0.089320226986433,
           "kind": "standard"
         },
         "bpfi_share": {
-          "center": 0.2524456985891355,
-          "scale": 0.07715884825066595,
+          "center": 0.2592063323193606,
+          "scale": 0.0846558163686877,
           "kind": "standard"
         },
         "family_contrast": {
-          "center": 0.08628390223290941,
-          "scale": 0.0881037037490859,
+          "center": 0.09174473130314348,
+          "scale": 0.08793326132569877,
           "kind": "standard"
         },
         "log_ftf_ratio": {
-          "center": 0.1281961698066544,
-          "scale": 0.6546204535580172,
+          "center": 0.39156262047023843,
+          "scale": 0.7117997369996913,
           "kind": "standard"
         },
         "log_bsf_ratio": {
-          "center": 0.2197622624997189,
-          "scale": 0.6564615575209768,
+          "center": 0.5204614389927436,
+          "scale": 0.8595438616524096,
           "kind": "standard"
         },
         "log_bpfo_ratio": {
-          "center": 0.3469226893455145,
-          "scale": 0.8704907843397767,
+          "center": 0.5991108856865923,
+          "scale": 0.8663749530080321,
           "kind": "standard"
         },
         "log_bpfi_ratio": {
-          "center": 0.24204802620650928,
-          "scale": 0.6077087504487387,
+          "center": 0.5695236174228505,
+          "scale": 0.7289793235051704,
           "kind": "standard"
         },
         "raw_ftf_share": {
-          "center": 0.26301272789790026,
-          "scale": 0.07145506548851797,
+          "center": 0.29897380948108776,
+          "scale": 0.1347621179633801,
           "kind": "standard"
         },
         "raw_bsf_share": {
-          "center": 0.255230289446787,
-          "scale": 0.06353475538987213,
+          "center": 0.23396615782506838,
+          "scale": 0.0716843213522516,
           "kind": "standard"
         },
         "raw_bpfo_share": {
-          "center": 0.28293857776305575,
-          "scale": 0.10064546715859037,
+          "center": 0.27278507265228574,
+          "scale": 0.10637772991737912,
           "kind": "standard"
         },
         "raw_bpfi_share": {
-          "center": 0.19881838774227653,
-          "scale": 0.056031338006283724,
+          "center": 0.19427491366439012,
+          "scale": 0.06429786763370308,
           "kind": "standard"
         },
         "rpm_norm": {
-          "center": -0.35951212894527473,
-          "scale": 0.09861661966858484,
+          "center": -0.4506200087656747,
+          "scale": 0.5454823960392315,
           "kind": "standard"
         }
       },
-      "warmup_windows": 13,
+      "warmup_windows": 5,
       "path": "tft.onnx",
-      "size_kb": 1581.4,
+      "size_kb": 1581.6,
       "onnx_inputs": [
         "encoder_cont",
         "decoder_cont"
@@ -319,13 +341,13 @@
         "variable_weights"
       ],
       "parity_max_abs_diff": [
-        1.9073486328125e-06,
-        2.980232238769531e-07
+        2.384185791015625e-06,
+        2.682209014892578e-07
       ],
       "parity_ok": true,
       "parity_samples": 64,
       "batch_dim": "dynamic",
-      "builder_vs_dataset_max_abs_diff": 9.5367431640625e-07
+      "builder_vs_dataset_max_abs_diff": 2.384185791015625e-07
     },
     "nhits": {
       "onnx": "nhits.onnx",

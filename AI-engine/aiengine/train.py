@@ -226,7 +226,10 @@ def finetune(checkpoint: Path, new_frame: pd.DataFrame, kind: str, run_dir: Path
 
 def load_model(path: Path):
     try:
-        return TemporalFusionTransformer.load_from_checkpoint(str(path), map_location="cpu").eval()
+        m = TemporalFusionTransformer.load_from_checkpoint(str(path), map_location="cpu").eval()
+        from . import v2
+        m.decision = v2.read_decision(path)     # e.g. "rtf_onset_gate" (IS3 v2), else None = flat argmax
+        return m
     except Exception:  # noqa: BLE001
         return NHiTS.load_from_checkpoint(str(path), map_location="cpu").eval()
 
@@ -246,6 +249,9 @@ def tft_predict(model, df: pd.DataFrame) -> pd.DataFrame:
     # built. Truth is always merged from the original table afterwards, never from this frame.
     known = set(params["target_normalizer"].classes_)
     frame.loc[~frame["observable_class"].isin(known), "observable_class"] = sorted(known)[0]
+    # A model trained on post-onset windows only (hierarchical v2) stores a min_prediction_idx > 0;
+    # prediction must still cover every window of the unit.
+    params = {**params, "min_prediction_idx": int(frame["window_index"].min())}
     ds = TimeSeriesDataSet.from_parameters(params, frame, predict=False, stop_randomization=True)
     order = models.class_order(ds)
     out = model.predict(ds.to_dataloader(train=False, batch_size=2048, num_workers=0),
@@ -262,7 +268,20 @@ def tft_predict(model, df: pd.DataFrame) -> pd.DataFrame:
     # keep exactly one prediction per window: the longest encoder.
     res = (res.sort_values(["unit_id", "window_index", "encoder_length"], ascending=[True, True, False])
            .drop_duplicates(["unit_id", "window_index"]).reset_index(drop=True))
+    if "healthy" not in order:
+        # Hierarchical v2 model (fault-type TFT, no healthy channel): compose with the causal onset
+        # gate -> probabilities over fault channels + healthy (DESIGN.md section 6, v2).
+        from . import hier
+        res = hier.compose(res, hier.gate_table(d), order)
+    elif getattr(model, "decision", None) == "rtf_onset_gate":
+        # IS3 v2 (flat 5-class TFT + causal onset gate on run-to-failure units, aiengine/v2.py)
+        from . import v2
+        res = v2.gated(res, d)
     return res
+
+
+def is_hierarchical(model) -> bool:
+    return "healthy" not in set(model.dataset_parameters["target_normalizer"].classes_)
 
 
 def nhits_layout(model) -> tuple[list[str], dict, int, int]:

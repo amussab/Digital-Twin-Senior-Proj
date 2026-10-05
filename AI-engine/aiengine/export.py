@@ -51,6 +51,23 @@ class TFTExport(infer.ExportWrapper):
         return out["prediction"], w
 
 
+class HierTFTExport(TFTExport):
+    """v2 hierarchical model: the TFT has fault channels only. The exported `logits` keep the
+    contract's shape [B, 1, C] over ALL labels (alphabetical, healthy included): the healthy channel
+    is a constant HEALTHY_LOGIT, so softmax(logits) = the TFT fault-type distribution with
+    p(healthy) = 0. The host applies the onset gate (contract classes.decision)."""
+    HEALTHY_LOGIT = -1.0e4
+
+    def __init__(self, model, L, D, ts, healthy_index: int):
+        super().__init__(model, L, D, ts)
+        self.hidx = int(healthy_index)
+
+    def forward(self, encoder_cont, decoder_cont):
+        pred, w = super().forward(encoder_cont, decoder_cont)
+        const = torch.full_like(pred[..., :1], self.HEALTHY_LOGIT)
+        return torch.cat([pred[..., :self.hidx], const, pred[..., self.hidx:]], dim=-1), w
+
+
 def _export(wrapper: nn.Module, enc: np.ndarray, dec: np.ndarray, path: Path, outputs: list[str]) -> dict:
     """Trace with batch 1 (the deployed call), then check parity sample by sample, and record
     whether the graph also accepts batch > 1 (N-HiTS bakes the traced batch into a Reshape)."""
@@ -89,6 +106,9 @@ def builder_parity_tft(model, unit: pd.DataFrame) -> float:
     frame = unit[["unit_id", "window_index", "observable_class"] + cols].copy()
     frame["unit_id"] = frame["unit_id"].astype(str)
     frame["observable_class"] = frame["observable_class"].astype(str)
+    known = set(params["target_normalizer"].classes_)          # target is not an input
+    frame.loc[~frame["observable_class"].isin(known), "observable_class"] = sorted(known)[0]
+    params = {**params, "min_prediction_idx": int(frame["window_index"].min())}
     ds = TimeSeriesDataSet.from_parameters(params, frame, predict=False, stop_randomization=True)
     enc, dec = infer.tft_tensors(unit[cols].to_numpy(np.float64), cols, sc, L)
     worst = 0.0
@@ -134,17 +154,19 @@ def run(run_dir: Path, df: pd.DataFrame, tft_ckpt=None, nhits_ckpt=None, calib_f
     unit = df[df["unit_id"] == unit_id].sort_values("window_index")
 
     enc, dec = infer.tft_tensors(unit[tcols].to_numpy(np.float64), tcols, tsc, TL)
-    tft_w = TFTExport(tft, TL, 1, [0.0, 1.0]).eval()
+    hierarchical = train.is_hierarchical(tft)
+    tft_channels = sorted(tft.dataset_parameters["target_normalizer"].classes_,
+                          key=lambda c: tft.dataset_parameters["target_normalizer"].classes_[c])
+    labels_all = sorted(set(tft_channels) | {"healthy"}) if hierarchical else tft_channels
+    tft_w = (HierTFTExport(tft, TL, 1, [0.0, 1.0], labels_all.index("healthy")) if hierarchical
+             else TFTExport(tft, TL, 1, [0.0, 1.0])).eval()
     res_t = _export(tft_w, enc[:64], dec[:64], out_dir / "tft.onnx", ["logits", "variable_weights"])
     ne, nd = infer.nhits_tensors(unit[ncols].to_numpy(np.float64), ncols, nsc, NL, NH)
     res_n = _export(train.nhits_wrapper(nh), ne[-64:], nd[-64:], out_dir / "nhits.onnx", ["hi_forecast"])
     res_t["builder_vs_dataset_max_abs_diff"] = builder_parity_tft(tft, unit)
     res_n["builder_vs_dataset_max_abs_diff"] = builder_parity_nhits(nh, unit)
 
-    order = models.class_order(TimeSeriesDataSet.from_parameters(
-        tft.dataset_parameters, unit[["unit_id", "window_index", "observable_class"] + tcols]
-        .assign(unit_id=lambda d: d["unit_id"].astype(str),
-                observable_class=lambda d: d["observable_class"].astype(str)), predict=False))
+    order = list(tft_channels)          # label-encoder (alphabetical) output-channel order
     contract = {
         "contract_version": 2,
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -177,8 +199,25 @@ def run(run_dir: Path, df: pd.DataFrame, tft_ckpt=None, nhits_ckpt=None, calib_f
                   "run_in_skip_windows": labels.ONSET_RUN_IN_SKIP,
                   "rule": "threshold = mean + sigmas*max(std, sigma_floor) of HI windows [skip, skip+baseline); "
                           "onset = first window of the first run of `consecutive` windows above it"},
-        "classes": {"labels": order, "index_is_output_channel": True,
-                    "note": "alphabetical (label encoder) order; apply softmax to logits"},
+        "classes": ({"labels": labels_all, "index_is_output_channel": True, "tft_channels": order,
+                     "decision": {"type": "hierarchical_onset_gate",
+                                  "rule": "if the causal onset (contract.onset) is NOT yet confirmed for this bearing: "
+                                          "class = healthy, probs = one-hot(healthy); else probs = softmax(logits) "
+                                          "(the healthy logit is a constant -1e4, so p(healthy) = 0 and the class is "
+                                          "the TFT's fault type). p(healthy) = 1 - P(fault), P(fault) in {0, 1}.",
+                                  "healthy_logit": HierTFTExport.HEALTHY_LOGIT},
+                     "note": "alphabetical order over all labels; ONNX logits carry one channel per label"}
+                    if hierarchical else
+                    {"labels": order, "index_is_output_channel": True,
+                     "note": "alphabetical (label encoder) order; apply softmax to logits",
+                     **({"decision": {"type": "rtf_onset_gate",
+                                      "rule": "continuous monitoring stream (rig / run-to-failure): if the causal onset "
+                                              "(contract.onset) is NOT yet confirmed for this bearing: probs = "
+                                              "one-hot(healthy); else probs = softmax(logits) with p(healthy) set to 0 "
+                                              "and the rest renormalised to sum 1. Short seeded-fault records "
+                                              "(MaFaulDa evaluation) use plain softmax.",
+                                      "selected_by": "validation only (aiengine/v2.py, reports/model_selection_tft_v2_*.json)"}}
+                        if getattr(tft, "decision", None) == "rtf_onset_gate" else {})}),
         "models": {
             "tft": {"onnx": "tft.onnx", "encoder_length": TL, "decoder_length": 1, "columns": tcols,
                     "scalers": tsc, "warmup_windows": TL + 1, **res_t},

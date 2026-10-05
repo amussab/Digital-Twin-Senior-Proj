@@ -65,28 +65,48 @@ $PY app.py export $D --run real                                              # m
 $PY app.py evaluate $D --run real --tag real --robustness --threads 8
 $PY app.py demo-payloads $D                                                  # models/demo_payloads.bin
 ```
+
+**v2 (IS3 with MaFaulDa, 2026-10-05)** -- TFT re-trained jointly; N-HiTS/RUL reused from `real`:
+```bash
+D2="--datasets xjtu_sy ims mafaulda"
+$PY app.py data $D2                                     # freezes the mafaulda section of splits.json (XJTU/IMS unchanged)
+for k in 0 1 2 3 4 5 6 7; do $PY -m aiengine.v2 fit --idx $k --epochs 25 --threads 3 & done; wait   # grid on VAL only
+$PY -m aiengine.v2 aggregate                            # -> reports/model_selection_tft_v2_<ts>.json (winner idx 2 + onset gate)
+mkdir -p checkpoints/real_v2 && cp checkpoints/real/{nhits.ckpt,nhits_ft.ckpt,rul_calibration.json,rul_calibration_ft.json} checkpoints/real_v2/
+cp checkpoints/real_v2/select/tft_02/tft.ckpt checkpoints/real_v2/tft.ckpt; cp checkpoints/real_v2/tft.ckpt checkpoints/real_v2/tft_ft.ckpt
+$PY -c "from aiengine import v2; [v2.write_decision(v2.CHECKPOINT_DIR/'real_v2'/f, 'rtf_onset_gate', 'model_selection_tft_v2') for f in ('tft.ckpt','tft_ft.ckpt')]"
+$PY app.py export   $D2 --run real_v2                   # models/ (v1 copy kept in checkpoints/real/models_v1_backup/)
+$PY app.py evaluate $D2 --run real_v2 --tag real_v2 --robustness --threads 12 --note "v2 = second look at XJTU/IMS test bearings; v2 choices made on validation only ..."
+```
+`models/demo_payloads.bin` is unchanged (it carries raw features; the inputs did not change).
 Seed 20261004. Splits frozen in `splits.json` before any real-data training (DESIGN.md change log).
 
 ## Results
 
-**[MEASURED on XJTU-SY / IMS public bearing datasets, not the team rig.]** Copied from
-`reports/spec_check_20261004T214921Z_real.md` (JSON alongside; per-window predictions in
-`*.tft_preds.csv.gz` / `*.rul_preds.csv.gz`). Test bearings: XJTU-SY Bearing1_4 (cage), 2_5 (outer),
-3_4 (inner) with the pretrained model; IMS test1 B4 (ball) with the IMS-fine-tuned model.
+**[MEASURED on XJTU-SY / IMS / MaFaulDa public bearing datasets, not the team rig.]**
+v1 = `reports/spec_check_20261004T214921Z_real.md` (TFT on XJTU-SY only; 4 output channels, no ball).
+v2 = `reports/spec_check_20261005T012112Z_real_v2.md`: **v2 = second look at the XJTU/IMS test bearings;
+every v2 choice was made on validation only** (`reports/model_selection_tft_v2_20261005T011306Z.json`).
+Test sets: XJTU-SY Bearing1_4 (cage), 2_5 (outer), 3_4 (inner); IMS test1 B4 (ball); v2 adds 233 MaFaulDa
+test records (held-out speed blocks). Per-window predictions in `*.tft_preds.csv.gz` / `*.rul_preds.csv.gz`.
 
-| Spec | Target | Measured | Verdict |
-|---|---|---|---|
-| S7 RUL MAPE (pre-registered, 4 test bearings) | <= 15 % | 259.5 % (XJTU-only 189.9 %; per bearing 1_4 464 %, 2_5 51 %, 3_4 55 %, IMS B4 469 %) | FAIL |
-| S8 TFT latency p95 (1 thread, ONNX) | < 200 ms | 11.4 ms | PASS |
-| IS3a macro-F1, testable classes {healthy, outer, inner, cage} (primary) | >= 0.85 | 0.566 | FAIL |
-| IS3a macro-F1, all 5 classes (ball: 1987 test windows, 0 training bearings) | >= 0.85 | 0.288 | FAIL |
-| IS3b stage error, max abs (literal) | <= 1 | 4 (mean 0.90; 72.1 % of windows within ±1) | FAIL |
-| IS3c caught by stage 3 | 4/4 | 2/4 (2_5 at stage 2, 3_4 at stage 3; 1_4 cage and IMS B4 ball never caught) | FAIL |
-| IS1 ICS leg p95 (features+TFT+N-HiTS+RUL) | < 500 ms | 14.8 ms | PASS |
+| Spec | Target | v1 | v2 | v2 verdict |
+|---|---|---|---|---|
+| S7 RUL MAPE (pre-registered, 4 RTF test bearings) | <= 15 % | 259.5 % | 281.8 % (1_4 567 %, 2_5 47 %, 3_4 44 %, IMS B4 469 %) | FAIL |
+| S8 TFT latency p95 (1 thread, ONNX) | < 200 ms | 11.4 ms | 11.1 ms | PASS |
+| IS3a macro-F1, all 5 classes | >= 0.85 | 0.288 (ball untrainable) | 0.581 | FAIL |
+| IS3a per dataset (classes present) | -- | -- | MaFaulDa 0.848, XJTU-SY 0.450, IMS 0.679 | -- |
+| IS3b stage error, max abs (literal) | <= 1 | 4 (72.1 % within +/-1) | 4 (72.1 % within +/-1) | FAIL |
+| IS3c caught by stage 3 | 4/4 | 2/4 | 1/4 (2_5 at stage 2; 3_4 at stage 4; IMS B4 at stage 6; 1_4 never) | FAIL |
+| IS1 ICS leg p95 | < 500 ms | 14.8 ms | 14.4 ms | PASS |
+
+v2 validation (selection only, not a result): pooled val macro-F1 0.917 (MaFaulDa 0.911, XJTU-SY 0.859). It
+did not transfer to test because validation has no inner-race and no IMS-domain fault: on test, IMS B4
+ball windows are called inner_race 75 % of the time (the only IMS-domain fault in training is B3's inner
+race, a source shortcut), XJTU-SY cage stays at F1 0 and inner race at 0.19, MaFaulDa cage recall drops
+to 0.60 (151 cage windows called outer). Per-source confusion matrices are in the report.
 
 SECONDARY robustness (`reports/model_selection_robustness_lobo_20261004T214321Z.json`, LOBO over all 15
-XJTU-SY bearings, TFT + N-HiTS retrained and the estimator selected inside each fold): S7 median 73.7 %,
-mean 221.7 %, 0/15 bearings ≤ 15 %. Fine-tune demonstration (IMS B4): S7 406.4 % before fine-tuning,
-468.6 % after; B4 classification is untestable (ball has no output channel).
+XJTU-SY bearings, v1 models): S7 median 73.7 %, mean 221.7 %, 0/15 bearings <= 15 %.
 
 Synthetic pipeline-proof results (superseded): `reports/spec_check_20261004T192939Z_synthetic.md`.
