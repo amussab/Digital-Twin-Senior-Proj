@@ -32,6 +32,27 @@ public sealed class OnnxInferenceEngine : IInferenceEngine, IDisposable
         _nhIdx = contract.Nhits.Columns.Select(c => contract.Features.Index(c)).ToArray();
         _classHealthy = contract.ClassLabels.ToList().IndexOf("healthy");
         if (_classHealthy < 0) throw new InvalidDataException("contract classes lack 'healthy'");
+        WarmUp();
+    }
+
+    /// <summary>Runs each ONNX session a few times on zero tensors at startup, so the first real window does not
+    /// pay the one-time session/kernel initialisation (measured ~170 ms max on the first call, which would eat the
+    /// IS1 &lt;500 ms budget on top of COE's 333 ms). Outputs are discarded; no tracker state is touched.</summary>
+    private void WarmUp()
+    {
+        var sw = Stopwatch.StartNew();
+        for (var k = 0; k < 3; k++)
+        {
+            var L = _c.Tft.EncoderLength; var R = _tftIdx.Length;
+            var tf = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("encoder_cont", new DenseTensor<float>(new float[L * R], new[] { 1, L, R })) };
+            if (_tftHasDecoder) tf.Add(NamedOnnxValue.CreateFromTensor("decoder_cont", new DenseTensor<float>(new float[R], new[] { 1, 1, R })));
+            using (_tft.Run(tf)) { }
+            var NL = _c.Nhits.EncoderLength; var NR = _nhIdx.Length;
+            var nf = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("encoder_cont", new DenseTensor<float>(new float[NL * NR], new[] { 1, NL, NR })) };
+            if (_nhitsHasDecoder) nf.Add(NamedOnnxValue.CreateFromTensor("decoder_cont", new DenseTensor<float>(new float[_c.NhitsPredictionLength * NR], new[] { 1, _c.NhitsPredictionLength, NR })));
+            using (_nhits.Run(nf)) { }
+        }
+        _log.LogInformation("ONNX sessions warmed up in {Ms:F0} ms (3 TFT + 3 N-HiTS dummy runs)", sw.Elapsed.TotalMilliseconds);
     }
 
     public string Name => "OnnxInferenceEngine";

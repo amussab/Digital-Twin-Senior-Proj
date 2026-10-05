@@ -18,3 +18,15 @@ Caveats:
   COE node's acquisition/DSP leg (COE spec S5 ≤333 ms) or the Wi-Fi hop.
 - On this stream, bearing 1 (true fault: outer race) is called "Cage fault" near end of life.
   That is the v2 model's real behaviour on a held-out bearing; IS3 is NOT claimed from this stream.
+
+## Update (~08:30): ONNX warm-up at backend startup
+The backend now runs 3 dummy TFT and 3 dummy N-HiTS inferences when the engine loads (18 ms total),
+so the first real window no longer pays session initialisation. Re-measured twice, same command:
+
+| Run | All windows (n=339) p50 / p95 / max | ONNX-active windows (n=303) p50 / p95 / max |
+|---|---|---|
+| 1 (first client after process start) | 25.5 / 30.5 / **137.5 ms** | 25.6 / 30.3 / **39.8 ms** |
+| 2 (steady state) | 25.1 / 30.0 / 39.0 ms | 25.1 / 30.0 / 39.0 ms |
+
+The remaining 137 ms one-off in run 1 falls on a pre-ONNX commissioning window, i.e. first-payload
+JIT/connection setup after a process start. With ONNX active, the max is ≤ 40 ms.
