@@ -63,3 +63,15 @@ through and note what replaced it.
   only).
 - Evidence deliverable: `AI-engine/notebooks/PPR_ICS_Evidence.ipynb`. It is a live, executed
   scorecard: every claim is recomputed in a cell from data on disk (Rank 9 when run at the PPR).
+
+## Final PPR state (2026-10-05 ~06:30, branch feature/integration)
+- Deliverable: `AI-engine/notebooks/PPR_ICS_Evidence.ipynb` (+ .html fallback). Run-All ~226 s,
+  executed at f0aa35a. Root README has the results, the presenter checklist and docker compose.
+- MET live (Rank 9): C5 (HTTP + UDP LAN guard), C4 AI/host part (needs team agreement to count
+  for ICS), S8 TFT p95 11.1 ms, S9 30 Hz (client rate, replay data).
+- PARTIAL: IS1, host leg only (p95 ~28–32 ms).
+- NOT MET: S7 281.8 % (LOBO median 73.7 %); IS3 5-class macro-F1 0.581 (MaFaulDa 0.848,
+  XJTU 0.450, IMS 0.679), stage max error 4, 1/4 caught by stage 3; IS2 (simulation residual
+  ~100 %).
+- Models: v2 = XJTU-SY + IMS + MaFaulDa, export a78a828. C# golden parity passes.
+  v2 was the second look at the XJTU/IMS test bearings (disclosed).
