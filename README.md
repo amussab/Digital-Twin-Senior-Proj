@@ -71,7 +71,7 @@ not in git (`AI-engine/data/`).
 ### Evidence notebook
 
 [`AI-engine/notebooks/PPR_ICS_Evidence.ipynb`](AI-engine/notebooks/PPR_ICS_Evidence.ipynb): a scorecard that
-recomputes each ICS spec claim from data on disk (PPR evidence).
+recomputes each ICS spec claim from data on disk (PPR evidence). It also contains §1b *Datasets used* (sources, sizes on disk, windows per class, frozen splits, bearing lifetimes), §6b the per-bearing values behind the S7 MAPE, and §7b the metric definitions with per-class TP/FP/FN/TN, precision, recall and F1 behind the macro-F1.
 
 ## Repository map
 

@@ -767,3 +767,112 @@ def poll_state(b: "Backend", max_payloads: int = 400, timeout_s: float = 40, int
                 break
         time.sleep(interval_s)
     return pd.DataFrame(rows)
+
+
+# --------------------------------------------------------------------------- datasets (reviewer request)
+DATASET_FACTS = [  # [CITED] from each dataset's publication / page; verified against files on disk where noted
+    {"dataset": "xjtu_sy", "name": "XJTU-SY bearing run-to-failure", "used for": "RUL (N-HiTS) + classification (TFT)",
+     "source": "github.com/WangBiaoXJTU/xjtu-sy-bearing-datasets (HF mirror)",
+     "citation": "Wang, Lei, Li, Li, IEEE Trans. Reliability 69(1), 2020",
+     "bearing": "LDK UER204, 8 balls", "sampling": "25.6 kHz, 1.28 s snapshot every 1 min",
+     "channels": "2 (horizontal + vertical, one bearing)", "speeds / load": "2100 / 2250 / 2400 rpm; 12 / 11 / 10 kN",
+     "faults": "natural degradation: outer race, inner race, cage, mixed"},
+    {"dataset": "ims", "name": "IMS / NASA bearing, test 1", "used for": "fine-tune rehearsal (new machine) + classification",
+     "source": "NASA Prognostics Data Repository (Univ. of Cincinnati IMS)",
+     "citation": "Lee, Qiu, Yu, Lin, 'Bearing Data Set', IMS / NASA, 2007",
+     "bearing": "Rexnord ZA-2115 double-row, 16 rollers/row", "sampling": "20 kHz, 1 s snapshot every 10 min (5 min early)",
+     "channels": "8 = 4 bearings x 2 radial axes", "speeds / load": "2000 rpm; 6000 lb radial",
+     "faults": "natural degradation: B3 inner race, B4 roller (ball); B1/B2 did not fail"},
+    {"dataset": "mafaulda", "name": "MaFaulDa machinery fault database (UFRJ)", "used for": "classification (TFT), seeded faults",
+     "source": "www02.smt.ufrj.br/~offshore/mfs/", "citation": "UFRJ SMT, MaFaulDa (SpectraQuest MFS ABVT)",
+     "bearing": "8-ball bearing (orders FTF .375, BSF 1.871, BPFO 2.998, BPFI 5.002)",
+     "sampling": "50 kHz, 5 s records", "channels": "2 radial axes per bearing (axial dropped), 2 bearings",
+     "speeds / load": "737-3686 rpm (49 speeds, ~60 rpm steps); imbalance mass 0/6/20/35 g",
+     "faults": "seeded: outer race, ball, cage at underhang/overhang + normal (no inner race)"},
+]
+FEMTO_CWRU_NOTE = ("Rejected: FEMTO-ST/PRONOSTIA (0.1 s records = ~3 revolutions, cannot form the 20-revolution window, "
+                   "spec C4/S6); CWRU (single axis per bearing, 12 kHz files cannot hold the 2-8 kHz band).")
+
+
+def dir_size(path: Path) -> tuple[int, int]:
+    n, b = 0, 0
+    for root, _, files in os.walk(path):
+        for f in files:
+            if not f.lower().endswith((".zip", ".pdf", ".7z", ".rar", ".md")):   # data files only (IMS files have no extension)
+                n += 1
+                b += os.path.getsize(os.path.join(root, f))
+    return n, b
+
+
+def dataset_inventory(data: Path) -> dict:
+    """Live inventory: raw files on disk, cached 20-revolution windows, units, classes, splits."""
+    splits = json.loads((AIENGINE / "splits.json").read_text())["sections"]
+    rows, cls_rows, split_rows, life_rows = [], [], [], []
+    for name in ("xjtu_sy", "ims", "mafaulda"):
+        raw_dir = data / "raw" / name
+        nfiles, nbytes = dir_size(raw_dir) if raw_dir.exists() else (0, 0)
+        f = pd.read_parquet(data / "cache" / f"{name}.parquet",
+                            columns=["unit_id", "fault_class", "rpm", "life_hours", "run_to_failure", "severity"])
+        units = f.groupby("unit_id").first()
+        rows.append({"dataset": name, "raw files": nfiles, "raw size (GB)": round(nbytes / 1e9, 2),
+                     "units (bearing records)": len(units), "20-rev windows": len(f),
+                     "run-to-failure units": int(units["run_to_failure"].sum()),
+                     "rpm min": round(float(f.rpm.min())), "rpm max": round(float(f.rpm.max())),
+                     "features / window": 16})
+        for c, g in f.groupby("fault_class"):
+            cls_rows.append({"dataset": name, "class": c, "units": g.unit_id.nunique(), "windows": len(g)})
+        sp = pd.Series(splits[name]["units"])
+        w = f.groupby("unit_id").size()
+        for s_name, us in sp.groupby(sp):
+            split_rows.append({"dataset": name, "split": s_name, "units": len(us),
+                               "windows": int(w.reindex(us.index).fillna(0).sum())})
+        if name in ("xjtu_sy", "ims"):
+            for u, r in units.iterrows():
+                life_rows.append({"unit": u, "fault": r.fault_class, "run to failure": bool(r.run_to_failure),
+                                  "life (h)": round(float(r.life_hours), 2) if r.run_to_failure else None,
+                                  "windows": int(w[u]), "split": splits[name]["units"].get(u, "-")})
+    return {"size": pd.DataFrame(rows), "classes": pd.DataFrame(cls_rows).pivot_table(
+                index="dataset", columns="class", values="windows", aggfunc="sum", fill_value=0),
+            "class_units": pd.DataFrame(cls_rows).pivot_table(
+                index="dataset", columns="class", values="units", aggfunc="sum", fill_value=0),
+            "splits": pd.DataFrame(split_rows), "lifetimes": pd.DataFrame(life_rows)}
+
+
+# --------------------------------------------------------------------------- metric tables (reviewer request)
+def per_class_counts(y_true, y_pred, classes=None) -> pd.DataFrame:
+    """One row per class with the raw counts behind precision / recall / F1 (one-vs-rest)."""
+    y, p = np.asarray(y_true).astype(str), np.asarray(y_pred).astype(str)
+    classes = classes or CLASSES
+    rows = []
+    for c in classes:
+        tp = int(((y == c) & (p == c)).sum()); fp = int(((y != c) & (p == c)).sum())
+        fn = int(((y == c) & (p != c)).sum()); tn = int(((y != c) & (p != c)).sum())
+        prec = tp / (tp + fp) if tp + fp else 0.0
+        rec = tp / (tp + fn) if tp + fn else 0.0
+        f1 = 2 * prec * rec / (prec + rec) if prec + rec else 0.0
+        rows.append({"class": c, "support (true windows)": tp + fn, "TP": tp, "FP": fp, "FN": fn, "TN": tn,
+                     "precision = TP/(TP+FP)": round(prec, 3), "recall = TP/(TP+FN)": round(rec, 3),
+                     "F1 = 2PR/(P+R)": round(f1, 3)})
+    df = pd.DataFrame(rows)
+    macro = {"class": "MACRO (unweighted mean)", "support (true windows)": int(df["support (true windows)"].sum()),
+             "TP": int(df.TP.sum()), "FP": int(df.FP.sum()), "FN": int(df.FN.sum()), "TN": None,
+             "precision = TP/(TP+FP)": round(df["precision = TP/(TP+FP)"].mean(), 3),
+             "recall = TP/(TP+FN)": round(df["recall = TP/(TP+FN)"].mean(), 3),
+             "F1 = 2PR/(P+R)": round(df["F1 = 2PR/(P+R)"].mean(), 3)}
+    acc = float((y == p).mean())
+    return pd.concat([df, pd.DataFrame([macro])], ignore_index=True), acc
+
+
+def s7_per_bearing_table(rul_preds: pd.DataFrame, mask) -> pd.DataFrame:
+    """Values behind S7: per test bearing, the windows inside the pre-registered window and their errors."""
+    g = rul_preds[mask].copy()
+    g["abs_err_h"] = (g["rul_pred"] - g["rul_true"]).abs()
+    g["ape_pct"] = g["abs_err_h"] / g["rul_true"] * 100
+    t = g.groupby("unit_id").agg(windows=("ape_pct", "size"), life_h=("life_hours", "first"),
+                                 onset_h=("onset_t_hours", "first"), mean_true_RUL_h=("rul_true", "mean"),
+                                 mean_pred_RUL_h=("rul_pred", "mean"), mean_abs_err_h=("abs_err_h", "mean"),
+                                 MAPE_pct=("ape_pct", "mean")).reset_index()
+    s7 = float(t.MAPE_pct.mean())          # mean of the UNROUNDED per-bearing MAPEs
+    t = t.round(2)
+    t.loc[len(t)] = {"unit_id": "S7 = mean over bearings", "windows": int(t.windows.sum()), "MAPE_pct": round(s7, 2)}
+    return t
