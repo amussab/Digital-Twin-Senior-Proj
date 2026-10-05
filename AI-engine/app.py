@@ -137,7 +137,18 @@ def cmd_train(args) -> int:
     meta = json.loads(prev.read_text()) if prev.exists() else {}
     meta.setdefault("history", []).append(_meta(args, names, df))
     meta["provenance"] = meta["history"][-1]
-    if not args.skip_tft:
+    if not args.skip_tft and (args.hierarchical or args.balance):
+        # v2 (DESIGN.md change log 2026-10-05 v2): settings chosen by LOBO over train+val bearings
+        # (aiengine/hier.py); the final model trains on train+val for the same fixed epochs, no early
+        # stopping (test bearings never seen).
+        from aiengine import hier
+        v = {"hier": args.hierarchical, "power": args.class_weight_power, "balance": args.balance}
+        fitdf = pre[pre.split.isin(["train", "val"])]
+        print(f"[TFT v2] {v} on {fitdf.unit_id.nunique()} train+val units, {args.epochs} epochs ...", flush=True)
+        _, meta["tft"] = hier.fit(fitdf, fitdf.iloc[:0], v, run, encoder=args.tft_encoder, epochs=args.epochs or 20)
+        meta["tft"]["v2_variant"] = v
+        print(f"  {meta['tft']['train_seconds']} s", flush=True)
+    elif not args.skip_tft:
         print(f"[TFT] training on {pre[pre.split == 'train'].unit_id.nunique()} units ...", flush=True)
         _, meta["tft"] = train.train_tft(pre[pre.split == "train"], pre[pre.split == "val"], tc, run)
         print(f"  {meta['tft']['train_seconds']} s, val loss {meta['tft']['best_val_loss']}", flush=True)
@@ -283,9 +294,24 @@ def cmd_finetune(args) -> int:
     _, meta["nhits_ft"] = train.finetune(run / "nhits.ckpt", train.rtf_frames(ftr), "nhits", run,
                                          lr_factor=args.lr_factor, freeze_encoder=args.freeze,
                                          max_epochs=args.epochs)
-    _, meta["tft_ft"] = train.finetune(run / "tft.ckpt", train.tft_frames(ftr), "tft", run,
-                                       lr_factor=args.lr_factor, freeze_encoder=args.freeze,
-                                       max_epochs=args.epochs)
+    tft_pre = train.load_model(run / "tft.ckpt")
+    if train.is_hierarchical(tft_pre):
+        from aiengine import hier
+        ft_cls = sorted(set(hier.post_onset(ftr)["observable_class"].astype(str)))
+        if len(ft_cls) < 2:
+            # A fault-type head fine-tuned on a single fault class collapses onto it; keep the
+            # pretrained fault-type TFT (the onset gate is rule-based and needs no fine-tuning).
+            (run / "tft_ft.ckpt").write_bytes((run / "tft.ckpt").read_bytes())
+            meta["tft_ft"] = {"skipped": True, "reason": f"ft_train post-onset classes {ft_cls}: < 2 fault classes; "
+                              "tft_ft.ckpt = pretrained hierarchical TFT"}
+        else:
+            _, meta["tft_ft"] = train.finetune(run / "tft.ckpt", hier.post_onset(ftr), "tft", run,
+                                               lr_factor=args.lr_factor, freeze_encoder=args.freeze,
+                                               max_epochs=args.epochs)
+    else:
+        _, meta["tft_ft"] = train.finetune(run / "tft.ckpt", train.tft_frames(ftr), "tft", run,
+                                           lr_factor=args.lr_factor, freeze_encoder=args.freeze,
+                                           max_epochs=args.epochs)
     # RUL thresholds re-fitted on the new domain's TRAINING bearings (part of fine-tuning)
     nh = train.load_model(run / "nhits_ft.ckpt")
     tft = train.load_model(run / "tft_ft.ckpt")
@@ -448,6 +474,8 @@ def main(argv=None) -> int:
     t.add_argument("--skip-nhits", action="store_true")
     t.add_argument("--rul-from", help="model_selection_rul_*.json to take the RUL estimator from")
     t.add_argument("--class-weight-power", type=float, default=1.0)
+    t.add_argument("--hierarchical", action="store_true", help="v2: onset gate + fault-type TFT (post-onset windows)")
+    t.add_argument("--balance", action="store_true", help="v2: bearing-balanced sampling (replicate short bearings)")
     t.add_argument("--nhits-covariates", help="comma-separated N-HiTS covariates ('' = none)")
     sl = sub.add_parser("select", help="model selection on train+val only (LOBO for RUL, val grid for TFT)")
     common(sl)

@@ -15,6 +15,8 @@ from __future__ import annotations
 import time
 from concurrent.futures import ProcessPoolExecutor
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -39,6 +41,14 @@ def tach_rpm(tach: np.ndarray, fs: float) -> float:
     return 60.0 * (len(up) - 1) * fs / (up[-1] - up[0])
 
 
+def _nominal_rpm(path) -> float:
+    """MaFaulDa filenames are the record's rotation frequency in Hz [CITED dataset page]."""
+    try:
+        return float(Path(path).stem) * 60.0
+    except ValueError:
+        return float("nan")
+
+
 def _task(args):
     path, positions = args
     cfg = common.pipeline(FS, BEARING_ORDERS[DATASET])
@@ -46,6 +56,12 @@ def _task(args):
     if a.shape[1] != 8:
         raise ValueError(f"{path}: expected 8 columns, got {a.shape}")
     rpm = tach_rpm(a[:, 0], FS)
+    nominal = _nominal_rpm(path)
+    # The simple mid-level crossing count over-counts on some noisy faulted records
+    # (up to ~19k rpm on a 737-3686 rpm rig). When it disagrees with the dataset's own
+    # filename frequency by >5%, trust the filename. Decided from metadata, not results.
+    if np.isfinite(nominal) and not (np.isfinite(rpm) and abs(rpm - nominal) / nominal <= 0.05):
+        rpm = nominal
     out = {}
     for pos in positions:
         cx, cy = COLS[pos]
@@ -76,12 +92,9 @@ def build(workers: int = 16) -> pd.DataFrame:
     with ProcessPoolExecutor(workers) as ex:
         for k, (rpm, out) in enumerate(ex.map(_task, [(str(j[0]), j[5]) for j in jobs], chunksize=4)):
             f, top, sub, fault, sev, _ = jobs[k]
-            try:
-                nominal = float(f.stem) * 60.0
-            except ValueError:
-                nominal = float("nan")
-            if np.isfinite(nominal) and not abs(rpm - nominal) / nominal <= 0.05:
-                mism += 1
+            nominal = _nominal_rpm(f)
+            if np.isfinite(nominal) and rpm == nominal:
+                mism += 1   # tach disagreed; filename frequency used (see _task)
             dur_h = 20.0 * 60.0 / rpm / 3600.0
             for pos, feats in out.items():
                 if top == "normal":
@@ -94,7 +107,7 @@ def build(workers: int = 16) -> pd.DataFrame:
                     rows.append(common.row(meta, i, i * dur_h, rpm, v, cfg))
             if (k + 1) % 100 == 0:
                 print(f"[mafaulda] {k + 1}/{len(jobs)}  {time.time() - t0:.0f}s", flush=True)
-    print(f"[mafaulda] tach-vs-filename rpm mismatch >5%: {mism} records", flush=True)
+    print(f"[mafaulda] tach disagreed with filename by >5%, filename rpm used: {mism} records", flush=True)
     frame = common.validate(pd.DataFrame(rows))
     common.save(frame, DATASET)
     print(f"[mafaulda] done {len(frame)} rows in {time.time() - t0:.0f}s", flush=True)

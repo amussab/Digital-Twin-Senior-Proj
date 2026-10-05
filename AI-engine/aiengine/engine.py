@@ -57,6 +57,9 @@ class HybridEngine:
         self.TL, self.tcols, self.tsc = mt["encoder_length"], mt["columns"], mt["scalers"]
         self.NL, self.NH, self.ncols, self.nsc = mn["encoder_length"], mn["prediction_length"], mn["columns"], mn["scalers"]
         self.classes = self.c["classes"]["labels"]
+        # v2 hierarchical decision: before the causal onset is confirmed the bearing is healthy; after
+        # it, the TFT's fault-type softmax (its healthy logit is a constant -1e4, so p(healthy) = 0).
+        self.hierarchical = self.c["classes"].get("decision", {}).get("type") == "hierarchical_onset_gate"
         r = dict(self.c["rul"])
         self.calib = rul.RULCalibration.from_dict({k: r[k] for k in rul.RULCalibration.__dataclass_fields__ if k in r})
         self.interval_rel = float(r.get("interval_rel", 0.5))
@@ -124,6 +127,9 @@ class HybridEngine:
         feed = {k2: v for k2, v in {"encoder_cont": enc[-1:], "decoder_cont": dec[-1:]}.items() if k2 in self.tft_in}
         logits, vw = self.tft.run(["logits", "variable_weights"], feed)
         probs = infer.softmax(logits[0, 0].astype(np.float64))
+        if self.hierarchical and b.onset.onset_index is None:
+            probs = np.zeros_like(probs)
+            probs[self.classes.index("healthy")] = 1.0
         b.probs.append(probs)
         t_tft = (time.perf_counter() - t1) * 1000
 
