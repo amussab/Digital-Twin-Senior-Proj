@@ -263,6 +263,35 @@ public class FeatureEngineerTests
     }
 }
 
+/// <summary>C5 for UDP 5005: datagrams from non-private senders are dropped and counted.</summary>
+public class UdpLanGuardTests
+{
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("10.1.2.3")]
+    [InlineData("172.20.0.5")]
+    [InlineData("192.168.1.50")]
+    [InlineData("fe80::1")]
+    public void PrivateSender_Accepted(string ip) =>
+        Assert.True(DigitalTwin.Backend.Ingest.UdpIngestService.IsAllowedSender(new IPEndPoint(IPAddress.Parse(ip), 40000)));
+
+    [Theory]
+    [InlineData("8.8.8.8")]
+    [InlineData("203.0.113.9")]
+    [InlineData("172.32.0.1")]
+    [InlineData("2001:4860:4860::8888")]
+    public void PublicSender_Rejected(string ip) =>
+        Assert.False(DigitalTwin.Backend.Ingest.UdpIngestService.IsAllowedSender(new IPEndPoint(IPAddress.Parse(ip), 40000)));
+
+    [Fact]
+    public void RejectCounter_Increments()
+    {
+        var l = new DigitalTwin.Backend.Services.LatencyRecorder();
+        l.CountUdpNonLan();
+        Assert.Equal(1, l.UdpRejectedNonLan);
+    }
+}
+
 /// <summary>C5: the remote-address guard returns 403 for any non-private address.</summary>
 public class LanOnlyTests
 {

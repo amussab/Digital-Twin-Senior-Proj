@@ -24,6 +24,10 @@ public sealed class LatencyRecorder
     public void CountReject() => Interlocked.Increment(ref _rejects);
     public long Rejects => Interlocked.Read(ref _rejects);
 
+    private long _udpNonLan;
+    public void CountUdpNonLan() => Interlocked.Increment(ref _udpNonLan);
+    public long UdpRejectedNonLan => Interlocked.Read(ref _udpNonLan);
+
     public IReadOnlyList<StageStats> Snapshot() =>
         _rings.OrderBy(k => k.Key).Select(kv =>
         {

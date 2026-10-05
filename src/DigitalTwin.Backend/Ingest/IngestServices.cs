@@ -11,8 +11,11 @@ namespace DigitalTwin.Backend.Ingest;
 /// <summary>UDP listener: one datagram = one 152-byte payload. Anything else is logged and counted as a reject.</summary>
 public sealed class UdpIngestService : BackgroundService
 {
-    private readonly Pipeline _pipe; private readonly UdpOptions _o; private readonly ILogger<UdpIngestService> _log;
-    public UdpIngestService(Pipeline p, IOptions<BackendOptions> o, ILogger<UdpIngestService> l) { _pipe = p; _o = o.Value.Udp; _log = l; }
+    private readonly Pipeline _pipe; private readonly UdpOptions _o; private readonly ILogger<UdpIngestService> _log; private readonly LatencyRecorder _lat;
+    public UdpIngestService(Pipeline p, IOptions<BackendOptions> o, ILogger<UdpIngestService> l, LatencyRecorder lat) { _pipe = p; _o = o.Value.Udp; _log = l; _lat = lat; }
+
+    /// <summary>C5 for UDP: only private/loopback senders are accepted (same ranges as the HTTP guard).</summary>
+    public static bool IsAllowedSender(IPEndPoint? remote) => remote is null || PrivateNetwork.IsPrivate(remote.Address);
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -24,6 +27,12 @@ public sealed class UdpIngestService : BackgroundService
             try
             {
                 var r = await udp.ReceiveAsync(ct);
+                if (!IsAllowedSender(r.RemoteEndPoint))
+                {
+                    _lat.CountUdpNonLan();
+                    _log.LogWarning("C5: dropped UDP datagram from non-LAN sender {Ep}", r.RemoteEndPoint);
+                    continue;
+                }
                 await _pipe.IngestAsync(r.Buffer, "udp:" + r.RemoteEndPoint, ct);
             }
             catch (OperationCanceledException) { break; }

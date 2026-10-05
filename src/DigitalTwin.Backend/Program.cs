@@ -107,7 +107,7 @@ app.MapGet("/api/state", (StateStore s, SnapshotFactory f, IInferenceEngine e) =
 });
 
 app.MapGet("/api/metrics", (LatencyRecorder l, IInferenceEngine e) =>
-    Results.Ok(new { isSimulated = e.IsSimulated, rejects = l.Rejects, stages = l.Snapshot() }));
+    Results.Ok(new { isSimulated = e.IsSimulated, rejects = l.Rejects, udpRejectedNonLan = l.UdpRejectedNonLan, stages = l.Snapshot() }));
 
 app.MapGet("/api/demo", (DemoControl c) => Results.Ok(new { source = c.Source, machine = c.MachineLabel }));
 app.MapPost("/api/demo/source", (string name, DemoControl c) =>
