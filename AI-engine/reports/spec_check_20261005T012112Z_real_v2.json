@@ -1,0 +1,2924 @@
+{
+  "generated_utc": "20261005T012112Z",
+  "provenance": {
+    "datasets": [
+      "xjtu_sy",
+      "ims",
+      "mafaulda"
+    ],
+    "real_data": [
+      "xjtu_sy",
+      "ims",
+      "mafaulda"
+    ],
+    "synthetic": false,
+    "seed": 20261004,
+    "git_commit": "a4dd328",
+    "git_dirty": true,
+    "command": "app.py evaluate --datasets xjtu_sy ims mafaulda --run real_v2 --tag real_v2 --robustness --threads 12 --note v2 = second look at XJTU/IMS test bearings; v2 choices made on validation only (reports/model_selection_tft_v2_20261005T011306Z.json). TFT trained jointly on XJTU-SY train + IMS ft_train + MaFaulDa train; N-HiTS + RUL calibration unchanged from v1 (run real).",
+    "run": "real_v2",
+    "host": "Windows 10, Intel64 Family 6 Model 183 Stepping 1, GenuineIntel, torch 2.14.0+cpu",
+    "counts": {
+      "ims": {
+        "ft_test": {
+          "units": 1,
+          "windows": 2156
+        },
+        "ft_train": {
+          "units": 3,
+          "windows": 6468
+        }
+      },
+      "mafaulda": {
+        "test": {
+          "units": 233,
+          "windows": 1911
+        },
+        "train": {
+          "units": 701,
+          "windows": 5922
+        },
+        "val": {
+          "units": 235,
+          "windows": 1907
+        }
+      },
+      "xjtu_sy": {
+        "test": {
+          "units": 3,
+          "windows": 1976
+        },
+        "train": {
+          "units": 9,
+          "windows": 6807
+        },
+        "val": {
+          "units": 3,
+          "windows": 433
+        }
+      }
+    }
+  },
+  "verdicts": [
+    {
+      "spec": "S7",
+      "requirement": "RUL MAPE on held-out degradation window (N-HiTS)",
+      "op": "<=",
+      "target": 15.0,
+      "measured": 281.8054261284695,
+      "unit": "%",
+      "status": "FAIL"
+    },
+    {
+      "spec": "S8",
+      "requirement": "TFT classification latency per window, p95 single-window",
+      "op": "<",
+      "target": 200.0,
+      "measured": 11.142779999954655,
+      "unit": "ms",
+      "status": "PASS"
+    },
+    {
+      "spec": "IS3a",
+      "requirement": "macro-F1 over the testable classes (train AND test support; primary)",
+      "op": ">=",
+      "target": 0.85,
+      "measured": 0.5811592376693763,
+      "unit": "",
+      "status": "FAIL"
+    },
+    {
+      "spec": "IS3a-5",
+      "requirement": "macro-F1 over all 5 classes (a class with no output channel scores F1 0)",
+      "op": ">=",
+      "target": 0.85,
+      "measured": 0.5811592376693763,
+      "unit": "",
+      "status": "FAIL"
+    },
+    {
+      "spec": "IS3b",
+      "requirement": "stage error <= 1, literal reading: MAX abs stage error over test windows",
+      "op": "<=",
+      "target": 1,
+      "measured": 4.0,
+      "unit": "",
+      "status": "FAIL"
+    },
+    {
+      "spec": "IS3c",
+      "requirement": "run-to-failure faults caught (3 consecutive correct) by stage 3",
+      "op": ">=",
+      "target": 1.0,
+      "measured": 0.25,
+      "unit": "",
+      "status": "FAIL"
+    },
+    {
+      "spec": "IS1 (ICS leg)",
+      "requirement": "features + TFT + N-HiTS + RUL per window, p95",
+      "op": "<",
+      "target": 500.0,
+      "measured": 14.4168,
+      "unit": "ms",
+      "status": "PASS"
+    }
+  ],
+  "metrics": {
+    "classification": {
+      "n": 5569,
+      "macro_f1": 0.5811592376693763,
+      "macro_f1_testable_classes": [
+        "healthy",
+        "outer_race",
+        "inner_race",
+        "ball",
+        "cage"
+      ],
+      "macro_f1_n": 5569,
+      "macro_f1_all5": 0.5811592376693763,
+      "trained_classes": [
+        "healthy",
+        "outer_race",
+        "inner_race",
+        "ball",
+        "cage"
+      ],
+      "untestable_note": {},
+      "classes_present": [
+        "healthy",
+        "outer_race",
+        "inner_race",
+        "ball",
+        "cage"
+      ],
+      "accuracy": 0.6414077931405997,
+      "per_class_f1": {
+        "healthy": 0.9846793040768631,
+        "outer_race": 0.7592982456140351,
+        "inner_race": 0.01707317073170732,
+        "ball": 0.5003010234798314,
+        "cage": 0.6444444444444445
+      },
+      "per_class_support": {
+        "healthy": 1909,
+        "outer_race": 685,
+        "inner_race": 98,
+        "ball": 2352,
+        "cage": 525
+      },
+      "confusion": {
+        "labels": [
+          "healthy",
+          "outer_race",
+          "inner_race",
+          "ball",
+          "cage"
+        ],
+        "matrix": [
+          [
+            1896,
+            13,
+            0,
+            0,
+            0
+          ],
+          [
+            13,
+            541,
+            5,
+            51,
+            75
+          ],
+          [
+            11,
+            17,
+            14,
+            47,
+            9
+          ],
+          [
+            11,
+            13,
+            1496,
+            831,
+            1
+          ],
+          [
+            11,
+            156,
+            27,
+            41,
+            290
+          ]
+        ]
+      },
+      "missed_fault_rate": 0.012568306010928962,
+      "false_alarm_rate": 0.006809848088004191,
+      "per_dataset": {
+        "ims": {
+          "n": 2154,
+          "classes_present": [
+            "healthy",
+            "ball"
+          ],
+          "macro_f1": 0.6786262725953602,
+          "accuracy": 0.30037140204271123,
+          "recall": {
+            "healthy": 1.0,
+            "ball": 0.24157020634121792
+          },
+          "macro_f1_all5": 0.2714505090381441,
+          "per_class_f1": {
+            "healthy": 0.9681159420289855,
+            "ball": 0.3891366031617349
+          },
+          "confusion": {
+            "labels": [
+              "healthy",
+              "outer_race",
+              "inner_race",
+              "ball",
+              "cage"
+            ],
+            "matrix": [
+              [
+                167,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                11,
+                0,
+                1496,
+                480,
+                0
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0
+              ]
+            ]
+          }
+        },
+        "mafaulda": {
+          "n": 1445,
+          "classes_present": [
+            "healthy",
+            "outer_race",
+            "ball",
+            "cage"
+          ],
+          "macro_f1": 0.8481298555030393,
+          "accuracy": 0.8262975778546713,
+          "recall": {
+            "healthy": 0.9015151515151515,
+            "outer_race": 0.9313304721030042,
+            "ball": 0.9616438356164384,
+            "cage": 0.6016597510373444
+          },
+          "macro_f1_all5": 0.6785038844024315,
+          "per_class_f1": {
+            "healthy": 0.9407114624505929,
+            "outer_race": 0.8059424326833797,
+            "ball": 0.9116883116883117,
+            "cage": 0.7341772151898734
+          },
+          "confusion": {
+            "labels": [
+              "healthy",
+              "outer_race",
+              "inner_race",
+              "ball",
+              "cage"
+            ],
+            "matrix": [
+              [
+                119,
+                13,
+                0,
+                0,
+                0
+              ],
+              [
+                2,
+                434,
+                0,
+                13,
+                17
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                13,
+                0,
+                351,
+                1
+              ],
+              [
+                0,
+                151,
+                0,
+                41,
+                290
+              ]
+            ]
+          }
+        },
+        "xjtu_sy": {
+          "n": 1970,
+          "classes_present": [
+            "healthy",
+            "outer_race",
+            "inner_race",
+            "cage"
+          ],
+          "macro_f1": 0.44981062279086914,
+          "accuracy": 0.8786802030456853,
+          "recall": {
+            "healthy": 1.0,
+            "outer_race": 0.4885844748858447,
+            "inner_race": 0.14285714285714285,
+            "cage": 0.0
+          },
+          "macro_f1_all5": 0.3598484982326953,
+          "per_class_f1": {
+            "healthy": 0.9898555179834,
+            "outer_race": 0.6149425287356322,
+            "inner_race": 0.19444444444444445,
+            "cage": 0.0
+          },
+          "confusion": {
+            "labels": [
+              "healthy",
+              "outer_race",
+              "inner_race",
+              "ball",
+              "cage"
+            ],
+            "matrix": [
+              [
+                1610,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                11,
+                107,
+                5,
+                38,
+                58
+              ],
+              [
+                11,
+                17,
+                14,
+                47,
+                9
+              ],
+              [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                11,
+                5,
+                27,
+                0,
+                0
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "detection": {
+      "per_unit": [
+        {
+          "unit_id": "ims:test1:B4",
+          "dataset": "ims",
+          "fault_class": "ball",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 1679,
+          "caught_at_stage": 6,
+          "caught_by_stage3": false
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/0g/12.9024:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/0g/14.1312:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/0g/15.7696:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/0g/16.5888:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/0g/17.6128:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/0g/18.6368:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/0g/19.6608:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/0g/20.6848:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/0g/21.504:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/0g/22.3232:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/20g/16.9984:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/20g/17.8176:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/20g/19.6608:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/20g/20.2752:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/20g/21.2992:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/35g/21.0944:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/35g/21.9136:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/35g/23.3472:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/35g/24.3712:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/6g/40.5504:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/6g/41.5744:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/6g/42.3936:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/6g/43.4176:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/6g/44.4416:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/6g/45.4656:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/6g/46.08:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/ball_fault/6g/47.104:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/0g/53.8624:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/0g/54.8864:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/0g/55.9104:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/0g/56.9344:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/0g/57.1392:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/0g/58.7776:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/0g/59.392:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/0g/60.0064:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/0g/61.44:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/20g/13.7216:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/20g/14.5408:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/20g/15.36:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/20g/16.384:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/20g/17.408:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/20g/18.432:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/20g/19.456:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/20g/20.6848:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/20g/21.2992:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/20g/22.3232:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/35g/22.1184:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/35g/23.1424:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/35g/24.7808:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/35g/25.3952:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/35g/26.0096:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/35g/27.8528:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/35g/28.0576:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/35g/29.4912:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/6g/33.3824:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/6g/33.9968:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/6g/35.4304:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/6g/36.6592:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/6g/37.4784:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/6g/38.7072:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/6g/39.7312:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/6g/40.5504:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/6g/41.7792:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/cage_fault/6g/42.1888:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/0g/53.248:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/0g/54.6816:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/0g/55.5008:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/0g/56.5248:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/0g/57.7536:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/0g/58.7776:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/0g/59.5968:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/0g/60.6208:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/0g/61.6448:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/20g/13.5168:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/20g/14.1312:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/20g/15.7696:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/20g/16.7936:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/20g/17.2032:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/20g/18.2272:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/20g/19.456:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/20g/20.2752:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/20g/21.2992:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/20g/22.9376:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/35g/22.528:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/35g/23.7568:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/35g/24.1664:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/35g/24.9856:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/35g/26.8288:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/35g/27.8528:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/35g/28.672:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/35g/29.4912:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/6g/33.3824:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/6g/33.9968:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/6g/34.816:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/6g/36.4544:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/6g/37.6832:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/6g/38.2976:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/6g/39.5264:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/6g/40.5504:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/6g/41.1648:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:overhang/outer_race/6g/42.3936:overhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/0g/42.1888:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/0g/43.2128:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/0g/44.032:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/0g/45.6704:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/0g/46.08:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/0g/47.3088:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/0g/48.128:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/0g/49.5616:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/0g/50.5856:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/0g/51.2:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/20g/53.0432:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/20g/54.4768:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/20g/55.0912:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/20g/56.1152:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/20g/57.344:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/20g/58.7776:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/20g/59.8016:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/20g/60.8256:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/20g/61.8496:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/35g/13.7216:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/35g/14.7456:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/35g/15.36:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/35g/16.1792:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/35g/17.408:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/35g/18.6368:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/35g/19.456:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/35g/20.48:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/6g/23.552:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/6g/24.3712:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/6g/25.3952:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/6g/26.8288:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/6g/27.2384:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/6g/28.2624:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/6g/29.4912:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/6g/30.3104:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/6g/31.1296:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/ball_fault/6g/32.5632:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "ball",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/0g/33.9968:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/0g/34.816:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/0g/35.2256:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 5,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/0g/36.2496:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/0g/37.4784:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/0g/38.2976:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/0g/39.5264:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 7,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/0g/40.5504:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/0g/41.7792:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/0g/42.3936:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/20g/43.4176:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/20g/44.4416:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/20g/45.4656:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/20g/46.6944:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/20g/47.7184:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/20g/48.7424:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/20g/49.7664:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/20g/50.7904:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/20g/51.6096:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/20g/52.6336:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/35g/48.7424:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 7,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/35g/49.7664:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/35g/50.5856:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/35g/51.8144:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/35g/53.6576:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/35g/54.6816:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/35g/56.1152:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/35g/56.5248:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/6g/12.9024:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/6g/14.336:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/6g/15.5648:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/6g/16.1792:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/6g/17.408:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/6g/18.6368:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/6g/19.456:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/6g/20.2752:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/6g/21.7088:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/cage_fault/6g/22.528:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "cage",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/0g/33.792:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/0g/34.816:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/0g/35.4304:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/0g/36.6592:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/0g/37.2736:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/0g/38.7072:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/0g/39.5264:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/0g/40.7552:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/0g/41.7792:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/0g/43.008:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/20g/43.6224:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/20g/44.4416:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/20g/45.6704:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/20g/46.8992:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/20g/47.3088:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/20g/48.3328:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/20g/49.3568:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/20g/50.5856:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/20g/51.2:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/20g/52.224:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/35g/44.2368:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/35g/45.6704:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/35g/46.8992:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/35g/47.104:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/35g/48.128:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/35g/48.9472:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/35g/58.9824:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/6g/13.5168:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/6g/14.336:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/6g/15.7696:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/6g/16.7936:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/6g/17.6128:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/6g/18.432:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/6g/19.8656:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/6g/20.0704:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/6g/21.0944:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "mafaulda:underhang/outer_race/6g/21.9136:underhang",
+          "dataset": "mafaulda",
+          "fault_class": "outer_race",
+          "run_to_failure": false,
+          "caught": true,
+          "caught_at_window": 4,
+          "caught_at_stage": null,
+          "caught_by_stage3": null
+        },
+        {
+          "unit_id": "xjtu_sy:Bearing1_4",
+          "dataset": "xjtu_sy",
+          "fault_class": "cage",
+          "run_to_failure": true,
+          "caught": false,
+          "caught_at_window": null,
+          "caught_at_stage": null,
+          "caught_by_stage3": false
+        },
+        {
+          "unit_id": "xjtu_sy:Bearing2_5",
+          "dataset": "xjtu_sy",
+          "fault_class": "outer_race",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 146,
+          "caught_at_stage": 2,
+          "caught_by_stage3": true
+        },
+        {
+          "unit_id": "xjtu_sy:Bearing3_4",
+          "dataset": "xjtu_sy",
+          "fault_class": "inner_race",
+          "run_to_failure": true,
+          "caught": true,
+          "caught_at_window": 1457,
+          "caught_at_stage": 4,
+          "caught_by_stage3": false
+        }
+      ],
+      "rtf_units": 4,
+      "caught_by_stage3_frac": 0.25,
+      "seeded_records": 213,
+      "seeded_caught_frac": 0.6056338028169014
+    },
+    "rul": {
+      "S7_mape_pct": 281.8054261284695,
+      "per_bearing_mape_pct": {
+        "ims:test1:B4": 468.55985705990497,
+        "xjtu_sy:Bearing1_4": 567.2088998349585,
+        "xjtu_sy:Bearing2_5": 47.31991206631444,
+        "xjtu_sy:Bearing3_4": 44.13303555269989
+      },
+      "mape_full_degradation_pct": 640.6799181733172,
+      "per_bearing_mape_full_pct": {
+        "ims:test1:B4": 1093.738072314391,
+        "xjtu_sy:Bearing1_4": 1249.4798440107324,
+        "xjtu_sy:Bearing2_5": 153.06957873173747,
+        "xjtu_sy:Bearing3_4": 66.43217763640783
+      },
+      "n_windows": 2056,
+      "n_bearings": 4,
+      "rmse_hours": 1010.2748551656059,
+      "phm2012_score": 0.05018488820750141,
+      "percent_of_life_error_pts": 94.20401884376507,
+      "S7_mape_trend_only_pct": 616.6553321818495,
+      "S7_mape_onset_only_pct": 1051.1479746442185,
+      "per_dataset": {
+        "ims": 468.55985705990497,
+        "xjtu_sy": 219.5539491513243
+      },
+      "stage_within1_frac": 0.7207163601161665,
+      "stage_mae": 0.9005324298160697,
+      "stage_max_error": 4,
+      "stage_n": 4132,
+      "note": "Headline S7 = all held-out run-to-failure test bearings, each scored by the model deployed for its domain (pretrained for xjtu_sy/synthetic, fine-tuned for ims)."
+    },
+    "latency": {
+      "torch_threads": 1,
+      "tft_torch": {
+        "p50_ms": 57.894600000508945,
+        "p95_ms": 63.335070000130145,
+        "max_ms": 68.34419999995589,
+        "mean_ms": 58.31639166666719,
+        "n": 300
+      },
+      "nhits_torch": {
+        "p50_ms": 11.875249999775406,
+        "p95_ms": 13.466510000444032,
+        "max_ms": 14.780999999857158,
+        "mean_ms": 11.908231000012771,
+        "n": 300
+      },
+      "tft_onnx": {
+        "p50_ms": 9.71895000020595,
+        "p95_ms": 11.142779999954655,
+        "max_ms": 15.510700000049837,
+        "mean_ms": 9.751865333364549,
+        "n": 300
+      },
+      "nhits_onnx": {
+        "p50_ms": 0.41639999972176156,
+        "p95_ms": 0.6139350001831192,
+        "max_ms": 1.3003999993088655,
+        "mean_ms": 0.4435043333372353,
+        "n": 300
+      },
+      "engine_step": {
+        "p50_ms": 12.96,
+        "p95_ms": 14.4168,
+        "max_ms": 18.9,
+        "mean_ms": 12.983612903225806,
+        "n": 217,
+        "note": "per bearing-window, features+TFT+N-HiTS+RUL via ONNX Runtime"
+      }
+    },
+    "source_check": {
+      "ball": {
+        "mafaulda": 1636
+      },
+      "cage": {
+        "mafaulda": 1896,
+        "xjtu_sy": 406
+      },
+      "healthy": {
+        "ims": 4482,
+        "mafaulda": 516,
+        "xjtu_sy": 3538
+      },
+      "inner_race": {
+        "ims": 1986,
+        "xjtu_sy": 67
+      },
+      "outer_race": {
+        "mafaulda": 1874,
+        "xjtu_sy": 248
+      }
+    },
+    "disclosure": "v2 = second look at XJTU/IMS test bearings; v2 choices made on validation only (reports/model_selection_tft_v2_20261005T011306Z.json). TFT trained jointly on XJTU-SY train + IMS ft_train + MaFaulDa train; N-HiTS + RUL calibration unchanged from v1 (run real).",
+    "extra_tracks": {
+      "ims_finetuned": {
+        "rul": {
+          "S7_mape_pct": 468.55985705990497,
+          "per_bearing_mape_pct": {
+            "ims:test1:B4": 468.55985705990497
+          },
+          "mape_full_degradation_pct": 1093.738072314391,
+          "per_bearing_mape_full_pct": {
+            "ims:test1:B4": 1093.738072314391
+          },
+          "n_windows": 1730,
+          "n_bearings": 1,
+          "rmse_hours": 1101.3567128422028,
+          "phm2012_score": 0.018542219264628335,
+          "percent_of_life_error_pts": 108.4924855377795,
+          "S7_mape_trend_only_pct": 1317.0457496718318,
+          "S7_mape_onset_only_pct": 1484.9013911673983,
+          "per_dataset": {
+            "ims": 468.55985705990497
+          },
+          "stage_within1_frac": 0.48840445269016697,
+          "stage_mae": 1.592300556586271,
+          "stage_max_error": 4,
+          "stage_n": 2156
+        },
+        "classification": {
+          "macro_f1_testable": 0.6786262725953602,
+          "testable_classes": [
+            "healthy",
+            "ball"
+          ],
+          "macro_f1_all5": 0.2714505090381441,
+          "untestable": {
+            "outer_race": "0 test support",
+            "inner_race": "0 test support",
+            "cage": "0 test support"
+          },
+          "per_dataset_recall": {
+            "ims": {
+              "healthy": 1.0,
+              "ball": 0.24157020634121792
+            }
+          },
+          "note": "IMS B4 = ball only after onset; ball has no output channel, so the testable set is {healthy} alone and macro_f1_testable is NOT informative here; read macro_f1_all5/recall."
+        },
+        "detection": {
+          "rtf_units": 1,
+          "caught_by_stage3_frac": 0.0,
+          "seeded_records": 0,
+          "seeded_caught_frac": NaN
+        }
+      },
+      "ims_zero_shot_pretrained": {
+        "rul": {
+          "S7_mape_pct": 577.1252574626135,
+          "per_bearing_mape_pct": {
+            "ims:test1:B4": 577.1252574626135
+          },
+          "mape_full_degradation_pct": 985.0573748547741,
+          "per_bearing_mape_full_pct": {
+            "ims:test1:B4": 985.0573748547741
+          },
+          "n_windows": 1730,
+          "n_bearings": 1,
+          "rmse_hours": 1417.533672355877,
+          "phm2012_score": 0.020535393686228653,
+          "percent_of_life_error_pts": 141.3564384431936,
+          "S7_mape_trend_only_pct": 796.469744232218,
+          "S7_mape_onset_only_pct": 1467.775915508208,
+          "per_dataset": {
+            "ims": 577.1252574626135
+          },
+          "stage_within1_frac": 0.48237476808905383,
+          "stage_mae": 1.6781076066790352,
+          "stage_max_error": 4,
+          "stage_n": 2156
+        },
+        "classification": {
+          "macro_f1_testable": 0.6786262725953602,
+          "testable_classes": [
+            "healthy",
+            "ball"
+          ],
+          "macro_f1_all5": 0.2714505090381441,
+          "untestable": {
+            "outer_race": "0 test support",
+            "inner_race": "0 test support",
+            "cage": "0 test support"
+          },
+          "per_dataset_recall": {
+            "ims": {
+              "healthy": 1.0,
+              "ball": 0.24157020634121792
+            }
+          },
+          "note": "IMS B4 = ball only after onset; ball has no output channel, so the testable set is {healthy} alone and macro_f1_testable is NOT informative here; read macro_f1_all5/recall."
+        }
+      },
+      "pretrain_test_only_rul": {
+        "S7_mape_pct": 219.5539491513243,
+        "per_bearing_mape_pct": {
+          "xjtu_sy:Bearing1_4": 567.2088998349585,
+          "xjtu_sy:Bearing2_5": 47.31991206631444,
+          "xjtu_sy:Bearing3_4": 44.13303555269989
+        }
+      },
+      "pretrain_test_only_classification": {
+        "macro_f1": 0.6811097900674866,
+        "n": 3415
+      },
+      "SECONDARY_xjtu_lobo_robustness": {
+        "file": "model_selection_robustness_lobo_20261004T214321Z.json",
+        "note": "SECONDARY robustness table (LOBO over all eligible XJTU-SY run-to-failure bearings, incl. the frozen test bearings). Not the pre-registered S7 headline.",
+        "mean_S7_mape_pct": 221.70976897739655,
+        "median_S7_mape_pct": 73.70040964965521,
+        "frac_bearings_meeting_15pct": 0.0,
+        "per_bearing": {
+          "xjtu_sy:Bearing1_1": {
+            "S7_mape_pct": 96.79257295965705,
+            "split": "train",
+            "class": "outer_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.926829268292683
+          },
+          "xjtu_sy:Bearing1_2": {
+            "S7_mape_pct": 70.96451545439184,
+            "split": "train",
+            "class": "outer_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9254658385093167
+          },
+          "xjtu_sy:Bearing1_3": {
+            "S7_mape_pct": 82.72509803841076,
+            "split": "val",
+            "class": "outer_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9746835443037974
+          },
+          "xjtu_sy:Bearing1_4": {
+            "S7_mape_pct": 569.8906349504728,
+            "split": "test",
+            "class": "cage",
+            "stage_max_error": 4,
+            "stage_within1_frac": 0.7786885245901639
+          },
+          "xjtu_sy:Bearing1_5": {
+            "S7_mape_pct": 153.65251332648117,
+            "split": "train",
+            "class": "mixed",
+            "stage_max_error": 3,
+            "stage_within1_frac": 0.8461538461538461
+          },
+          "xjtu_sy:Bearing2_1": {
+            "S7_mape_pct": 32.57592123501094,
+            "split": "train",
+            "class": "inner_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9938900203665988
+          },
+          "xjtu_sy:Bearing2_2": {
+            "S7_mape_pct": 73.70040964965521,
+            "split": "val",
+            "class": "outer_race",
+            "stage_max_error": 3,
+            "stage_within1_frac": 0.6459627329192547
+          },
+          "xjtu_sy:Bearing2_3": {
+            "S7_mape_pct": 79.74074335463808,
+            "split": "train",
+            "class": "cage",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9474671669793621
+          },
+          "xjtu_sy:Bearing2_4": {
+            "S7_mape_pct": 27.108239016303198,
+            "split": "train",
+            "class": "outer_race",
+            "stage_max_error": 5,
+            "stage_within1_frac": 0.8095238095238095
+          },
+          "xjtu_sy:Bearing2_5": {
+            "S7_mape_pct": 68.49399946315712,
+            "split": "test",
+            "class": "outer_race",
+            "stage_max_error": 3,
+            "stage_within1_frac": 0.8348082595870207
+          },
+          "xjtu_sy:Bearing3_1": {
+            "S7_mape_pct": 46.69304462773424,
+            "split": "train",
+            "class": "outer_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9980299448384555
+          },
+          "xjtu_sy:Bearing3_2": {
+            "S7_mape_pct": 1174.4020011293787,
+            "split": "train",
+            "class": "mixed",
+            "stage_max_error": 4,
+            "stage_within1_frac": 0.8653846153846154
+          },
+          "xjtu_sy:Bearing3_3": {
+            "S7_mape_pct": 72.63970354868185,
+            "split": "train",
+            "class": "inner_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9730458221024259
+          },
+          "xjtu_sy:Bearing3_4": {
+            "S7_mape_pct": 64.59191658690962,
+            "split": "test",
+            "class": "inner_race",
+            "stage_max_error": 2,
+            "stage_within1_frac": 0.9953795379537954
+          },
+          "xjtu_sy:Bearing3_5": {
+            "S7_mape_pct": 711.6752213200659,
+            "split": "val",
+            "class": "outer_race",
+            "stage_max_error": 4,
+            "stage_within1_frac": 0.868421052631579
+          }
+        }
+      }
+    }
+  }
+}

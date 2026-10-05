@@ -172,3 +172,37 @@ parity tests.
   healthy, inner_race, outer_race). IS3 primary macro-F1 = the classes with train AND test support;
   the 5-class figure (ball F1 = 0) is reported alongside. `train.tft_predict` maps target labels the
   model has no channel for to a placeholder (the target is not an input; truth is merged afterwards).
+- 2026-10-05 (ml-engineer, IS3 v2 with MaFaulDa): **MaFaulDa splits frozen in `splits.json` (section
+  `mafaulda`, created 2026-10-05T00:41:52Z) before any MaFaulDa model was trained or scored.** Policy =
+  `splits.py::_split_mafaulda` unchanged: one identity group per (position, fault, severity) (26 groups:
+  2 healthy positions + 3 faults × 4 severities × 2 positions); within a group the records are sorted by
+  rpm and cut into 5 contiguous speed blocks; block `(g + offset) % 5` → test, block `+2` → val, the other
+  three → train (seeded offset), so test speeds of a group are never seen for that group and every speed
+  range appears in test across groups. Result: 701 train / 235 val / 233 test units (5,922 / 1,907 / 1,911
+  windows). XJTU-SY and IMS sections byte-identical to before (checked; pre-change copy in
+  `checkpoints/real_v2/splits_before_mafaulda.json`). Residual risk, stated: the same speed can appear in
+  training for a *different severity* of the same fault/position (groups are per severity, per §5).
+  Baselines: the speed-matched `normal` record at the same position (`features.make_mafaulda_provider`,
+  verified in use via `default_provider`); normal records never baseline themselves.
+- 2026-10-05 (ml-engineer, IS3 v2): **labels.** MaFaulDa seeded faults are observable from window 0
+  (the defect is physically present for the whole record, no run-in): `observable_class = fault_class` on
+  every window (labels.py non-RTF branch). **Training (v2):** one joint TFT on XJTU-SY train + IMS
+  ft_train + MaFaulDa train (IMS ft_train joins pretraining here, so the IMS test bearing B4 is scored by
+  this same model; no separate TFT fine-tune). Early stopping and selection on VALIDATION only (XJTU-SY
+  val 1_3/2_2/3_5 + MaFaulDa val blocks). Grid encoder {4, 6} (min 2) × class-weight power {0, 0.25,
+  0.5, 1}; pre-declared rule in `aiengine/v2.py`. Dataset identity is not an input. Inner race comes only
+  from XJTU-SY/IMS and has no validation support, so per-source confusion matrices are reported. N-HiTS and
+  the RUL calibration are reused unchanged from run `real`; S7 is re-reported because the TFT class picks
+  the RUL threshold. **v2 is the second look at the XJTU-SY/IMS test bearings** (v1 reports kept).
+- 2026-10-05 (ml-engineer, IS3 v2 outcome): grid winner on VALIDATION = encoder 4 (min 2), class-weight
+  power 0.5, **plus the causal onset gate on run-to-failure (continuous-monitoring) units** (pooled val
+  macro-F1 0.917 vs 0.875 flat; `reports/model_selection_tft_v2_20261005T011306Z.json`). The gate is a
+  decision rule on a flat 5-class TFT, carried in the contract as `classes.decision.type =
+  "rtf_onset_gate"` (engine.py + `train.tft_predict` via a `<ckpt>.decision.json` sidecar): before onset
+  confirmation p(healthy)=1; after it, fault probabilities renormalised, p(healthy)=0. Short seeded-fault
+  records use the plain softmax. (A first aggregation had a bug, `p_fault_gate` counted as a class; fixed
+  and re-scored from the saved val predictions before any test scoring.) Test scored once as `real_v2`:
+  IS3a 5-class 0.581 (MaFaulDa 0.848, XJTU-SY 0.450, IMS 0.679): FAIL. Main failure is a source shortcut
+  validation could not see: IMS B4 ball → inner_race (IMS B3 inner race is the only IMS-domain fault in
+  training). Next lever (needs a fresh, untouched test set to claim anything): domain-balanced training
+  or per-dataset baseline normalisation of the order-band shares.

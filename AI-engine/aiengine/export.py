@@ -209,7 +209,15 @@ def run(run_dir: Path, df: pd.DataFrame, tft_ckpt=None, nhits_ckpt=None, calib_f
                      "note": "alphabetical order over all labels; ONNX logits carry one channel per label"}
                     if hierarchical else
                     {"labels": order, "index_is_output_channel": True,
-                     "note": "alphabetical (label encoder) order; apply softmax to logits"}),
+                     "note": "alphabetical (label encoder) order; apply softmax to logits",
+                     **({"decision": {"type": "rtf_onset_gate",
+                                      "rule": "continuous monitoring stream (rig / run-to-failure): if the causal onset "
+                                              "(contract.onset) is NOT yet confirmed for this bearing: probs = "
+                                              "one-hot(healthy); else probs = softmax(logits) with p(healthy) set to 0 "
+                                              "and the rest renormalised to sum 1. Short seeded-fault records "
+                                              "(MaFaulDa evaluation) use plain softmax.",
+                                      "selected_by": "validation only (aiengine/v2.py, reports/model_selection_tft_v2_*.json)"}}
+                        if getattr(tft, "decision", None) == "rtf_onset_gate" else {})}),
         "models": {
             "tft": {"onnx": "tft.onnx", "encoder_length": TL, "decoder_length": 1, "columns": tcols,
                     "scalers": tsc, "warmup_windows": TL + 1, **res_t},

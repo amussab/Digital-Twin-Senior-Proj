@@ -336,7 +336,9 @@ def cmd_evaluate(args) -> int:
     meta = _meta(args, names, df)
     pre = df[df["dataset"] != "ims"]
     m, preds, scored = evaluate.score(run, pre, "test", latency_n=args.latency_n)
-    m["source_check"] = evaluate.source_check(pre[pre["split"] == "train"])
+    m["source_check"] = evaluate.source_check(df[df["split"].isin(["train", "ft_train"])])
+    if args.note:
+        m["disclosure"] = args.note
     extra = {}
     scored_all, preds_all, truth_all = [scored], [preds], [pre[pre["split"] == "test"]]
     if "ims" in names and (run / "nhits_ft.ckpt").exists():
@@ -504,6 +506,7 @@ def main(argv=None) -> int:
     e.add_argument("--latency-n", type=int, default=300)
     e.add_argument("--tag", default="")
     e.add_argument("--robustness", action="store_true", help="attach the latest LOBO robustness file")
+    e.add_argument("--note", default="", help="disclosure line printed on the report face")
     x = sub.add_parser("export", help="ONNX + contract + golden vectors to models/")
     common(x)
     d = sub.add_parser("demo", help="stream a test unit through HybridEngine")
