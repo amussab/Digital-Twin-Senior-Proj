@@ -73,6 +73,8 @@ public sealed class BearingTracker
     public double[]? Latest => _eng.Count > 0 ? _eng[^1] : null;
     public double? LatestHi => Latest?[_hiIdx];
     public double[]? Baseline => _baseline;
+    /// <summary>True once the causal onset is confirmed (Python: b.onset.onset_index is not None).</summary>
+    public bool OnsetConfirmed => _onset.OnsetIndex is not null;
     public double? OnsetT { get; private set; }
     public double? OnsetHi { get; private set; }
     public double CurrentT { get; private set; }

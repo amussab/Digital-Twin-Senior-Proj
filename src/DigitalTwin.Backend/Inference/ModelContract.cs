@@ -53,6 +53,8 @@ public sealed class ModelContract
     public string Provenance { get; init; } = "";
     public required FeatureConstants Features { get; init; }
     public required IReadOnlyList<string> ClassLabels { get; init; }
+    /// <summary>contract classes.decision.type: "rtf_onset_gate" | "hierarchical_onset_gate" | "" (plain softmax).</summary>
+    public string DecisionType { get; init; } = "";
     public required SubModelSpec Nhits { get; init; }
     public required SubModelSpec Tft { get; init; }
     public int NhitsPredictionLength { get; init; }
@@ -102,6 +104,8 @@ public sealed class ModelContract
             Provenance = provText,
             Features = feats,
             ClassLabels = r.GetProperty("classes").GetProperty("labels").EnumerateArray().Select(e => e.GetString()!).ToList(),
+            DecisionType = r.GetProperty("classes").TryGetProperty("decision", out var dec) && dec.TryGetProperty("type", out var dt)
+                ? dt.GetString() ?? "" : "",
             Nhits = ParseModel(models.GetProperty("nhits")),
             Tft = ParseModel(models.GetProperty("tft")),
             NhitsPredictionLength = models.GetProperty("nhits").GetProperty("prediction_length").GetInt32(),

@@ -93,6 +93,7 @@ public sealed class OnnxInferenceEngine : IInferenceEngine, IDisposable
             var logits = res.First(r => r.Name == "logits").AsEnumerable<float>().Take(_c.ClassLabels.Count).Select(v => (double)v).ToArray();
             probs = Softmax(logits);
         }
+        probs = ApplyDecision(probs, t.OnsetConfirmed);
         t.PushProbs(probs, _c.Rul.ClassSmoothingWindows);
         var tTft = Stopwatch.GetTimestamp();
 
@@ -140,6 +141,26 @@ public sealed class OnnxInferenceEngine : IInferenceEngine, IDisposable
             enc.Select(v => (double)v).ToArray(), dec.Select(v => (double)v).ToArray());
         return new BearingResult(t.Bearing, BearingStates.Ready, _c.ClassLabels[k], probs[k] * 100, hi, est,
             _c.ClassLabels.Zip(probs).ToDictionary(p => p.First, p => p.Second), t.Fill, t.Required, details);
+    }
+
+    /// <summary>Port of engine.py's v2 decision rule (contract classes.decision): before the causal onset is
+    /// confirmed the bearing is reported healthy; after it, p(healthy) = 0 and the fault channels are renormalised.</summary>
+    private double[] ApplyDecision(double[] probs, bool onsetConfirmed)
+    {
+        var gate = _c.DecisionType is "rtf_onset_gate" or "hierarchical_onset_gate";
+        if (!gate) return probs;
+        if (!onsetConfirmed)
+        {
+            var oneHot = new double[probs.Length];
+            oneHot[_classHealthy] = 1.0;
+            return oneHot;
+        }
+        if (_c.DecisionType == "hierarchical_onset_gate") return probs;
+        var p = (double[])probs.Clone();
+        p[_classHealthy] = 0.0;
+        var sum = Math.Max(p.Sum(), 1e-12);
+        for (var i = 0; i < p.Length; i++) p[i] /= sum;
+        return p;
     }
 
     private static double[] Softmax(double[] x)
