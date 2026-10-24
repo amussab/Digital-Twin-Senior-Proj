@@ -166,8 +166,11 @@ def cmd_select(a) -> int:
 
     grid = []
     grid += score_val("base", A.onnx_probs(base_onnx, Bc_va), A.onnx_probs(base_onnx, Bs_va))
-    grid += score_val("affine", A.onnx_probs(base_onnx, A.apply_affine(Bc_va, aff)), A.onnx_probs(base_onnx, Bs_va))
-    grid += score_val("quantile", A.onnx_probs(base_onnx, A.apply_quantile(Bc_va, qm)), A.onnx_probs(base_onnx, Bs_va))
+    # the map is embedded in the deployed graph, so it also applies to synth_v3 inputs (eligibility check uses that)
+    grid += score_val("affine", A.onnx_probs(base_onnx, A.apply_affine(Bc_va, aff)),
+                      A.onnx_probs(base_onnx, A.apply_affine(Bs_va, aff)))
+    grid += score_val("quantile", A.onnx_probs(base_onnx, A.apply_quantile(Bc_va, qm)),
+                      A.onnx_probs(base_onnx, A.apply_quantile(Bs_va, qm)))
 
     # retrained mixtures
     Bs_tr, is_tr = _blocks(s_tr, a.stride)
