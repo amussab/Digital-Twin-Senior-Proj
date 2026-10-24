@@ -62,7 +62,7 @@ class Knobs:
     healthy_run_windows: tuple = (250, 700)
     shape_a: tuple = (0.25, 0.35)     # linear share of the damage curve
     shape_p: tuple = (2.0, 3.0)       # power of the accelerating part
-    eol_sev: tuple = (0.85, 1.15)     # end-of-life severity factor (failure is not one fixed HI)
+    eol_sev: tuple = (0.75, 1.25)     # end-of-life severity factor (failure is not one fixed HI)
     transmission: tuple = (0.04, 0.10)  # fraction of the faulted bearing's growth seen by the partner
     leak: float = 0.12                # generic leakage of the fault family into the other families
     signature: float = 1.0            # multiplies every fault-family gain (lower = harder)
@@ -77,16 +77,16 @@ class Knobs:
 
 # Base healthy levels (per axis), [CLAUDE-SYNTHESIS] magnitudes in the same units as synthetic_rig.
 BASE = {"bp_rms": 0.45, "env_rms": 0.11, "kurt": 3.0, "crest": 4.1, "fam": 0.012}
-G_BP, G_ENV = 5.5, 10.0
+G_BP, G_ENV = 3.5, 5.5          # calibrated 2026-10-24 to XJTU-SY end-of-life env ratio (median 6.4)
 # Per-class signature: own family, family gain, leakage overrides, bp/env gain, kurtosis bump
 # height, axis gains (x, y), extra noise on the own family.
 CLASS = {
-    "outer_race": dict(fam="bpfo_mag", gain=34.0, leak={}, amp=1.0, kurt=9.0, axis=(0.6, 1.0), fam_noise=0.0),
-    "inner_race": dict(fam="bpfi_mag", gain=24.0, leak={"bpfo_mag": 0.10}, amp=0.8, kurt=7.0, axis=(0.85, 0.85),
+    "outer_race": dict(fam="bpfo_mag", gain=34.0, leak={}, amp=1.0, kurt=5.5, axis=(0.6, 1.0), fam_noise=0.0),
+    "inner_race": dict(fam="bpfi_mag", gain=24.0, leak={"bpfo_mag": 0.10}, amp=0.8, kurt=4.5, axis=(0.85, 0.85),
                        fam_noise=0.05),
-    "ball": dict(fam="bsf_mag", gain=17.0, leak={"ftf_mag": 0.35}, amp=0.7, kurt=6.0, axis=(0.8, 0.8),
+    "ball": dict(fam="bsf_mag", gain=17.0, leak={"ftf_mag": 0.35}, amp=0.7, kurt=4.0, axis=(0.8, 0.8),
                  fam_noise=0.22),
-    "cage": dict(fam="ftf_mag", gain=13.0, leak={"bsf_mag": 0.30}, amp=0.55, kurt=3.0, axis=(0.9, 0.9),
+    "cage": dict(fam="ftf_mag", gain=13.0, leak={"bsf_mag": 0.30}, amp=0.55, kurt=2.0, axis=(0.9, 0.9),
                  fam_noise=0.10),
 }
 NOISE = {"bp_rms": 0.06, "env_rms": 0.08, "fam": 0.12, "kurt": 0.07, "crest": 0.05}
@@ -157,8 +157,11 @@ def _axis_features(rng, n, s, d, bump, knee, cls, axis_gain, healthy_machine, rp
     return out
 
 
-def generate_run(run_id: int, fault: str, rng: np.random.Generator, k: Knobs) -> pd.DataFrame:
+def generate_run(run_id: int, fault: str, rng: np.random.Generator, k: Knobs,
+                 overrides: dict | None = None) -> pd.DataFrame:
+    """overrides: fix run parameters (e.g. faulted_bearing, rpm_mode, n_healthy, n_deg) for demo scenarios."""
     p = _run_params(rng, fault, k)
+    p.update(overrides or {})
     nh, nd = p["n_healthy"], p["n_deg"]
     n = nh + nd
     healthy = fault == "healthy"
