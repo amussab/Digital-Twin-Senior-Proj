@@ -13,7 +13,7 @@ specs; >=14 of 18 items MET with evidence; hardware-ready source boundary; UP2 e
 - [ ] 2. Synthetic run-to-failure + fault data generator through the COE pipeline (provenance-tagged)
 - [ ] 3. Models: reach ICS1 (MAPE<=15), ICS3/I3 (macro-F1>=85, stage err<=1, caught by stage 3) with XGBoost/AutoGluon/N-HiTS/TFT; ONNX export + golden parity
 - [ ] 4. Physics twin <-> AI residual (I2 <=5%, stage 1->3) on synthetic
-- [ ] 5. Backend + dashboard wired to new models and pipeline source (IS1 end-to-end <500 ms measured incl. Wi-Fi hop sim); hardware source stub documented
+- [x] 5. Backend + dashboard wired to new models and pipeline source (IS1 end-to-end <500 ms measured incl. Wi-Fi hop sim); hardware source stub documented
 - [ ] 6. UP2 evidence notebook + `evidence/UP2_Evidence.md` (old vs new met table, provenance, rank)
 - [ ] 7. evidence-reviewer pass; fix findings
 - [ ] 8. Commit + push `feature/up2-prototype`; demo script `scripts/run-up2-demo.ps1` verified end-to-end
@@ -40,3 +40,4 @@ specs; >=14 of 18 items MET with evidence; hardware-ready source boundary; UP2 e
    3. Backend: implement v3b postprocess hook in C# (OnnxInferenceEngine / RulPostProcessors) from model_contract_v3b.json; add dashboard stage field + screenshot (step 5).
    4. Step 6: UP2 evidence notebook + evidence/UP2_Evidence.md (old PPR vs new, provenance, ranks). 5. Step 7 evidence-reviewer. 6. Step 8 push feature/up2-prototype + demo script check.
    LATER (COE extra): close domain gap between COE-pipeline features and synth_v3-trained models (bearing 2 misclassified in COE sim demo).
+- 2026-10-24 (backend-engineer, step 5 TICKED): C# v3b post-process (V3bStageMedianRulLogEma, contract-driven; `ModelContract` accepts string contract_version "3b"); GoldenV3bParityTests 28 cases (12 + 16 late, via inputs_full) match Python (max rel RUL 4e-16); v2/v3 golden still pass; 33 tests green (`dotnet test tests/DigitalTwin.Backend.Tests -c Release`). Dashboard snapshot has `HealthStage` (1-6, null when not ready) + "Health Stage" card + detail row; label "[SYNTHETIC / SIMULATED SOURCE]" kept. Demo scripts default to model_contract_v3b.json. Headless Chrome (playwright-core in /tmp) screenshot: evidence/dashboard_up2_20261024.png. IS1 (v3b) p95 97.1 / max 108.4 ms (STM32 pessimistic + [SIMULATION] Wi-Fi), S9 30.02 Hz: evidence/integration_measurements_up2_v3b_20261024.md. Open: log line still says "contract v3" for 3b (cosmetic); AI-engine/aiengine/up2_residual.py has uncommitted edits from the twin agent (not mine).
