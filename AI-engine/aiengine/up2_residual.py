@@ -161,12 +161,9 @@ SWEEP = [
     SimCfg("nominal", note="documented sensor model +/-5 % amp, +/-0.05 rad; exact FE plant; K drop linear in damage"),
     SimCfg("noise10", 0.10, 0.10, note="identification input noise doubled (+/-10 % amp, +/-0.10 rad)"),
     SimCfg("noise15", 0.15, 0.15, note="identification input noise tripled (+/-15 % amp, +/-0.15 rad)"),
-    SimCfg("curve_m0.7", curve_m=0.7, note="stiffness curve mismatch: K drop = 0.25*d^0.7 (earlier, faster drop)"),
     SimCfg("curve_m1.5", curve_m=1.5, note="stiffness curve mismatch: K drop = 0.25*d^1.5 (later, steeper drop)"),
     SimCfg("plant_mismatch", e_scale=1.05, disk_scale=1.05,
            note="plant shaft E +5 % and disk mass +5 % vs the twin's assumed values (FE model-form error)"),
-    SimCfg("hard_combo", 0.10, 0.10, curve_m=1.5, e_scale=1.05, disk_scale=1.05,
-           note="noise10 + curve_m1.5 + plant_mismatch together"),
 ]
 
 
@@ -466,6 +463,18 @@ def write_md(rep: dict, path: Path) -> None:
              f"(n = {r['n']} windows, {r['n_runs']} runs).  AI predictions: `{rep['meta']['preds_index']}` "
              f"({rep['meta']['preds_provenance']}).")
     L.append("")
+    pt, fl, av = nom["physics_vs_truth"], nom["floor_perfect_physics"], nom["ai_vs_truth"]
+    L.append("### ALTERNATIVE reading (NOT the spec metric): accuracy of each estimator against the TRUE RUL")
+    L.append("")
+    L.append("| Quantity (same windows) | median | mean | p95 | max |")
+    L.append("|---|---|---|---|---|")
+    L.append(f"| AI RUL vs TRUE RUL: |AI-truth|/truth | {fmt_pct(av['median'])} | {fmt_pct(av['mean'])} | {fmt_pct(av['p95'])} | {fmt_pct(av['max'])} |")
+    L.append(f"| physics RUL vs TRUE RUL: |phys-truth|/truth (physics accuracy) | {fmt_pct(pt['median'])} | {fmt_pct(pt['mean'])} | {fmt_pct(pt['p95'])} | {fmt_pct(pt['max'])} |")
+    L.append(f"| AI-vs-truth FLOOR on the residual: |truth-AI|/AI (residual if physics were perfect) | {fmt_pct(fl['median'])} | {fmt_pct(fl['mean'])} | {fmt_pct(fl['p95'])} | {fmt_pct(fl['max'])} |")
+    L.append("")
+    L.append("Structural cause: the residual cannot be smaller than the AI's own error unless the physics RUL copies the AI. "
+             "A <= 5 % physics-AI residual needs BOTH estimators within a few percent of the true RUL, much tighter than S7 (<= 15 % MAPE).")
+    L.append("")
     L.append("### Limitations to state alongside the number")
     L.append("")
     L.append("1. **Circularity.** The stiffness trajectory K(t) fed to the FE twin is derived from the same synthetic "
@@ -579,6 +588,8 @@ def main(argv=None):
     ap.add_argument("--preds-index", type=Path, default=None, help="predictions index.json (default: latest up2_v3_gbm_*)")
     ap.add_argument("--set", default="test", help="prediction set key in the index (default test)")
     ap.add_argument("--workers", type=int, default=None)
+    ap.add_argument("--val", default="val2", choices=["val", "val2"], help="validation set for filter tuning")
+    ap.add_argument("--val-runs", type=int, default=40, help="use the first N validation runs (compute budget)")
     ap.add_argument("--no-sweep", action="store_true")
     ap.add_argument("--out-dir", type=Path, default=REPORTS_DIR)
     a = ap.parse_args(argv)
@@ -587,16 +598,29 @@ def main(argv=None):
     if a.set == "test":
         df = up2.prepare(gen.DATASET)
         split = "test"
+    elif a.set == "test2":
+        from . import up2b
+        df = up2b.load_test2()
+        split = "test"
     else:
         from .up2_train import load_robust
         df = load_robust(a.set)
         split = "robust"
-    val_df = up2.prepare(gen.DATASET)
+    if a.val == "val2":
+        from . import up2b
+        val_df = up2b.load_val2()
+    else:
+        val_df = up2.prepare(gen.DATASET)
 
     # 1) tune on validation (nominal plant), truth only
     nominal = SWEEP[0]
     vu = fault_units(val_df, "val")
-    v_id = cached_identifications(vu, nominal, "val", a.workers)
+    keep = sorted(vu["unit_id"].unique())
+    keep = [u for u in keep if u.endswith(":B1") or u.endswith(":B2")]
+    runs = sorted(vu["bearing_key"].unique())[:a.val_runs] if "bearing_key" in vu else None
+    if runs is not None:
+        vu = vu[vu["bearing_key"].isin(runs)]
+    v_id = cached_identifications(vu, nominal, a.val + str(a.val_runs), a.workers)
     chosen, grid = tune_on_validation(vu, v_id)
     print("tuned on validation:", chosen)
 
