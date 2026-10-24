@@ -4,7 +4,7 @@ Applies to everything on branch `feature/up2-prototype`. Read `.claude/UP2_STATE
 session/agent: it is the resume ledger (what is done, what is next, exact commands).
 
 - UP2 = in-class with coach only, 25/26 Oct 2026. Rubric (Week 9): 50 pts = department's 1 constraint
-  + 2 specs met with sufficient evidence; 50 pts = MORE THAN 75% of all 18 items (>=14) met with
+  + 2 specs met with sufficient evidence; 50 pts = MORE THAN 75% of the 17 counted items (>=13; the BOM constraint C3 was excluded by the reviewer) met with
   satisfactory-or-better evidence. Evidence ladder: `evidence-strength.md` (target Rank 9 = runs live).
 - Hardware (AD7606 + IEPE accelerometers + STM32/ESP32-C6) is NOT ready. Every data path goes through
   the `SampleSource` / payload boundary so a real node replaces the simulator with ZERO downstream

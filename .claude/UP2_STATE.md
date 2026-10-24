@@ -5,7 +5,7 @@ Updated by the coordinator after every step. If you are a fresh session: read th
 the listed command if in doubt.
 
 Goal: prototype fully working for UP2 demo; covers old (PPR) met specs + all ICS specs + integrated
-specs; >=14 of 18 items MET with evidence; hardware-ready source boundary; UP2 evidence file.
+specs; >=13 of 17 counted items MET with evidence (C3 BOM excluded by the reviewer); hardware-ready source boundary; UP2 evidence file.
 
 ## Steps
 - [x] 0. Worktree/branch `feature/up2-prototype` created; main docs pulled; rules/FACTS written

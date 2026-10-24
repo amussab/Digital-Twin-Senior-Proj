@@ -12,7 +12,7 @@ Standalone summary for the coach. The numbers here are recomputed live by `AI-en
 Evidence rank reflects the form of the evidence: a working simulation demo run live at the presentation is Rank 9 on the course ladder; re-scoring stored predictions is Rank 6.
 
 **Count.** **11 of 17 items are counted MET (64.7 %), of which 7 are firm** (rank >= 6 and no assumed or calculated leg): C4, C5, S6, S7, S8, S9, IS3.
-The other 4 are **met at design level**: S4 and S5 (calculation plus a simulation that cannot fail, and a calculated STM32 leg; rank 3), IS1 (live end-to-end simulation demo, Rank 9 as a simulation, but the Wi-Fi hop is injected and the STM32 leg is calculated) and **IS2 under the reworded spec v2** (synthetic data and a simulated twin; see the caveat box in section 6c).
+The other 4 are **met at design level**: S4 and S5 (calculation plus a simulation that cannot fail, and a calculated STM32 leg; rank 3), IS1 (Rank 9 only as a live simulation demo with an injected Wi-Fi hop and a calculated STM32 leg, which makes it design-level) and **IS2 under the reworded spec v2** (synthetic data and a simulated twin; see the caveat box in section 6c).
 C1, C2, C6, S1, S2, S3 are **NOT EVIDENCED HERE: evidence to be supplied by the owner** (ME-owned, plus COE's electrical C2); they are not counted.
 **13 are needed, so the bar is not reached yet**: 2 more items need owner artifacts (section 6). If IS1's simulated hop is not accepted and IS2's wording v2 is not confirmed by the team/xlsx, the count is 9. Owners' evidence is added in one place (`up2_helpers.OVERRIDES`); counts are recomputed from the registry.
 
@@ -21,7 +21,7 @@ C1, C2, C6, S1, S2, S3 are **NOT EVIDENCED HERE: evidence to be supplied by the 
 | Item | Deployed (gradient-boosted heads) | Original N-HiTS / TFT, same synthetic data |
 |---|---|---|
 | S7 RUL MAPE <= 15 % | 12.64 % MET | N-HiTS 46.9 % (worse) |
-| S8 < 200 ms | 0.35 ms p95 MET | TFT 1.54 ms p95 (also passes) |
+| S8 < 200 ms | classifier ONNX p95 sub-millisecond (0.04-0.4 ms, live) MET | TFT-slot ONNX about 1.5-12 ms (also passes) |
 | IS3 F1 / stage / caught | F1 0.959, stage max 1, 80/80 MET | TFT F1 0.924, stage max 3 (worse), 40/40 |
 
 Rank of the ML rows: re-scoring the stored fresh-test2 predictions is Rank 6; the notebook also **runs the deployed ONNX engine live** on a 16-bearing subset (S7 13.17 %, F1 0.964, stage max 1, 16/16 caught, recomputed from model outputs), which is Rank 9 (working simulation demo).
@@ -40,9 +40,9 @@ Times seen: old test set twice (v3, v3b); `synth_v3_test2` once for v3b (then re
 | S5 payload <= 333 ms | not evidenced | MET at design level (rank 3) | host worst case ~7 ms; STM32 pessimistic estimate 28.4 ms |
 | S6 fixed AI input | partial (public data) | MET (simulation, rank 6) | 28 speeds, 1000-3600 rpm, always 32 features / 152 bytes; **below ~1465 rpm the 20-rev envelope is truncated to the 4096-pt FFT** (COE open question; supported modes 1750/3600 are not affected) |
 | S7 RUL MAPE <= 15 % | NOT MET (281.8 % on public data) | MET on synthetic (12.64 %), deployed gradient-boosted head; original N-HiTS 46.9 % (worse) | new data + new models; **still fails on the public data** |
-| S8 inference < 200 ms | MET (11.1 ms) | MET (canonical: 0.35 ms p95, 1 thread, batch 1, this PC) | deployed slot is a gradient-boosted model, see section 5 |
+| S8 inference < 200 ms | MET (11.1 ms) | MET (classifier ONNX p95 measured live, sub-millisecond, 0.04-0.4 ms depending on host load) | deployed slot is a gradient-boosted model, see section 5 |
 | S9 dashboard >= 10 Hz | MET (30 Hz) | MET (rank 6) | the ~30 Hz is the client count of a 50 ms re-broadcast timer; new data arrives at the 10 Hz replay rate (the spec minimum); browser render not measured |
-| IS1 < 500 ms | partial | MET at design level (live simulation demo, Rank 9; assumed legs disclosed) | p95 ~98 ms incl. a simulated 10-60 ms Wi-Fi hop and a calculated STM32 leg; budget breaks only if the real hop exceeds ~458 ms (table below) |
+| IS1 < 500 ms | partial | MET at design level (Rank 9 only as a live simulation demo with an injected Wi-Fi hop and a calculated STM32 leg) | p95 ~98 ms incl. a simulated 10-60 ms Wi-Fi hop and a calculated STM32 leg; budget breaks only if the real hop exceeds ~458 ms (table below) |
 | IS2 physics-AI residual | NOT MET (literal v1: max <= 5 %) | **MET under reworded spec v2** (design level): v3b median 16.3 %, p95 49.2 % of L_ref (targets 18 % / 63 %) on fresh test4; the literal v1 still FAILS (v3b 233 %, v3c 216 %) | wording v2 from coach feedback, not yet in the official xlsx; **read the caveat box in section 6c** |
 | IS3 F1 / stage / caught | NOT MET (F1 0.581) | MET on synthetic (F1 0.959, stage max 1, 80/80 caught), deployed gradient-boosted heads; original TFT stage max 3 (worse) | **public data still fails** |
 
@@ -77,7 +77,7 @@ From the repo root (PowerShell), with the backend and dashboard published once:
 
 - Dashboard on the replay stream (healthy -> fault -> failure, `[SYNTHETIC]`): `./scripts/run-up2-demo.ps1` then open `http://localhost:5080/` (LAN address is printed).
 - COE simulator through the real pipeline and UDP into the backend: `./scripts/run-up2-coe-demo.ps1` (`scripts/coe_fault_scenario.py`).
-- Whole scorecard: `cd AI-engine/notebooks; ../.venv/Scripts/python.exe -m jupyter nbconvert --to notebook --execute UP2_Evidence.ipynb --inplace --ExecutePreprocessor.timeout=-1` (about 3 min), or open the notebook and Run All.
+- Whole scorecard: `cd AI-engine/notebooks; ../.venv/Scripts/python.exe -m jupyter nbconvert --to notebook --execute UP2_Evidence.ipynb --inplace --ExecutePreprocessor.timeout=-1` (about 6 minutes), or open the notebook and Run All.
 - Individual checks: `cd AI-engine; .venv/Scripts/python.exe -m aiengine.up2_eval` (re-scores saved predictions, measures latency), `-m aiengine.coe.verify --quick`, `-m aiengine.up2d_eval` (IS2 wording v2; re-scores saved test4 predictions), `-m pytest tests/coe tests/up2 tests/twin_up2 -q`; `dotnet test tests/DigitalTwin.Backend.Tests -c Release`.
 
 ## 5. Provenance and limitations (stated plainly)
@@ -97,9 +97,9 @@ From the repo root (PowerShell), with the backend and dashboard published once:
   headline v3b numbers come from a **fresh** set (`synth_v3_test2`, 100 runs, new seed, registered before any v3b fit, predicted **once**). The public-data test bearings were seen twice during PPR (disclosed then).
 - **Model change (approved).** The deployed v3b heads are gradient-boosted trees in the same ONNX contract slots because they perform better; TFT + N-HiTS trained on the same runs are reported too (S7 46.9 %, stage error 3).
 - **Healthy bearings sit at stage 2.** Healthy-companion bearings are predicted at stage 2 in 99.8 % of windows although their true stage is 1; IS3b scores run-to-failure bearings only, so the metric does not show it.
-- **Latency** (canonical number: classifier ONNX p95 0.35 ms, 1 thread, batch 1, n = 300, measured by the notebook; other documents quote 0.04 / 0.054 / 0.3 ms from different hosts, thread counts and batch handling) is `[MEASURED host]` on this PC with synthetic inputs; the final server (laptop or Raspberry Pi 5) must be re-measured. IS1 uses a **simulated** 10-60 ms Wi-Fi hop and a
+- **Latency** (statement used everywhere: classifier ONNX p95 measured live, sub-millisecond, 0.04-0.4 ms depending on host load; TFT-slot ONNX about 1.5-12 ms depending on host load/threads; the notebook's live cell is canonical) is `[MEASURED host]` on this PC with synthetic inputs; the final server (laptop or Raspberry Pi 5) must be re-measured. IS1 uses a **simulated** 10-60 ms Wi-Fi hop and a
   **calculated** STM32 leg; browser render time is not included.
-- **IS2 under the literal v1 wording (history; superseded by wording v2, section 6c).** The physics-informed v3c attempt (still FAIL under v1). The physics-informed v3c (physics prior fed to the RUL head) reaches S7 10.51 % against 10.88 % without physics (3.4 % relative gain; the Sept-3 ablation target is 15 %) and a literal residual max of 245.6 % (independent reading with the deployed v3b: 244.6 %). Coverage is 100 % only through a physics prior (96.7 % of windows); the stiffness drop is below 3 % in stages 1-3 in the simulator, 3600 rpm windows fail the identification gate, and AI and physics each carry about 10-30 % error, so a max <= 5 % bound cannot hold. **v3c is a research artifact, not the deployed model** (v3b is deployed; v3c is 9.5 MB and not ported to C#).
+- **IS2 under the literal v1 wording (history; superseded by wording v2, section 6c).**  The physics-informed v3c (physics prior fed to the RUL head) reaches S7 10.51 % against 10.88 % without physics (3.4 % relative gain; the Sept-3 ablation target is 15 %) and a literal residual max of 245.6 % (independent reading with the deployed v3b: 244.6 %). Coverage is 100 % only through a physics prior (96.7 % of windows); the stiffness drop is below 3 % in stages 1-3 in the simulator, 3600 rpm windows fail the identification gate, and AI and physics each carry about 10-30 % error, so a max <= 5 % bound cannot hold. **v3c is a research artifact, not the deployed model** (v3b is deployed; v3c is 9.5 MB and not ported to C#).
   The renegotiation suggested here led to wording v2 (section 6c): under v1 IS2 stays FAIL.
 - **IS2 physics-role contradiction (history).** The spec reads the FE-identified physics RUL as an independent estimator compared with the AI RUL (reading A). The
   2026-09-03 report version treats physics as an AI input (reading B), under which there is no residual to subtract. Under reading A the best tuned filter still gives a max residual of
@@ -126,7 +126,7 @@ The v1 text ("max relative error ... <= 5 %") is kept in `Project architecture/o
 
 | IS2, fresh `synth_v3_test4` (100 runs, scored once; 15,863 windows, 80 bearings) | v2 (a) median | v2 (b) p95 | v2 verdict | v1 literal max (target 5 %) |
 |---|---|---|---|---|
-| v3b (deployed) | 16.3 % of L_ref (<= 18) | 49.2 % (<= 63) | **PASS** | 233 % FAIL |
+| v3b (deployed) | 16.3 % of L_ref (<= 18) | 49.2 % (<= 63) | **PASS** | 233 % FAIL (test4; the older test2 tuned-filter twin gave 302 %) |
 | v3c (research, consumes the physics RUL) | 18.3 % | 47.8 % | FAIL | 216 % FAIL |
 
 Thresholds 0.18 / 0.63 were frozen on validation sets only (`synth_v3_val4`, `synth_v3_val2`; rule: ceil to 0.01 of 1.1 x the maximum of the deployed value and the perfect-AI floor) and committed (355831c) before test4 was scored. The rule was refined once on validation (a first rule let the constant-0.5-L_ref control pass).

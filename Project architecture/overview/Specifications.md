@@ -58,7 +58,7 @@ Rows with an approval of "No" are still open.
   Exemplary needs C4 (offline AI) counted as ICS evidence too. The team should confirm that this
   counting is acceptable.
 - **Team table, Exemplary:** more than 50% of all constraints + specs + integrated specs met with
-  satisfactory-or-better evidence. That is 18 items, so at least 10 must be met.
+  satisfactory-or-better evidence. That is 18 items, so at least 10 must be met. **(PPR history.)** For UP2 the reviewer excluded C3 (BOM), so there are 17 counted items and the bar is more than 75 %, i.e. at least 13 met.
 
 ## IS2 wording history and changelog
 
