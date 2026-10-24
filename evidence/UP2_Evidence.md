@@ -88,7 +88,7 @@ From the repo root (PowerShell), with the backend and dashboard published once:
   bearing-diagnostics literature; **magnitudes were calibrated to the XJTU-SY end-of-life envelope ratio and the knob ranges were narrowed on validation runs**. A synthetic score
   therefore shows the pipeline works on data of this shape; it is not evidence about real bearings.
 - **Data flow caveat.** The generator works at the payload level, not through the COE raw-sample pipeline; the classifier trained on it
-  mis-classifies bearing 2 in the COE-simulator demo (a domain gap, recorded in `integration_measurements_up2_*.md`).
+  mis-classifies bearing 2 in the COE-simulator demo (a domain gap, recorded in `integration_measurements_up2_*.md` and quantified and reduced in section 6b).
 - **S7 definition used** (pre-registered, DESIGN.md section 7, unchanged since PPR): MAPE of RUL in absolute hours, per bearing over [detected onset, T_fail - 10 % of the
   degradation span], averaged over bearings. The window starts at the *detected* onset and drops the last 10 %; the true-onset variant passes test2 by only 0.28 points. Stricter (true-onset) 14.72 % and percent-of-life 5.81 points are reported alongside; the stricter variant fails on the older test set (17.44 %).
 - **Post-process disclosure.** The deployed v3b adds a causal post-process (stage median filter, log-EMA of RUL, stage scale), all parameters chosen on validation runs only and
@@ -118,6 +118,21 @@ From the repo root (PowerShell), with the backend and dashboard published once:
 | S1 IEPE accelerometers | ME | datasheet (100 mV/g, +-50 g, 2-10 kHz) + purchase record |
 | S2 FE stiffness identification <= 10 % | ME | run vs a known-stiffness reference; a repo simulation precursor does not meet the literal spec (1750 rpm noisy mean 6.4 %, p95 13.6 %, max 15.5 %; 3600 rpm mean 24 %) and is not counted |
 | S3 IP54 enclosure | ME | IP54 / 85 C / UV evidence (reviewer: duplicate of C6) |
+
+## 6b. COE-integration readiness: the domain gap and its adaptation `[SIMULATION]` `[SYNTHETIC]`
+
+The deployed v3b classifier was trained on payload-level synthetic features, not on what the COE pipeline outputs. Raw samples from the COE rig simulator were therefore run through the real causal `CoePipeline` (dataset `synth_coe`, 420 runs, split by run; the 106-run COE-test was scored once; `reports/coe_adapt_20261024T213622Z.md`, re-scored live in the notebook, section 8b).
+
+| COE-test, per bearing-window | macro-F1 | bearing-2 false-fault | bearing-1 false-fault | missed-fault | cage F1 |
+|---|---|---|---|---|---|
+| v3b as deployed | 0.584 | 82.1 % | 74.7 % | 2.2 % | 0.24 |
+| gate alone (ablation) | 0.725 | 4.4 % | 2.6 % | 13.9 % | 0.25 |
+| retrain alone (ablation) | 0.777 | 53.0 % | 39.5 % | 15.4 % | 0.79 |
+| **selected: retrain on synth_v3 + COE-train (COE weight 0.6) + cross-bearing gate (tau 0.6)** | **0.875** | **0.6 %** | **0.0 %** | 22.8 % | 0.83 |
+
+Limitations: the missed-fault rate rises because low-severity faults (<= 0.2) are suppressed by the gate; the stage and RUL heads are unreliable on COE features (raw stage >= 2 on 100 % of healthy COE bearings; COE runs are not run-to-failure, so no stage/RUL truth); the simulator's partner-transmission gain is invented, so `tau` is a placeholder; none of this validates real hardware.
+This is readiness evidence for S4-S6 and the hardware-day swap. It **adds no MET item and changes no rank** in the master table.
+On the first rig data, re-fit: `tau` (healthy-partner commissioning data), the stage cut, and the classifier with real seeded faults. The adapted classifier and contract (`model_contract_v3b_coe.json`) are for COE-pipeline sources; the deployed v3b contract is unchanged.
 
 ## 7. COE hardware-day swap steps
 

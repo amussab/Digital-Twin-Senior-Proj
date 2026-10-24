@@ -521,3 +521,39 @@ def is1_sensitivity(backend_p95: float, backend_max: float, coe_ms: float, hops=
                      "< 500 ms": "yes" if hop + backend_max + coe_ms < 500 else "NO"})
     brk = 500 - backend_max - coe_ms
     return pd.DataFrame(rows), brk
+
+
+# --------------------------------------------------------------------------- COE-integration readiness (domain gap + adaptation)
+def coe_adapt_rescore() -> dict:
+    """Re-score the SAVED COE-test predictions with the logic of `python -m aiengine.coe_adapt_eval` (cmd_report) WITHOUT writing a
+    new report. Returns metrics for: v3b as deployed, base+gate, adapted without gate, adapted + gate (selected). [SIMULATION]/[SYNTHETIC]."""
+    try:
+        from aiengine import coe_adapt as A
+        from aiengine import coe_adapt_eval as CE
+        idxs = sorted(CE.PRED_DIR.glob("coe_adapt_test_*.index.json"))
+        if not idxs:
+            return miss("saved COE-test predictions (reports/up2_preds/coe_adapt_test_*.index.json)")
+        ix = json.loads(idxs[-1].read_text())
+        sel = ix["meta"]["selected"]
+        coe = CE.load_coe()
+        te = coe[coe["split"] == "test"]
+        rd = lambda k: pd.read_csv(CE.PRED_DIR / ix["files"][k])  # noqa: E731
+        base, adapted = rd("base"), rd("selected_nogate")
+        res = {"v3b as deployed": A.coe_metrics(base, te), "adapted, no gate (ablation: retrain alone)": A.coe_metrics(adapted, te)}
+        if sel.get("gate_tau", 0) > 0:
+            res["deployed + gate (ablation: gate alone)"] = A.coe_metrics(A.gate(base, te, sel["gate_tau"], sel["gate_signal"]), te)
+            res["SELECTED: adapted + gate"] = A.coe_metrics(A.gate(adapted, te, sel["gate_tau"], sel["gate_signal"]), te)
+        rul = CE._rul_summary(rd("rul_diag_raw_features"), te)
+        key = "run_id" if "run_id" in te.columns else None
+        n_runs = int(te[key].nunique()) if key else None
+        rows = []
+        for name, r in res.items():
+            rows.append({"classifier": name, "macro-F1": r["classification"]["macro_f1"], "B2 false-fault %": 100 * r["b2_transmitted_false_fault_rate"],
+                         "B1 false-fault %": 100 * r["b1_transmitted_false_fault_rate"], "both-healthy false-fault %": 100 * r["clean_false_fault_rate"],
+                         "missed-fault %": 100 * r["missed_fault_rate"], "wrong-class %": 100 * r["wrong_class_rate"],
+                         "F1 cage": r["classification"]["per_class_f1"].get("cage")})
+        return {"status": "ok", "index": idxs[-1].name, "scored_utc": ix["meta"]["utc"], "selected": {k: sel[k] for k in ("candidate", "gate_tau", "gate_signal")},
+                "table": pd.DataFrame(rows), "n_runs_test": n_runs, "rul_diag": rul, "windows": int(len(te)),
+                "sel_metrics": res.get("SELECTED: adapted + gate")}
+    except Exception as e:  # noqa: BLE001
+        return err("COE adapt re-score", e)
