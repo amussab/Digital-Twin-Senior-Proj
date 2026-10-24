@@ -392,3 +392,116 @@ public class RealEngineFactory : WebApplicationFactory<Program>
         b.UseSetting("Urls", "http://127.0.0.1:0");
     }
 }
+
+/// <summary>Contract v3 ("direct_v3"): GBM heads in the TFT/N-HiTS ONNX slots; RUL/stage come straight from rul_head.</summary>
+public class GoldenV3ParityTests
+{
+    private readonly ITestOutputHelper _out;
+    public GoldenV3ParityTests(ITestOutputHelper o) => _out = o;
+    private static double[] Arr(JsonElement e) => e.EnumerateArray().Select(x => x.GetDouble()).ToArray();
+
+    [Fact]
+    public void V3Contract_Loads_AsDirectRul()
+    {
+        var c = ModelContract.Load(Path.Combine(Golden.Dir(), "model_contract_v3.json"));
+        Assert.Equal(3, c.ContractVersion);
+        Assert.True(c.DirectRul);
+        Assert.Equal(48, c.Nhits.EncoderLength);
+        Assert.Contains("SYNTHETIC", c.Provenance);
+    }
+
+    [Fact]
+    public void CSharpPipeline_MatchesPythonGoldenVectorsV3()
+    {
+        var dir = Golden.Dir();
+        var contract = ModelContract.Load(Path.Combine(dir, "model_contract_v3.json"));
+        using var engine = new OnnxInferenceEngine(contract, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "golden_vectors_v3.json")));
+        var root = doc.RootElement;
+        var cases = root.GetProperty("cases").EnumerateArray().ToDictionary(c => c.GetProperty("window_index").GetInt32());
+        var tr = engine.CreateTracker(1, 0);
+        double t0 = -1, maxEng = 0, maxEnc = 0, maxProb = 0, maxHi = 0, maxRulRel = 0;
+        var checkedN = 0;
+        foreach (var inp in root.GetProperty("inputs").EnumerateArray())
+        {
+            var f16 = Arr(inp.GetProperty("features16")).Select(v => (float)v).ToArray();
+            var ms = inp.GetProperty("t20_ms").GetUInt32();
+            if (t0 < 0) t0 = ms;
+            tr.Update(f16.Concat(f16).ToArray(), inp.GetProperty("rpm").GetDouble(), (ms - t0) / 3.6e6);
+            var wi = inp.GetProperty("window_index").GetInt32();
+            if (!cases.TryGetValue(wi, out var cs)) { if (tr.State == BearingStates.Ready) engine.Infer(tr); continue; }
+            Assert.Equal(BearingStates.Ready, tr.State);
+            var r = engine.Infer(tr);
+            var o = cs.GetProperty("output");
+            maxEng = Math.Max(maxEng, Arr(cs.GetProperty("engineered")).Zip(tr.Latest!).Max(p => Math.Abs(p.First - p.Second)));
+            var enc = cs.GetProperty("tft_encoder_cont").EnumerateArray().SelectMany(row => Arr(row)).ToArray();
+            maxEnc = Math.Max(maxEnc, enc.Zip(r.Details!.TftEncoder!).Max(p => Math.Abs(p.First - p.Second)));
+            Assert.Equal(o.GetProperty("fault_class").GetString(), r.FaultClass);
+            foreach (var p in o.GetProperty("class_probs").EnumerateObject())
+                maxProb = Math.Max(maxProb, Math.Abs(p.Value.GetDouble() - r.ClassProbs![p.Name]));
+            maxHi = Math.Max(maxHi, Math.Abs(o.GetProperty("health_index").GetDouble() - r.HealthIndex!.Value));
+            var rulPy = o.GetProperty("rul_hours").GetDouble();
+            maxRulRel = Math.Max(maxRulRel, Math.Abs(rulPy - r.RulHours!.Value) / Math.Max(Math.Abs(rulPy), 1e-9));
+            Assert.Equal(o.GetProperty("health_stage").GetInt32(), r.Details.HealthStage);
+            Assert.Equal(o.GetProperty("onset_detected").GetBoolean(), r.Details.OnsetDetected);
+            checkedN++;
+        }
+        _out.WriteLine($"[SYNTHETIC] V3 PARITY cases={checkedN}: max|engineered|={maxEng:E2} max|tft enc|={maxEnc:E2} max|prob|={maxProb:E2} max|HI|={maxHi:E2} max rel RUL={maxRulRel:E2}");
+        Assert.Equal(cases.Count, checkedN);
+        Assert.True(maxEng < 1e-6, $"engineered {maxEng}");
+        Assert.True(maxEnc < 1e-4, $"tft tensors {maxEnc}");
+        Assert.True(maxProb < 1e-4, $"probs {maxProb}");
+        Assert.True(maxHi < 1e-4, $"hi {maxHi}");
+        Assert.True(maxRulRel < 1e-3, $"rul rel {maxRulRel}");
+    }
+}
+
+public class V3EngineFactory : WebApplicationFactory<Program>
+{
+    protected override void ConfigureWebHost(IWebHostBuilder b)
+    {
+        b.UseSetting("Backend:Udp:Enabled", "false");
+        b.UseSetting("Backend:Replay:Enabled", "false");
+        b.UseSetting("Backend:ModelContractPath", "AI-engine/models/model_contract_v3.json");
+        b.UseSetting("Backend:DashboardPath", "");
+        b.UseSetting("Backend:PhysicsTwin", "None");
+        b.UseSetting("Urls", "http://127.0.0.1:0");
+    }
+}
+
+public class V3StreamTests : IClassFixture<V3EngineFactory>
+{
+    private readonly V3EngineFactory _f; private readonly ITestOutputHelper _out;
+    public V3StreamTests(V3EngineFactory f, ITestOutputHelper o) { _f = f; _out = o; }
+
+    [Fact]
+    public async Task Up2DemoStream_GoesHealthyToFault_RealV3Onnx()
+    {
+        _ = _f.Server;
+        var pipe = _f.Services.GetRequiredService<DigitalTwin.Backend.Services.Pipeline>();
+        var store = _f.Services.GetRequiredService<DigitalTwin.Backend.Services.StateStore>();
+        pipe.Reset();
+        Assert.False(pipe.Engine.IsSimulated);
+        Assert.Contains("SYNTHETIC", pipe.Engine.Provenance);
+        var recs = ReplaySource.Load(DigitalTwin.Backend.Config.Paths.Resolve("AI-engine/models/up2_demo_payloads.bin"));
+        Assert.Equal(509, recs.Count);
+        string? first = null, last = null; var maxStage = 0; var lat = new List<double>();
+        foreach (var r in recs)
+        {
+            var t0 = Stopwatch.GetTimestamp();
+            await pipe.IngestAsync(PayloadCodec.Encode(r), "test");
+            lat.Add((Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency);
+            foreach (var b in store.Current.Bearings.Where(b => b.State == BearingStates.Ready))
+            {
+                if (b.Bearing != 1) continue;   // the demo stream faults bearing 1; bearing 2 gets the same 16 features only if the generator says so
+                first ??= b.FaultClass; last = b.FaultClass;
+                maxStage = Math.Max(maxStage, b.Details!.HealthStage);
+            }
+        }
+        lat.Sort();
+        _out.WriteLine($"[SYNTHETIC] first ready class={first} last={last} max stage={maxStage}; in-process ingest p95={lat[(int)(lat.Count * 0.95)]:F1} ms");
+        Assert.Equal("healthy", first);
+        Assert.NotEqual("healthy", last);
+        Assert.True(maxStage >= 3);
+    }
+}

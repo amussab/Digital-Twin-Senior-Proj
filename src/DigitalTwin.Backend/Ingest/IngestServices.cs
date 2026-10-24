@@ -47,14 +47,17 @@ public sealed class DemoControl
     public const string Real = "demo";          // recorded XJTU-SY payloads (MEASURED public data)
     public const string TwinSim = "twin-sim";   // [SIMULATION] synthetic degrading run with FE-beam displacement
     public const string Synthetic = "synthetic";
+    public const string Up2 = "up2";            // [SYNTHETIC] UP2 demo stream (healthy -> fault -> failure) through the v3 contract
     private readonly string _machineId;
+    private readonly bool _replayEnabled;
     private volatile string _source;
     private int _version;
     public DemoControl(IOptions<BackendOptions> o)
     {
         _machineId = o.Value.MachineId;
+        _replayEnabled = o.Value.Replay.Enabled;
         var r = o.Value.Replay;
-        _source = r.Source.ToLowerInvariant() is Real or TwinSim or Synthetic ? r.Source.ToLowerInvariant() : Real;
+        _source = r.Source.ToLowerInvariant() is Real or TwinSim or Synthetic or Up2 ? r.Source.ToLowerInvariant() : Real;
         if (r.Synthetic && string.IsNullOrEmpty(r.Path) && r.Source == "") _source = Synthetic;
     }
     public string Source => _source;
@@ -62,14 +65,15 @@ public sealed class DemoControl
     public bool TrySet(string name)
     {
         name = name.ToLowerInvariant();
-        if (name is not (Real or TwinSim or Synthetic)) return false;
+        if (name is not (Real or TwinSim or Synthetic or Up2)) return false;
         _source = name; Interlocked.Increment(ref _version); return true;
     }
     /// <summary>Label shown on the dashboard (MachineId). Simulation sources are labelled explicitly.</summary>
-    public string MachineLabel => _source switch
+    public string MachineLabel => !_replayEnabled ? _machineId : _source switch   // replay off = live UDP/HTTP ingest: label is whatever the operator configured
     {
         TwinSim => _machineId + " [SIMULATION: twin demo]",
         Synthetic => _machineId + " [SYNTHETIC]",
+        Up2 => _machineId + " [SYNTHETIC / SIMULATED SOURCE]",
         _ => _machineId + " [REPLAY: XJTU-SY public data]",
     };
 }
@@ -94,7 +98,8 @@ public sealed class ReplaySource : BackgroundService
             try { records = Records(src); }
             catch (Exception ex) { _log.LogError(ex, "REPLAY: cannot load source {Src}; replay stopped", src); return; }
             _log.LogWarning("REPLAY source={Src}: {N} records at {Hz} Hz ({Prov})", src, records.Count, _o.RateHz,
-                src == DemoControl.Real ? "MEASURED XJTU-SY public data, not the rig" : "[SIMULATION] generated data");
+                src == DemoControl.Real ? "MEASURED XJTU-SY public data, not the rig"
+                    : src == DemoControl.Up2 ? "[SYNTHETIC] synth_v3 stream, not the rig" : "[SIMULATION] generated data");
             _pipe.Reset();
             foreach (var rec in records)
             {
@@ -110,6 +115,7 @@ public sealed class ReplaySource : BackgroundService
     {
         DemoControl.TwinSim => SyntheticWindows.DegradingRun(400, hoursPerWindow: _opt.HoursPerWindow),
         DemoControl.Synthetic => SyntheticWindows.DegradingRun(600),
+        DemoControl.Up2 => Load(Paths.Resolve(_o.Up2Path)),
         _ => Load(Paths.Resolve(_o.Path)),
     };
 

@@ -71,3 +71,29 @@ hardware with the real ONNX engine before quoting them.
 - `OnnxInferenceEngine` mirrors `AI-engine/aiengine/engine.py` + `rul.py` for contract v2 (per-bearing, 21 engineered
   features, class-conditioned RUL threshold, loglin RUL). Golden parity test runs and passes.
 - Not implemented: persisted per-machine baselines (re-collected at each start).
+
+## UP2: contract v3, COE simulator, hardware-day swap
+
+**Model contract switch.** `Backend:ModelContractPath` (appsettings, env `Backend__ModelContractPath`, or CLI
+`--Backend:ModelContractPath=AI-engine/models/model_contract_v3.json`). Contract v2 (`model_contract.json`) is still the default and its
+tests stay green. v3 (`rul.method = "direct_v3"`): classifier ONNX in the TFT slot, `v3_rul.onnx` in the N-HiTS slot
+(`encoder_cont` [1,48,21] -> `rul_head` [1,3] = rul_windows, z, stage). `OnnxInferenceEngine` then uses
+`rul_hours = max(head[0],0) * cadence`, `stage = (int)head[2]` and skips `RulEstimator`/`Stage` (mirrors `engine.py`).
+An optional contract `postprocess` block (planned v3b causal stage/RUL smoothing) is parsed into `ModelContract.Postprocess`;
+`IRulPostProcessor`/`RulPostProcessors.Create` is the hook (TODO until the Python reference exists; an unknown block is logged, not applied).
+Golden test: `GoldenV3ParityTests` against `golden_vectors_v3.json` ([SYNTHETIC] vectors).
+
+**Demo commands.**
+```
+./scripts/run-up2-demo.ps1          # replay source 'up2' = AI-engine/models/up2_demo_payloads.bin ([SYNTHETIC] healthy -> fault -> failure)
+./scripts/run-up2-coe-demo.ps1      # backend (replay off) + COE simulator (AI-engine/aiengine/coe) sending a ramping fault over UDP :5005
+```
+The dashboard header shows the machine label (`[SYNTHETIC / SIMULATED SOURCE]`). With replay disabled the label is exactly `Backend:MachineId`.
+
+**Single ingest entry.** UDP `:5005` (one 152-byte datagram = one payload; `UdpIngestService`, C5 private/loopback sender guard unchanged)
+is the only path for the COE simulator (`python -m aiengine.coe.run --source sim --udp 127.0.0.1:5005`) and the future STM32 + ESP32-C6 node.
+HTTP `POST /api/payload` stays as a fallback. Replay sources are demo-only.
+
+**Hardware day swap: change nothing but the sender.** Stop the simulator; power the node and point its UDP sender at `<server LAN IP>:5005`
+(same 152-byte layout, little-endian, `t20_ms` = ms since stream start). Open UDP 5005 in the firewall for the node's subnet (see C5 above).
+No backend, contract, model or dashboard change. Re-measure IS1 with `tools/DemoMeasure is1` (real Wi-Fi) and replace the `[SIMULATION]` hop.

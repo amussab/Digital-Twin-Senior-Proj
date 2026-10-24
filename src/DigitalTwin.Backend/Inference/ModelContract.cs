@@ -59,6 +59,11 @@ public sealed class ModelContract
     public required SubModelSpec Tft { get; init; }
     public int NhitsPredictionLength { get; init; }
     public required RulCalibration Rul { get; init; }
+    /// <summary>True when the RUL graph outputs [rul_windows, z, stage] directly (contract rul.method "direct_v3").</summary>
+    public bool DirectRul => Rul.Method == "direct_v3";
+    /// <summary>Optional contract <c>postprocess</c> block (v3b: causal stage/RUL smoothing). Null when absent.
+    /// Interpreted by <see cref="IRulPostProcessor"/> implementations; unknown types are reported, never silently applied.</summary>
+    public JsonElement? Postprocess { get; init; }
     /// <summary>Engineered rows each bearing must hold before the TFT can run (encoder + 1 decoder row).</summary>
     public int RequiredHistory => Tft.EncoderLength + 1;
     /// <summary>Rows the tracker retains (covers the RUL history window and the N-HiTS encoder).</summary>
@@ -110,6 +115,7 @@ public sealed class ModelContract
             Tft = ParseModel(models.GetProperty("tft")),
             NhitsPredictionLength = models.GetProperty("nhits").GetProperty("prediction_length").GetInt32(),
             Rul = cal,
+            Postprocess = r.TryGetProperty("postprocess", out var pp) && pp.ValueKind == JsonValueKind.Object ? pp.Clone() : null,
         };
     }
 

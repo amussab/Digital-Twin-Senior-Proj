@@ -111,7 +111,7 @@ app.MapGet("/api/metrics", (LatencyRecorder l, IInferenceEngine e) =>
 
 app.MapGet("/api/demo", (DemoControl c) => Results.Ok(new { source = c.Source, machine = c.MachineLabel }));
 app.MapPost("/api/demo/source", (string name, DemoControl c) =>
-    c.TrySet(name) ? Results.Ok(new { source = c.Source }) : Results.BadRequest(new { error = "name must be demo | twin-sim | synthetic" }));
+    c.TrySet(name) ? Results.Ok(new { source = c.Source }) : Results.BadRequest(new { error = "name must be demo | twin-sim | synthetic | up2" }));
 
 app.MapGet("/api/health", (IInferenceEngine e) => Results.Ok(new { status = "ok", isSimulated = e.IsSimulated }));
 

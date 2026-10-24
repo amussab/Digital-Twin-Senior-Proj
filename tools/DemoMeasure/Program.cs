@@ -48,6 +48,89 @@ if (mode == "rate")
     Console.WriteLine($"snapshots with PhysicsRulHours != null: {withPhys}/{list.Length}; with RulResidualPercent: {list.Count(x => x.S.RulResidualPercent is not null)}");
     Console.WriteLine($"last: aiRul={list[^1].S.AiRulHours:F2} class={list[^1].S.FaultClass} latencyMs(server decode+feat+inf)={list[^1].S.ProcessingLatencyMs}");
 }
+else if (mode == "is1")
+{
+    var ci = System.Globalization.CultureInfo.InvariantCulture;
+    var port = int.Parse(args[2]); var all = File.ReadAllBytes(args[3]); var n = int.Parse(args[4]);
+    var wMin = double.Parse(args[5], ci); var wMax = double.Parse(args[6], ci);
+    var coePath = args[7]; var outPath = args[8];
+    var hz = args.Length > 9 ? double.Parse(args[9], ci) : 10; var seed = args.Length > 10 ? int.Parse(args[10]) : 1;
+    var rng = new Random(seed);
+    n = Math.Min(n, all.Length / 152);
+    using var udp = new UdpClient(); udp.Connect("127.0.0.1", port);
+    void Precise(double ms)
+    {
+        var end = Stopwatch.GetTimestamp() + (long)(ms * Stopwatch.Frequency / 1000.0);
+        while (Stopwatch.GetTimestamp() < end) { if (end - Stopwatch.GetTimestamp() > Stopwatch.Frequency / 500) Thread.Sleep(1); else Thread.SpinWait(50); }
+    }
+    var wifi = new List<double>(); var backend = new List<double>(); var meas = new List<double>(); var missed = 0;
+    await Task.Delay(500);
+    for (var k = 0; k < n; k++)
+    {
+        var pkt = all.AsSpan(k * 152, 152).ToArray();
+        var rpm = BitConverter.ToSingle(pkt, 0) + ((k % 50) + 1) * 0.004f;            // marker only (<= 0.2 rpm)
+        BitConverter.GetBytes(rpm).CopyTo(pkt, 0);
+        var tClose = Stopwatch.GetTimestamp();                                       // COE window close / payload ready (sender side)
+        var d = wMin + (wMax - wMin) * rng.NextDouble();                              // [SIMULATION] Wi-Fi hop delay
+        Precise(d);
+        var tSend = Stopwatch.GetTimestamp();
+        await udp.SendAsync(pkt, pkt.Length);
+        long? got = null; var dl = tSend + Stopwatch.Frequency * 2;
+        while (got is null && Stopwatch.GetTimestamp() < dl)
+        {
+            foreach (var (ticks, s) in snaps) if (ticks >= tSend && Math.Abs(s.Rpm - rpm) < 0.0015) { got = ticks; break; }
+            if (got is null) await Task.Delay(1);
+        }
+        if (got is null) { missed++; continue; }
+        if (k >= 25) { wifi.Add(Ms(tClose, tSend)); backend.Add(Ms(tSend, got.Value)); meas.Add(Ms(tClose, got.Value)); }   // k>=25: TFT buffer full, ONNX active
+        while (snaps.TryDequeue(out _)) { }
+        await Task.Delay(TimeSpan.FromSeconds(1.0 / hz));
+    }
+    double P(IReadOnlyList<double> l, double q) { var s2 = l.OrderBy(x => x).ToArray(); return s2[Math.Clamp((int)Math.Ceiling(q * s2.Length) - 1, 0, s2.Length - 1)]; }
+    using var cj = System.Text.Json.JsonDocument.Parse(File.ReadAllText(coePath));
+    var coe2 = cj.RootElement.GetProperty("COE2");
+    double hostP50 = 0, hostP95 = 0, hostMax = 0;
+    foreach (var r in coe2.GetProperty("by_rpm").EnumerateObject())
+    {
+        var t = r.Value.GetProperty("t20_to_payload_ms");
+        hostP50 = Math.Max(hostP50, t.GetProperty("p50").GetDouble()); hostP95 = Math.Max(hostP95, t.GetProperty("p95").GetDouble()); hostMax = Math.Max(hostMax, t.GetProperty("max").GetDouble());
+    }
+    double stm = 0, stmNom = 0;
+    foreach (var r in coe2.GetProperty("stm32_estimate").GetProperty("by_rpm").EnumerateObject())
+    {
+        var e = r.Value;
+        stm = Math.Max(stm, e.GetProperty("pessimistic_10cyc_per_flop").GetProperty("plus_wait_for_block_end_ms").GetDouble());
+        stmNom = Math.Max(stmNom, e.GetProperty("nominal_2cyc_per_flop").GetProperty("plus_wait_for_block_end_ms").GetDouble());
+    }
+    var totHost = meas.Select(m => m + hostP95).ToList(); var totStm = meas.Select(m => m + stm).ToList();
+    string F(double v) => v.ToString("F1", ci);
+    var sb = new System.Text.StringBuilder();
+    sb.AppendLine($"# IS1 end-to-end latency measurement (UP2), {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC");
+    sb.AppendLine();
+    sb.AppendLine($"Spec IS1: sensor -> classify+RUL -> dashboard < 500 ms. Tool: `tools/DemoMeasure is1` (n = {meas.Count} ONNX-active windows of {n} sent, {missed} without a snapshot; payloads = AI-engine/models/up2_demo_payloads.bin, [SYNTHETIC] synth_v3 stream; contract v3).");
+    sb.AppendLine($"Method: t_close = sender timestamp when the COE window is complete (payload ready); then a [SIMULATION] Wi-Fi hop delay, uniform {wMin}-{wMax} ms (NOT measured on a real Wi-Fi link; real value needs the ESP32-C6 + AP); then UDP 127.0.0.1 -> backend (decode, feature engineering, ONNX classifier-slot + RUL-slot, SignalR broadcast) -> .NET SignalR client receive (stands in for the browser; Blazor WASM render time is NOT included). One monotonic clock. Windows are sent one at a time at {hz} Hz. Marker: rpm nudged by <= 0.2 rpm to identify each window's snapshot.");
+    sb.AppendLine();
+    sb.AppendLine("## Measured legs (this PC, Windows host)");
+    sb.AppendLine("| Leg | p50 ms | p95 ms | max ms | Provenance |");
+    sb.AppendLine("|---|---|---|---|---|");
+    sb.AppendLine($"| Wi-Fi hop (injected delay realised) | {F(P(wifi, .5))} | {F(P(wifi, .95))} | {F(wifi.Max())} | [SIMULATION] assumed {wMin}-{wMax} ms jitter |");
+    sb.AppendLine($"| UDP + backend (decode, features, 2x ONNX, SignalR) + client receive | {F(P(backend, .5))} | {F(P(backend, .95))} | {F(backend.Max())} | [MEASURED host] localhost; not the target server / Pi 5 |");
+    sb.AppendLine($"| Sender window-close -> client receive (two rows above) | {F(P(meas, .5))} | {F(P(meas, .95))} | {F(meas.Max())} | [MEASURED host + SIMULATION] |");
+    sb.AppendLine();
+    sb.AppendLine("## Budget including COE processing (t20 -> payload ready), from AI-engine/reports/coe_verification.json");
+    sb.AppendLine("| Stage | p50 ms | p95 ms | max ms | Provenance |");
+    sb.AppendLine("|---|---|---|---|---|");
+    sb.AppendLine($"| COE t20 -> payload ready, host PC (Python/NumPy; worst of 1750/3600 rpm) | {F(hostP50)} | {F(hostP95)} | {F(hostMax)} | [MEASURED host], not STM32 |");
+    sb.AppendLine($"| COE t20 -> payload ready, STM32 pessimistic (10 cyc/flop, 480 MHz M7 assumed, incl. wait for last DMA block) | - | {F(stm)} | {F(stm)} | [CALCULATED] (nominal 2 cyc/flop: {F(stmNom)} ms) |");
+    sb.AppendLine($"| Per-window sum: measured legs + COE host (p50 / p95 / max) | {F(P(meas, .5) + hostP50)} | {F(P(totHost, .95))} | {F(meas.Max() + hostMax)} | [MEASURED host + SIMULATION] |");
+    sb.AppendLine($"| Per-window sum: measured legs + COE STM32 pessimistic (conservative) | {F(P(meas, .5) + stm)} | {F(P(totStm, .95))} | {F(meas.Max() + stm)} | mixed incl. [CALCULATED] |");
+    sb.AppendLine();
+    var worst = meas.Max() + stm;
+    sb.AppendLine($"Verdict vs IS1 (< 500 ms): p95 = {F(P(totStm, .95))} ms, max = {F(worst)} ms (STM32 pessimistic) -> " + (worst < 500 ? "within budget for this setup: **MET (design / simulation)**; the hardware leg and the real Wi-Fi hop are still to be measured." : "max EXCEEDS 500 ms; not met on the worst case."));
+    sb.AppendLine("Not measured: real Wi-Fi latency/jitter, STM32 timing, browser (Blazor WASM) render time, final server (laptop vs Raspberry Pi 5).");
+    File.WriteAllText(outPath, sb.ToString());
+    Console.WriteLine(sb.ToString());
+}
 else
 {
     var port = int.Parse(args[2]); var bytes = File.ReadAllBytes(args[3]); var hz = double.Parse(args[4]);

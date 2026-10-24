@@ -19,6 +19,7 @@ public sealed class OnnxInferenceEngine : IInferenceEngine, IDisposable
     private readonly int[] _tftIdx, _nhIdx;
     private readonly ILogger _log;
     private readonly int _classHealthy;
+    private readonly IRulPostProcessor? _post;
 
     public OnnxInferenceEngine(ModelContract contract, ILogger log)
     {
@@ -32,6 +33,13 @@ public sealed class OnnxInferenceEngine : IInferenceEngine, IDisposable
         _nhIdx = contract.Nhits.Columns.Select(c => contract.Features.Index(c)).ToArray();
         _classHealthy = contract.ClassLabels.ToList().IndexOf("healthy");
         if (_classHealthy < 0) throw new InvalidDataException("contract classes lack 'healthy'");
+        if (contract.Postprocess is { } pp)
+        {
+            _post = RulPostProcessors.Create(pp);
+            if (_post is null)
+                _log.LogWarning("Contract has a postprocess block (type {T}) that this backend does not implement; RUL/stage are raw head outputs (TODO v3b)",
+                    pp.TryGetProperty("type", out var ty) ? ty.GetString() : "?");
+        }
         WarmUp();
     }
 
@@ -151,8 +159,19 @@ public sealed class OnnxInferenceEngine : IInferenceEngine, IDisposable
         double cad = 0;
         if (ts.Count > 1) cad = FeatureEngineer.Median(Enumerable.Range(1, ts.Count - 1).Select(i => ts[i] - ts[i - 1]).ToArray());
         double? tau = t.OnsetT is { } ot ? t.CurrentT - ot : null;
-        var est = RulEstimator.Estimate(_c.Rul, t.HiHistory, forecast, thrCls, tau, t.OnsetHi, Math.Max(cad, 1e-9));
-        var stage = RulEstimator.Stage(tau, est);
+        double est; int stage;
+        if (_c.DirectRul)
+        {
+            // contract v3 (engine.py "direct_v3"): the N-HiTS-slot graph outputs [rul_windows, z, stage]; no RulEstimator, no onset Stage().
+            est = Math.Max(forecast[0], 0.0) * Math.Max(cad, 1e-9);
+            stage = (int)forecast[2];
+            if (_post is not null) (est, stage) = _post.Apply(t, est, stage, forecast, Math.Max(cad, 1e-9));
+        }
+        else
+        {
+            est = RulEstimator.Estimate(_c.Rul, t.HiHistory, forecast, thrCls, tau, t.OnsetHi, Math.Max(cad, 1e-9));
+            stage = RulEstimator.Stage(tau, est);
+        }
 
         var k = Array.IndexOf(probs, probs.Max());
         var hi = t.LatestHi!.Value;
@@ -191,6 +210,23 @@ public sealed class OnnxInferenceEngine : IInferenceEngine, IDisposable
     }
 
     public void Dispose() { _nhits.Dispose(); _tft.Dispose(); }
+}
+
+/// <summary>
+/// Hook for the optional contract <c>postprocess</c> block (planned v3b: causal smoothing of stage / RUL).
+/// Called once per bearing-window after the "direct_v3" head, with per-bearing state in <see cref="BearingTracker.PostState"/>.
+/// TODO(v3b): when AI-engine/models/model_contract_v3b.json defines the block, implement it in <see cref="RulPostProcessors.Create"/>
+/// as a literal port of the Python reference (aiengine) and add a golden test; until then unknown blocks are logged, not applied.
+/// </summary>
+public interface IRulPostProcessor
+{
+    (double RulHours, int Stage) Apply(BearingTracker t, double rulHours, int stage, double[] headOutput, double cadenceHours);
+}
+
+public static class RulPostProcessors
+{
+    /// <summary>Returns the processor for the block's "type", or null when unknown.</summary>
+    public static IRulPostProcessor? Create(System.Text.Json.JsonElement block) => null;
 }
 
 /// <summary>Port of aiengine/rul.py (trend_steps, estimate with method "loglin"/"trend"/"onset"/blend, stage_estimate).</summary>

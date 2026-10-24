@@ -63,6 +63,8 @@ public sealed class BearingTracker
     }
 
     public int Bearing { get; }
+    /// <summary>Opaque per-bearing state owned by an <see cref="IRulPostProcessor"/> (v3b causal post-process).</summary>
+    public object? PostState { get; set; }
     public int Required => _required;
     public int Fill => _eng.Count;
     public int CommissioningFill => _pending.Count;

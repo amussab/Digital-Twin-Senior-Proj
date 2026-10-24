@@ -4,7 +4,8 @@ public sealed class BackendOptions
 {
     public const string Section = "Backend";
     public string MachineId { get; set; } = "OH2-PUMP-01";
-    /// <summary>Path to model_contract.json (the ONLY source of model metadata).</summary>
+    /// <summary>Path to the model contract JSON (the ONLY source of model metadata). Switch by config, env
+    /// (<c>Backend__ModelContractPath</c>) or CLI (<c>--Backend:ModelContractPath=AI-engine/models/model_contract_v3.json</c>).</summary>
     public string ModelContractPath { get; set; } = "AI-engine/models/model_contract.json";
     /// <summary>Re-broadcast period; 100 ms = 10 Hz (spec S9).</summary>
     // 50 ms (20 Hz nominal): Windows timer granularity (~15.6 ms) stretches a 100 ms period to
@@ -40,6 +41,8 @@ public sealed class ReplayOptions
     /// AI-engine will produce AI-engine/models/demo_payloads.bin; set Backend:Replay:Path to it. Empty + Synthetic=true generates a SYNTHETIC degrading run.</summary>
     public string Path { get; set; } = "";
     public bool Synthetic { get; set; }
+    /// <summary>Payload file played by Source "up2" ([SYNTHETIC] synth_v3 healthy -> fault -> failure stream).</summary>
+    public string Up2Path { get; set; } = "AI-engine/models/up2_demo_payloads.bin";
     public double RateHz { get; set; } = 10;
     public bool Loop { get; set; } = true;
 }
