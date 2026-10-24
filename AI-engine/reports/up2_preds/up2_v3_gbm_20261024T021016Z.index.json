@@ -1,0 +1,30 @@
+{
+ "meta": {
+  "provenance": "[SYNTHETIC] synth_v3",
+  "seed": 20261004,
+  "git_commit": "04c4511",
+  "git_dirty": true,
+  "command": "python -m aiengine.up2_train predict",
+  "utc": "2026-10-24T02:10:38+00:00",
+  "tag": "20261024T021016Z",
+  "touch": "test runs scored once with the selected heads"
+ },
+ "files": {
+  "test": {
+   "cls": "up2_v3_gbm_test_20261024T021016Z.cls.csv.gz",
+   "rul": "up2_v3_gbm_test_20261024T021016Z.rul.csv.gz"
+  },
+  "synth_v3_noise15": {
+   "cls": "up2_v3_gbm_synth_v3_noise15_20261024T021016Z.cls.csv.gz",
+   "rul": "up2_v3_gbm_synth_v3_noise15_20261024T021016Z.rul.csv.gz"
+  },
+  "synth_v3_rpm3000": {
+   "cls": "up2_v3_gbm_synth_v3_rpm3000_20261024T021016Z.cls.csv.gz",
+   "rul": "up2_v3_gbm_synth_v3_rpm3000_20261024T021016Z.rul.csv.gz"
+  },
+  "synth_v3_hard": {
+   "cls": "up2_v3_gbm_synth_v3_hard_20261024T021016Z.cls.csv.gz",
+   "rul": "up2_v3_gbm_synth_v3_hard_20261024T021016Z.rul.csv.gz"
+  }
+ }
+}

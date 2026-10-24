@@ -1,0 +1,536 @@
+{
+  "contract_version": 3,
+  "generated_utc": "2026-10-24T03:14:54+00:00",
+  "generated_by": "AI-engine/aiengine/up2_export.py",
+  "provenance": {
+    "synthetic": true,
+    "datasets": [
+      "synth_v3",
+      "synth_v3_train2 (training only)"
+    ],
+    "run": "up2_v3_gbm",
+    "git_commit": "c990257",
+    "seed": 20261004,
+    "selection": {
+      "cls": {
+        "kind": "xgb",
+        "T": 25
+      },
+      "rul": {
+        "kind": "lgbm",
+        "NL": 48,
+        "levels": false
+      },
+      "z": {
+        "kind": "lgbm",
+        "NL": 48,
+        "levels": false,
+        "z_cut": 0.0
+      },
+      "interval_rel_q80_val": 0.22940708383686803
+    },
+    "note": "[SYNTHETIC] gradient-boosted heads trained on synth_v3; selected on validation runs only",
+    "generator_knobs": {
+      "noise_scale": 1.0,
+      "life_ref_h": 50.0,
+      "life_sigma": 0.35,
+      "life_clip_windows": [
+        80,
+        720
+      ],
+      "healthy_windows": [
+        60,
+        200
+      ],
+      "healthy_run_windows": [
+        250,
+        700
+      ],
+      "shape_a": [
+        0.28,
+        0.32
+      ],
+      "shape_p": [
+        2.3,
+        2.7
+      ],
+      "eol_sev": [
+        0.85,
+        1.15
+      ],
+      "transmission": [
+        0.04,
+        0.1
+      ],
+      "leak": 0.12,
+      "signature": 1.0,
+      "drift_sigma": 0.04,
+      "transient_rate": 0.004,
+      "rpm_modes": [
+        1750.0,
+        3600.0
+      ],
+      "rpm_jitter": 0.002
+    },
+    "table_hash": "66031b7aa779ee8c"
+  },
+  "model_unit": "one biaxial bearing: 16 raw features = X's 8 then Y's 8 (COE C7 order)",
+  "wire_payload": {
+    "size_bytes": 152,
+    "byte_order": "little-endian",
+    "fields": [
+      {
+        "offset": 0,
+        "type": "float32",
+        "name": "rpm"
+      },
+      {
+        "offset": 4,
+        "type": "float32[32]",
+        "name": "features"
+      },
+      {
+        "offset": 132,
+        "type": "float32[4]",
+        "name": [
+          "p1_amp_um",
+          "p1_phase_rad",
+          "p2_amp_um",
+          "p2_phase_rad"
+        ]
+      },
+      {
+        "offset": 148,
+        "type": "uint32",
+        "name": "t20_ms"
+      }
+    ],
+    "bearing_slices": {
+      "1": [
+        0,
+        16
+      ],
+      "2": [
+        16,
+        32
+      ]
+    },
+    "note": "COE doc: 152 bytes; FDR deck: 168 (unreconciled)."
+  },
+  "raw_bearing_feature_order": [
+    "x_bp_rms",
+    "x_bp_kurtosis",
+    "x_bp_crest",
+    "x_env_rms",
+    "x_ftf_mag",
+    "x_bsf_mag",
+    "x_bpfo_mag",
+    "x_bpfi_mag",
+    "y_bp_rms",
+    "y_bp_kurtosis",
+    "y_bp_crest",
+    "y_env_rms",
+    "y_ftf_mag",
+    "y_bsf_mag",
+    "y_bpfo_mag",
+    "y_bpfi_mag"
+  ],
+  "feature_engineering": {
+    "engineered_order": [
+      "hi",
+      "log_env_ratio",
+      "log_bp_ratio",
+      "kurtosis_max",
+      "crest_max",
+      "kurtosis_rise",
+      "axis_asymmetry",
+      "ftf_share",
+      "bsf_share",
+      "bpfo_share",
+      "bpfi_share",
+      "family_contrast",
+      "log_ftf_ratio",
+      "log_bsf_ratio",
+      "log_bpfo_ratio",
+      "log_bpfi_ratio",
+      "raw_ftf_share",
+      "raw_bsf_share",
+      "raw_bpfo_share",
+      "raw_bpfi_share",
+      "rpm_norm"
+    ],
+    "baseline": {
+      "windows": 24,
+      "statistic": "median",
+      "rel_floor": 1e-06,
+      "rig_policy": "commissioning capture (spec M5); else median of first 24 windows"
+    },
+    "eps": 1e-09,
+    "health_index": {
+      "r_ref": 20.0,
+      "curve_k": 1.0,
+      "weights": {
+        "env_rms": 0.45,
+        "bp_rms": 0.3,
+        "family_max": 0.25
+      },
+      "clip_max": 1.5
+    },
+    "rpm_norm": {
+      "center": 2675.0,
+      "scale": 925.0
+    },
+    "reference_impl": "aiengine/features.py::engineer_arrays (unchanged from contract v2)"
+  },
+  "onset": {
+    "sigmas": 3.0,
+    "consecutive": 12,
+    "sigma_floor": 0.01,
+    "baseline_windows": 24,
+    "run_in_skip_windows": 6,
+    "use": "v3: reported as onset_detected only; class, RUL and stage come from the heads"
+  },
+  "classes": {
+    "labels": [
+      "ball",
+      "cage",
+      "healthy",
+      "inner_race",
+      "outer_race"
+    ],
+    "index_is_output_channel": true,
+    "note": "alphabetical; logits = log probabilities, apply softmax (identity on probabilities). No decision gate (plain argmax)."
+  },
+  "models": {
+    "tft": {
+      "onnx": "v3_cls.onnx",
+      "family": "gradient-boosted trees (xgb) in the TFT slot",
+      "encoder_length": 24,
+      "decoder_length": 1,
+      "columns": [
+        "hi",
+        "log_env_ratio",
+        "log_bp_ratio",
+        "kurtosis_max",
+        "crest_max",
+        "kurtosis_rise",
+        "axis_asymmetry",
+        "ftf_share",
+        "bsf_share",
+        "bpfo_share",
+        "bpfi_share",
+        "family_contrast",
+        "log_ftf_ratio",
+        "log_bsf_ratio",
+        "log_bpfo_ratio",
+        "log_bpfi_ratio",
+        "raw_ftf_share",
+        "raw_bsf_share",
+        "raw_bpfo_share",
+        "raw_bpfi_share",
+        "rpm_norm"
+      ],
+      "scalers": {
+        "hi": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_env_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bp_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "crest_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_rise": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "axis_asymmetry": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "family_contrast": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_ftf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bsf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfo_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfi_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "rpm_norm": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        }
+      },
+      "warmup_windows": 25,
+      "size_kb": 1423.6,
+      "onnx_inputs": [
+        "encoder_cont",
+        "decoder_cont"
+      ],
+      "outputs": [
+        "logits",
+        "variable_weights"
+      ],
+      "batch_dim": "dynamic",
+      "parity": {
+        "windows": 2934,
+        "cls_prob_max_abs_diff": 3.5762786865234375e-07,
+        "cls_argmax_mismatch": 0,
+        "rul_windows_max_rel_diff": 1.0363304853853233e-05,
+        "z_max_abs_diff": 9.609769570234628e-06,
+        "stage_mismatch": 0,
+        "reference": "aggregator via ORT + native predict_proba / predict (float32 features)"
+      }
+    },
+    "nhits": {
+      "onnx": "v3_rul.onnx",
+      "family": "gradient-boosted trees (rul lgbm, z lgbm) in the N-HiTS slot",
+      "encoder_length": 48,
+      "prediction_length": 1,
+      "columns": [
+        "hi",
+        "log_env_ratio",
+        "log_bp_ratio",
+        "kurtosis_max",
+        "crest_max",
+        "kurtosis_rise",
+        "axis_asymmetry",
+        "ftf_share",
+        "bsf_share",
+        "bpfo_share",
+        "bpfi_share",
+        "family_contrast",
+        "log_ftf_ratio",
+        "log_bsf_ratio",
+        "log_bpfo_ratio",
+        "log_bpfi_ratio",
+        "raw_ftf_share",
+        "raw_bsf_share",
+        "raw_bpfo_share",
+        "raw_bpfi_share",
+        "rpm_norm"
+      ],
+      "scalers": {
+        "hi": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_env_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bp_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "crest_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_rise": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "axis_asymmetry": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "family_contrast": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_ftf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bsf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfo_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfi_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "rpm_norm": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        }
+      },
+      "left_pad": "repeat first row",
+      "output": "rul_head [B,3] = [rul_windows, z, stage]",
+      "in_graph_features": {
+        "aggregates": [
+          "last",
+          "mean6",
+          "mean",
+          "mean_q1",
+          "slope",
+          "slope_h2",
+          "std",
+          "max"
+        ],
+        "hi_levels": [],
+        "reference_impl": "aiengine/up2_window.py"
+      },
+      "size_kb": 5863.8,
+      "onnx_inputs": [
+        "encoder_cont"
+      ],
+      "outputs": [
+        "rul_head"
+      ],
+      "batch_dim": "dynamic"
+    }
+  },
+  "rul": {
+    "method": "direct_v3",
+    "procedure": "rul_hours = rul_head[0] * cadence_hours (median spacing of the last <=48 window times); stage = rul_head[2]; z = rul_head[1]. RUL is meaningful when stage >= 2.",
+    "history_windows": 24,
+    "blend_w": 0.5,
+    "u_min": 0.05,
+    "class_thresholds": {},
+    "pooled_threshold": 1.0,
+    "max_rul_factor": 20.0,
+    "loglin_coef": [],
+    "interval_rel": 0.22940708383686803,
+    "class_smoothing_windows": 5
+  },
+  "stage": "rul_head[2] (from the z head): 1 if z < 0.0 (z_cut, chosen on validation) else min(6, 2 + floor(5 clip(z, 0, 1)))"
+}

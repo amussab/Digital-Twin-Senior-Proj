@@ -26,7 +26,7 @@ LINEAR_AGGS = ["last", "mean6", "mean", "mean_q1", "slope", "slope_h2"]
 NONLIN_AGGS = ["std", "max"]
 AGGS = LINEAR_AGGS + NONLIN_AGGS
 HI_LEVELS = [0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-OPSET = 17
+OPSET = 15                     # onnxmltools tree converters support <= 15
 
 
 def n_features(R: int, levels: bool) -> int:

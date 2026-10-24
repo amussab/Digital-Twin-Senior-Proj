@@ -1,0 +1,292 @@
+{
+ "meta": {
+  "provenance": "[SYNTHETIC] synth_v3",
+  "seed": 20261004,
+  "git_commit": "c990257",
+  "git_dirty": true,
+  "command": "python -m aiengine.up2_train select-gbm --threads 16",
+  "utc": "2026-10-24T02:53:53+00:00",
+  "selection": "validation runs only",
+  "counts": {
+   "runs_in_multiple_splits": 0,
+   "units_in_multiple_splits": 0,
+   "runs_per_split": {
+    "test": 50,
+    "train": 635,
+    "val": 35
+   },
+   "faulted_runs_per_split_class": {
+    "test": {
+     "ball": 10,
+     "cage": 10,
+     "inner_race": 10,
+     "outer_race": 10
+    },
+    "train": {
+     "ball": 127,
+     "cage": 127,
+     "inner_race": 127,
+     "outer_race": 127
+    },
+    "val": {
+     "ball": 7,
+     "cage": 7,
+     "inner_race": 7,
+     "outer_race": 7
+    }
+   },
+   "windows_per_split": {
+    "train": 488454,
+    "test": 42292,
+    "val": 29646
+   }
+  }
+ },
+ "grid": {
+  "cls": [
+   {
+    "kind": "xgb",
+    "T": 13,
+    "best_iteration": 118,
+    "fit_seconds": 314.5,
+    "class_weight_power": 0.5,
+    "val_macro_f1": 0.9526475037586813,
+    "val_per_class_f1": {
+     "healthy": 0.980747186937095,
+     "outer_race": 0.954239091876552,
+     "inner_race": 0.9726067746686303,
+     "ball": 0.937261551504875,
+     "cage": 0.9183829138062548
+    }
+   },
+   {
+    "kind": "xgb",
+    "T": 25,
+    "best_iteration": 112,
+    "fit_seconds": 273.4,
+    "class_weight_power": 0.5,
+    "val_macro_f1": 0.9633334917349152,
+    "val_per_class_f1": {
+     "healthy": 0.9844987608727344,
+     "outer_race": 0.9688826025459689,
+     "inner_race": 0.9712103407755581,
+     "ball": 0.9597563628453339,
+     "cage": 0.932319391634981
+    }
+   },
+   {
+    "kind": "lgbm",
+    "T": 13,
+    "best_iteration": 105,
+    "fit_seconds": 113.0,
+    "class_weight_power": 0.5,
+    "val_macro_f1": 0.9529879600369473,
+    "val_per_class_f1": {
+     "healthy": 0.9811743822114262,
+     "outer_race": 0.9499822632139057,
+     "inner_race": 0.9711084905660378,
+     "ball": 0.9423569598633647,
+     "cage": 0.9203177043300026
+    }
+   },
+   {
+    "kind": "lgbm",
+    "T": 25,
+    "best_iteration": 96,
+    "fit_seconds": 102.6,
+    "class_weight_power": 0.5,
+    "val_macro_f1": 0.96320591550986,
+    "val_per_class_f1": {
+     "healthy": 0.9846198631798554,
+     "outer_race": 0.9658089531194924,
+     "inner_race": 0.9699469652327637,
+     "ball": 0.9583787317498366,
+     "cage": 0.9372750642673522
+    }
+   }
+  ],
+  "rul": [
+   {
+    "kind": "xgb",
+    "NL": 48,
+    "levels": false,
+    "rul": {
+     "kind": "xgb",
+     "best_iteration": 163,
+     "fit_seconds": 26.1
+    },
+    "z": {
+     "kind": "xgb",
+     "best_iteration": 355,
+     "fit_seconds": 141.2
+    },
+    "val_S7_mape_pct": 15.96440047417917,
+    "val_percent_of_life_pts": 7.530342427157967,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9999049339290808,
+    "val_stage_mae": 0.1338530278543588
+   },
+   {
+    "kind": "lgbm",
+    "NL": 48,
+    "levels": false,
+    "rul": {
+     "kind": "lgbm",
+     "best_iteration": 494,
+     "fit_seconds": 44.0
+    },
+    "z": {
+     "kind": "lgbm",
+     "best_iteration": 1168,
+     "fit_seconds": 140.9
+    },
+    "val_S7_mape_pct": 15.772629982213886,
+    "val_percent_of_life_pts": 7.495411563416393,
+    "val_stage_max": 1,
+    "val_stage_within1": 1.0,
+    "val_stage_mae": 0.1370852742656146
+   },
+   {
+    "kind": "xgb",
+    "NL": 48,
+    "levels": true,
+    "rul": {
+     "kind": "xgb",
+     "best_iteration": 198,
+     "fit_seconds": 30.3
+    },
+    "z": {
+     "kind": "xgb",
+     "best_iteration": 258,
+     "fit_seconds": 113.4
+    },
+    "val_S7_mape_pct": 16.07534967360852,
+    "val_percent_of_life_pts": 7.537797080874537,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9999049339290808,
+    "val_stage_mae": 0.13594448141458312
+   },
+   {
+    "kind": "xgb",
+    "NL": 96,
+    "levels": true,
+    "rul": {
+     "kind": "xgb",
+     "best_iteration": 201,
+     "fit_seconds": 27.9
+    },
+    "z": {
+     "kind": "xgb",
+     "best_iteration": 432,
+     "fit_seconds": 156.5
+    },
+    "val_S7_mape_pct": 16.543070722024048,
+    "val_percent_of_life_pts": 7.655019657300062,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9990493392908071,
+    "val_stage_mae": 0.16180245270462973
+   },
+   {
+    "kind": "lgbm",
+    "NL": 48,
+    "levels": true,
+    "rul": {
+     "kind": "lgbm",
+     "best_iteration": 391,
+     "fit_seconds": 43.6
+    },
+    "z": {
+     "kind": "lgbm",
+     "best_iteration": 958,
+     "fit_seconds": 135.4
+    },
+    "val_S7_mape_pct": 15.8627066083492,
+    "val_percent_of_life_pts": 7.456303982903886,
+    "val_stage_max": 1,
+    "val_stage_within1": 1.0,
+    "val_stage_mae": 0.13584941534366385
+   },
+   {
+    "kind": "lgbm",
+    "NL": 96,
+    "levels": true,
+    "rul": {
+     "kind": "lgbm",
+     "best_iteration": 300,
+     "fit_seconds": 36.6
+    },
+    "z": {
+     "kind": "lgbm",
+     "best_iteration": 940,
+     "fit_seconds": 142.8
+    },
+    "val_S7_mape_pct": 16.668466122061343,
+    "val_percent_of_life_pts": 7.704988451491186,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9993345375035649,
+    "val_stage_mae": 0.15714421522958455
+   }
+  ],
+  "z_cut_grid": [
+   {
+    "z_cut": 0.0,
+    "max": 1,
+    "n_ge2": 0,
+    "within1": 1.0
+   },
+   {
+    "z_cut": -0.02,
+    "max": 1,
+    "n_ge2": 0,
+    "within1": 1.0
+   },
+   {
+    "z_cut": -0.04,
+    "max": 1,
+    "n_ge2": 0,
+    "within1": 1.0
+   },
+   {
+    "z_cut": -0.06,
+    "max": 1,
+    "n_ge2": 0,
+    "within1": 1.0
+   },
+   {
+    "z_cut": -0.08,
+    "max": 1,
+    "n_ge2": 0,
+    "within1": 1.0
+   },
+   {
+    "z_cut": -0.1,
+    "max": 1,
+    "n_ge2": 0,
+    "within1": 1.0
+   },
+   {
+    "z_cut": -0.12,
+    "max": 1,
+    "n_ge2": 0,
+    "within1": 1.0
+   }
+  ]
+ },
+ "selected": {
+  "cls": {
+   "kind": "xgb",
+   "T": 25
+  },
+  "rul": {
+   "kind": "lgbm",
+   "NL": 48,
+   "levels": false
+  },
+  "z": {
+   "kind": "lgbm",
+   "NL": 48,
+   "levels": false,
+   "z_cut": 0.0
+  }
+ }
+}

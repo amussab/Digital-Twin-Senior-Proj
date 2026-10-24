@@ -86,12 +86,12 @@ def _rul_frame(pred_factor: float):
     t = 20 + u * 80
     rul = life - t
     return pd.DataFrame({"unit_id": "a", "window_index": np.arange(n), "rul_hours": rul, "life_hours": life,
-                         "u_true": u, "in_deg": u <= 0.9, "in_deg_full": True, "rul_pred_h": rul * pred_factor})
+                         "u_true": u, "in_deg": u <= 0.9, "in_deg_det": (u >= 0.1) & (u <= 0.9), "in_deg_full": True, "rul_pred_h": rul * pred_factor})
 
 
 def test_mape_definition():
     r = M.rul(_rul_frame(1.1))
-    assert r["S7_mape_pct"] == pytest.approx(10.0, abs=1e-9)
+    assert r["S7_mape_pct"] == pytest.approx(10.0, abs=1e-9) and r["alt_mape_true_onset_pct"] == pytest.approx(10.0)
     assert M.rul(_rul_frame(1.0))["S7_mape_pct"] == pytest.approx(0.0)
 
 

@@ -115,7 +115,9 @@ def spec_rows(s: dict, lat: dict, model: str, prov: str = "[SYNTHETIC] synth_v3 
     T = SPEC_TARGETS
     rul, st, cl, ca = s["rul"], s["stage"], s["classification"], s["caught"]
     rows = [
-        ("S7 / ICS1", "RUL MAPE, absolute hours (spec metric)", "<=", T["S7_rul_mape_pct"], rul["S7_mape_pct"], "%"),
+        ("S7 / ICS1", "RUL MAPE, absolute hours (spec metric, DESIGN.md s7 pre-registered window)", "<=", T["S7_rul_mape_pct"], rul["S7_mape_pct"], "%"),
+        ("S7-strict", "STRICTER variant (synthetic only): same MAPE from the TRUE onset", "<=", T["S7_rul_mape_pct"],
+         rul["alt_mape_true_onset_pct"], "%"),
         ("S7-alt", "ALTERNATIVE (not the spec metric): percent-of-life error", "<=", T["S7_rul_mape_pct"],
          rul["alt_percent_of_life_error_pts"], "pts"),
         ("IS3a", "macro-F1 over {healthy, OD, ID, BD, CF}", ">=", T["IS3_macro_f1"], cl["macro_f1"], ""),
@@ -173,7 +175,7 @@ def write_md(rep: dict, path: Path) -> None:
                  f"median {ru['per_bearing_summary'].get('median', float('nan')):.2f}, p90 {ru['per_bearing_summary'].get('p90', float('nan')):.2f}, "
                  f"max {ru['per_bearing_summary'].get('max', float('nan')):.2f}, share of bearings <= 15 %: {ru['per_bearing_summary'].get('frac_le_15', float('nan')):.2f}; "
                  f"RMSE {ru['rmse_hours']:.2f} h; full-interval MAPE {ru['alt_mape_full_degradation_pct']:.2f} %; "
-                 f"detected-onset-window MAPE {ru.get('alt_mape_detected_onset_window_pct', float('nan')):.2f} %; per rpm {ru.get('per_rpm_mode')}; per class {ru.get('per_fault_class')}")
+                 f"true-onset (stricter) MAPE {ru.get('alt_mape_true_onset_pct', float('nan')):.2f} %; per rpm {ru.get('per_rpm_mode')}; per class {ru.get('per_fault_class')}")
         L += ["", "RUL error vs true elapsed fraction of the degradation interval:", "", "| u | MAPE % | median APE % | bias % | n |", "|---|---|---|---|---|"]
         for k, v in ru["error_vs_life_fraction"].items():
             L.append(f"| {k} | {v['mape_pct']:.2f} | {v['median_ape_pct']:.2f} | {v['bias_pct']:+.2f} | {v['n']} |")

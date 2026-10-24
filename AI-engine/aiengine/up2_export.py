@@ -33,7 +33,7 @@ from .config import BEARING_FEATURES, MODELS_DIR, SEED
 from .payload import DISPLACEMENT_NAMES, PAYLOAD_SIZE
 from .synth_v3 import generator as gen
 
-OPSET = 17
+OPSET = 15                     # onnxmltools tree converters support <= 15
 ML_OPSET = 3
 CLS_FILE, RUL_FILE, CONTRACT_FILE, GOLDEN_FILE = "v3_cls.onnx", "v3_rul.onnx", "model_contract_v3.json", "golden_vectors_v3.json"
 
@@ -247,3 +247,24 @@ def run(df_test, out_dir: Path = MODELS_DIR, prov: dict | None = None, interval_
     golden["provenance"] = "[SYNTHETIC] synth_v3 test run"
     (out_dir / GOLDEN_FILE).write_text(json.dumps(golden, indent=1, default=float))
     return {"contract": str(out_dir / CONTRACT_FILE), "parity": par, "golden_unit": unit_id, "T": T, "NL": NL}
+
+
+def main(argv=None) -> int:
+    """python -m aiengine.up2_export  -> models/{v3_cls.onnx, v3_rul.onnx, model_contract_v3.json, golden_vectors_v3.json}"""
+    from .train import git_commit
+    from .up2_train import load_main
+    df = load_main()
+    test = df[df["split"] == "test"]
+    sel = json.loads((up2.RUN_DIR / "selection.json").read_text())
+    p = df.attrs.get("provenance", {})
+    prov = {"synthetic": True, "datasets": ["synth_v3", "synth_v3_train2 (training only)"], "run": "up2_v3_gbm",
+            "git_commit": git_commit(), "seed": SEED, "selection": sel,
+            "note": "[SYNTHETIC] gradient-boosted heads trained on synth_v3; selected on validation runs only",
+            "generator_knobs": p.get("knobs"), "table_hash": p.get("table_hash")}
+    res = run(test, MODELS_DIR, prov, interval_rel=float(sel.get("interval_rel_q80_val", 0.25)))
+    print(json.dumps(res, indent=1, default=str))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

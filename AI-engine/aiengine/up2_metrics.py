@@ -1,13 +1,17 @@
 """UP2 spec metrics (pure functions over prediction frames). Definitions are stated in every report.
 
-S7 / ICS1 (spec metric, absolute hours, DESIGN.md section 7 applied to the generator's TRUE onset):
-    degradation window = windows with true onset <= t <= T_fail - 0.1 (T_fail - t_onset)
-    MAPE = mean over test run-to-failure bearings of [mean over that bearing's degradation-window
-           windows of |RUL_pred_h - RUL_true_h| / RUL_true_h] * 100
+S7 / ICS1 (spec metric, absolute hours) = the DESIGN.md section 7 PRE-REGISTERED definition (2026-10-04, also
+  used for the PPR v2 public-data number): degradation window = [t_onset, T_fail - 0.1 (T_fail - t_onset)], t_onset =
+  the CAUSAL detected onset (labels.detect_onset on the HI: the first predicting time), and
+    MAPE = mean over test run-to-failure bearings of [mean over that bearing's degradation-window windows of
+           |RUL_pred_h - RUL_true_h| / RUL_true_h] * 100      (bearing-averaged)
   Alternatives, reported alongside, never substituted:
-    percent-of-life error = mean |RUL_pred_h - RUL_true_h| / life_h * 100 (points)
-    MAPE over the full degradation interval (no 10 % tail exclusion)
-    MAPE with the DESIGN.md detected-onset window (in_deg_det)
+    STRICTER, synthetic-only: same formula with the generator's TRUE onset (includes the first ~15 % of the
+      degradation interval where the defect is not yet detectable, so the life prior dominates)
+    percent-of-life error = mean |RUL_pred_h - RUL_true_h| / life_h * 100 (points), true-onset window
+    MAPE over the full detected degradation interval (no 10 % tail exclusion)
+  Disclosure: the first v3 code used the true-onset variant as primary; after the validation run it was set back to
+  the pre-registered section 7 definition (before any test score), and both are reported.
 IS3a macro-F1 over {healthy, outer_race, inner_race, ball, cage}, every scored window of every test bearing.
 IS3b stage error = |stage_pred - stage_true| over every scored window of the test run-to-failure bearings
      (stage_true = generator truth); literal max reported, plus fraction within +/-1.
@@ -95,7 +99,8 @@ def rul(p: pd.DataFrame, col: str = "rul_pred_h") -> dict:
         for uid, g in p[p[window] & (p["rul_hours"] > 0)].groupby("unit_id"):
             per[uid] = float(np.mean(np.abs(g[col] - g["rul_hours"]) / g["rul_hours"]) * 100)
         return (float(np.mean(list(per.values()))) if per else float("nan")), per
-    m, per = mape("in_deg")
+    m, per = mape("in_deg_det")                    # S7 spec metric (DESIGN.md section 7, detected onset)
+    m_true, per_true = mape("in_deg")              # stricter: generator true onset
     d = p[p["in_deg"] & (p["rul_hours"] > 0)]
     err = (d[col] - d["rul_hours"]).to_numpy()
     rel = np.abs(err) / d["rul_hours"].to_numpy()
@@ -109,7 +114,10 @@ def rul(p: pd.DataFrame, col: str = "rul_pred_h") -> dict:
                                           "bias_pct": float(((g[col] - g["rul_hours"]) / g["rul_hours"]).mean() * 100),
                                           "n": int(len(g))}
     vals = np.array(list(per.values()))
-    out = {"S7_mape_pct": m, "n_bearings": len(per), "n_windows": int(len(d)),
+    out = {"S7_mape_pct": m, "S7_window": "DESIGN.md section 7: detected onset .. T_fail - 10 % of span",
+           "n_bearings": len(per), "n_windows_s7": int((p["in_deg_det"] & (p["rul_hours"] > 0)).sum()),
+           "alt_mape_true_onset_pct": m_true, "per_bearing_mape_true_onset_pct": per_true,
+           "n_windows": int(len(d)),
            "per_bearing_mape_pct": per,
            "per_bearing_summary": {"median": float(np.median(vals)), "p90": float(np.quantile(vals, 0.9)),
                                    "max": float(vals.max()), "frac_le_15": float((vals <= 15).mean())} if len(vals) else {},
@@ -117,9 +125,7 @@ def rul(p: pd.DataFrame, col: str = "rul_pred_h") -> dict:
            "rmse_hours": float(np.sqrt(np.mean(err ** 2))) if len(err) else None,
            "alt_percent_of_life_error_pts": float(np.mean(np.abs(err) / d["life_hours"].to_numpy()) * 100) if len(err) else None,
            "alt_mape_full_degradation_pct": mape("in_deg_full")[0],
-           "error_vs_life_fraction": by_u}
-    if "in_deg_det" in p:
-        out["alt_mape_detected_onset_window_pct"] = mape("in_deg_det")[0]
+           "error_vs_life_fraction": by_u, "error_vs_life_fraction_window": "true-onset window, u = true elapsed fraction"}
     if "rpm_mode" in p:
         out["per_rpm_mode"] = {str(int(k)): mape_sub(g, col) for k, g in p.groupby("rpm_mode")}
     if "fault_class" in p:
@@ -129,5 +135,5 @@ def rul(p: pd.DataFrame, col: str = "rul_pred_h") -> dict:
 
 def mape_sub(p: pd.DataFrame, col: str) -> float:
     per = [np.mean(np.abs(g[col] - g["rul_hours"]) / g["rul_hours"]) * 100
-           for _, g in p[p["in_deg"] & (p["rul_hours"] > 0)].groupby("unit_id")]
+           for _, g in p[p["in_deg_det"] & (p["rul_hours"] > 0)].groupby("unit_id")]
     return float(np.mean(per)) if per else float("nan")
