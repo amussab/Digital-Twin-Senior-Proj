@@ -39,7 +39,7 @@ Rows with an approval of "No" are still open.
 | # | Short ID | Integrated specification (verbatim) | Depts (approval) | Reviewer comment |
 |---|---|---|---|---|
 | IS1 | N1 | Sensor → classify+RUL → dashboard <500 ms | COE (No: "not clear"), ICS (No: "Not clear. Specification should be specific and clear"), ME (No: "reflect the integration, how this is governed by all departments") | open |
-| IS2 | N2 | Physics-AI residual: max relative error between the FE-identified physics RUL and the AI RUL ≤5%, health stage 1→3 | COE (No: "not clear"), ICS (No), ME (Yes) | open |
+| IS2 | N2 | **Wording v2 (coach feedback 2026-10-25; v1 text kept below; xlsx not yet updated by the team):** Physics-AI RUL agreement. For the faulted bearing of every run-to-failure run, over every window in true health stages 1→3 after the AI warm-up, the disagreement e = \|RUL_physics − RUL_AI\| / L_ref between the FE-twin physics RUL and the deployed AI RUL, as a fraction of the bearing's reference (rated) life L_ref at its duty speed, shall satisfy (a) median over bearings of each bearing's median e ≤ 18 % of L_ref and (b) 95th percentile over bearings of each bearing's 95th-percentile e ≤ 63 % of L_ref. | COE (No: "not clear"), ICS (No), ME (Yes) — approvals refer to v1 | open (v2 pending team/xlsx) |
 | IS3 | N3 | Classification & stage performance: macro-F1 ≥85% over {Healthy, OD, ID, BD, CF}; stage error ≤1; any injected fault caught by stage 3 at the latest | COE (No: "not clear"), ICS (No), ME (Yes) | open |
 
 ## ICS-relevant reading of the table (for PPR planning)
@@ -59,3 +59,46 @@ Rows with an approval of "No" are still open.
   counting is acceptable.
 - **Team table, Exemplary:** more than 50% of all constraints + specs + integrated specs met with
   satisfactory-or-better evidence. That is 18 items, so at least 10 must be met.
+
+## IS2 wording history and changelog
+
+**v1 (superseded, kept verbatim):** "Physics-AI residual: max relative error between the FE-identified physics RUL
+and the AI RUL ≤5%, health stage 1→3". COE (No: "not clear"), ICS (No), ME (Yes).
+
+**v2 (2026-10-25, coach feedback):** the text in the IS2 row above.
+
+| Date | Change | Reason |
+|---|---|---|
+| 2026-10-25 | v1 → v2: normaliser RUL_AI → L_ref; aggregation "max over windows" → per-bearing median and 95th percentile, then median / 95th percentile over bearings; threshold 5 % → 18 % (median) and 63 % (tail) of L_ref; window set made explicit (faulted bearing of run-to-failure runs, true stages 1→3, after AI warm-up) | (1) Coach and COE/ICS reviewers: "not clear". (2) v1 divides by the AI's own RUL, so late windows with a small RUL_AI dominate the max (window max 233 % on test4 although the median is 27.5 %); a max over ~16 000 windows is set by a single window. (3) In stages 1→3 the stiffness drop is ≤ ~5 %, below the twin's identification noise (~6 % at 1750 rpm, ~25 % at 3600 rpm), so the physics RUL is the rated-life prior on ~97 % of windows; even an exact AI (RUL_AI = true RUL) shows a median disagreement of 15–18 % of L_ref with it, so v1's 5 % cannot be met by any AI. |
+
+**Why L_ref and these statistics.** Expressing the error as a fraction of a fixed reference life (rather than of the
+remaining life) is the prognostic-horizon convention (accuracy bands as a fraction of end-of-life; Saxena et al.,
+"Metrics for Offline Evaluation of Prognostic Performance", IJPHM 1(1), 2010 `[CITED — check the exact wording before
+quoting]`). The spec answers one safety question: *are the two estimators consistent to within a tolerable fraction of
+the asset's life, so that a larger disagreement flags an implausible estimate?* The median clause bounds typical
+agreement; the tail clause bounds how far any one bearing's estimates may drift from the twin.
+
+**How the thresholds were set (validation only, `[SYNTHETIC]`+`[SIMULATION]`).** Rule: T = ceil to 0.01 of
+1.1 × max over the validation sets of max(deployed-AI value, perfect-AI floor). Validation sets: `synth_v3_val4`
+(fresh, registered 2026-10-25, never used to fit a model) and `synth_v3_val2`. Values (fraction of L_ref):
+v3b MED 0.153 / 0.156, P95 0.477 / 0.536; perfect-AI floor MED 0.153 / 0.155, P95 0.457 / 0.571 → T_MED = 0.18,
+T_P95 = 0.63. Six deliberately wrong AIs (×1.5, ×0.6, +0.3 L_ref, time-reversed, constant 0.5 L_ref, lognormal
+noise σ 0.5) all FAIL on both validation sets. Thresholds were frozen in `AI-engine/aiengine/up2d_is2.py` and
+committed (355831c) before `synth_v3_test4` was scored. Disclosure: the rule was refined once on validation (first
+rule, margin 1.2 / 0.05 steps → 0.20 / 0.65, let the constant-0.5 L_ref control pass).
+
+**Result on fresh `synth_v3_test4` (scored once, `AI-engine/reports/up2d_is2_20261024T225605Z.md`).** Deployed v3b:
+MED 16.3 %, P95 49.2 % of L_ref → **PASS** (v1 literal max 233 % → FAIL). v3c (research): MED 18.3 % → FAIL. All six
+controls FAIL. **Limitation:** the exact-AI floor on test4 is MED 18.1 % (would FAIL clause (a)): clause (a) measures
+agreement with the twin's mostly-prior RUL, not AI accuracy (that is S7/IS3); clause (b) and the controls are the
+discriminating parts. Circular on synthetic data (K(t) and the features share one damage variable); L_ref is the
+synthetic median TRAIN life (72.9 h at 1750 rpm, 46.5 h at 3600 rpm) and becomes the ISO 281 rated life at the duty
+point on the rig, with thresholds re-derived on rig validation data.
+
+**Ready-to-paste text for the team xlsx (IS2 / N2 row; do not paste the reasoning above):**
+
+> Physics-AI RUL agreement: for the faulted bearing of each run-to-failure run, over all windows in health stages 1→3
+> after the AI warm-up, the disagreement between the FE-twin physics RUL and the AI RUL, expressed as a fraction of the
+> bearing's reference (rated) life L_ref at its duty speed, |RUL_phys − RUL_AI| / L_ref, shall have (a) a median over
+> bearings of each bearing's median ≤ 18 % of L_ref and (b) a 95th percentile over bearings of each bearing's 95th
+> percentile ≤ 63 % of L_ref. Thresholds set from validation runs only; verified on a fresh held-out test set.
