@@ -30,8 +30,8 @@ PRED_DIR = REPORTS_DIR / "up2_preds"
 REAL_V2_REPORT = REPORTS_DIR / "spec_check_20261005T012112Z_real_v2.json"
 
 
-def latest_index(family: str) -> dict | None:
-    files = sorted(PRED_DIR.glob(f"up2_v3_{family}_*.index.json"))
+def latest_index(family: str, prefix: str = "up2_v3") -> dict | None:
+    files = sorted(PRED_DIR.glob(f"{prefix}_{family}_*.index.json"))
     return json.loads(files[-1].read_text()) | {"index_file": files[-1].name} if files else None
 
 
@@ -89,6 +89,20 @@ def latencies(df: pd.DataFrame) -> dict:
                                           lambda i: {"encoder_cont": br[i % len(br): i % len(br) + 1]})
         from .engine import HybridEngine
         out["v3_engine_step"] = HybridEngine(MODELS_DIR, contract_file=con3.name).benchmark(g, n=200)
+    con3b = MODELS_DIR / "model_contract_v3b.json"
+    if con3b.exists():
+        c = json.loads(con3b.read_text())
+        T = c["models"]["tft"]["encoder_length"] + 1
+        NL = c["models"]["nhits"]["encoder_length"]
+        bc, _ = uw.blocks(rows, T)
+        br, _ = uw.blocks(rows, NL)
+        out["v3b_cls_onnx"] = onnx_latency(MODELS_DIR / c["models"]["tft"]["onnx"],
+                                           lambda i: {"encoder_cont": bc[T + i % (len(bc) - T): T + i % (len(bc) - T) + 1, :-1],
+                                                      "decoder_cont": bc[T + i % (len(bc) - T): T + i % (len(bc) - T) + 1, -1:]})
+        out["v3b_rul_onnx"] = onnx_latency(MODELS_DIR / c["models"]["nhits"]["onnx"],
+                                           lambda i: {"encoder_cont": br[i % len(br): i % len(br) + 1]})
+        from .engine import HybridEngine
+        out["v3b_engine_step"] = HybridEngine(MODELS_DIR, contract_file=con3b.name).benchmark(g, n=200)
     con_nn = MODELS_DIR / "model_contract_v3_nn.json"
     if con_nn.exists():
         from . import infer
@@ -138,7 +152,7 @@ def fmt(v):
 
 
 def write_md(rep: dict, path: Path) -> None:
-    L = ["# UP2 spec check (contract v3) -- [SYNTHETIC] synth_v3 data", "",
+    L = ["# UP2 spec check (contracts v3b deployed, v3 history) -- [SYNTHETIC] synth_v3 data", "",
          "**Provenance: every synth_v3 number below is [SYNTHETIC]: physics-informed generated data "
          "(aiengine/synth_v3), NOT a measurement of the team rig or of any public dataset.** "
          "The public-data (PPR v2) rows are [MEASURED on XJTU-SY / IMS / MaFaulDa], carried from their stored report.", "",
@@ -153,7 +167,9 @@ def write_md(rep: dict, path: Path) -> None:
         L.append(f"| {r['spec']} | {r['what']} | {r['op']} {fmt(r['target'])} | {fmt(r['measured'])} {r['unit']} | "
                  f"**{r['verdict']}** | {r['model']} | {r['provenance']} |")
     L += ["", "## Metric definitions", "", "```", M.__doc__.strip(), "```", ""]
-    for fam in ("gbm", "nn"):
+    if rep.get("v3b"):
+        L += ["## Test sets (v3b)", "", rep["v3b"]["disclosure"], ""]
+    for fam in ("v3b:test2", "v3b:test", "gbm", "nn"):
         s = rep["test"].get(fam)
         if not s:
             continue
@@ -232,18 +248,47 @@ def main(argv=None) -> int:
                 r = load_robust(name)
                 cp, rp = load_preds(idx, name)
                 rep["robustness"].setdefault(name, {})[fam] = score_set(cp, rp, r, min_window)
+    bi = latest_index("gbm", prefix="up2_v3b")
+    table = []
+    if bi is not None:
+        from . import up2b
+        rep["pred_index"]["v3b"] = bi.get("index_file")
+        t2 = up2b.load_test2()
+        rep["v3b"] = {"selection": bi["meta"].get("selection"), "index": bi.get("index_file"), "scored_utc": bi["meta"].get("utc"),
+                      "disclosure": ("v3b (DEPLOYED) = v3 classifier unchanged + v3b RUL/z heads + causal post-process, all chosen on "
+                                     "validation runs only. `test2` = synth_v3_test2, 100 FRESH runs (new seed, same generator), "
+                                     "registered in splits.json before any v3b fit and predicted exactly once "
+                                     f"({bi.get('index_file')}); this command only re-scores those saved predictions. "
+                                     "`test` = the 50 synth_v3 test runs: already scored once for v3, so the v3b number on it "
+                                     "is a SECOND LOOK (disclosed); test2 is the primary verdict."),
+                      "test2_data": {"runs": int(t2["bearing_key"].nunique()), "windows": int(len(t2)),
+                                     "table_hash": t2.attrs.get("provenance", {}).get("table_hash")}}
+        for name, d, key in (("test2", t2, "v3b:test2"), ("test", test, "v3b:test")):
+            cp, rp = load_preds(bi, name)
+            rep["test"][key] = score_set(cp, rp, d, min_window)
+        fams["v3b:test2"] = "DEPLOYED v3b on FRESH synth_v3_test2 (100 runs, first and only look) -- primary verdict"
+        fams["v3b:test"] = "DEPLOYED v3b on the old synth_v3 test (50 runs, SECOND look, disclosed)"
+        for name in ROBUST_SETS:
+            if name in bi["files"]:
+                r = load_robust(name)
+                cp, rp = load_preds(bi, name)
+                rep["robustness"].setdefault(name, {})["v3b"] = score_set(cp, rp, r, min_window)
+        table += spec_rows(rep["test"]["v3b:test2"], {}, "v3b (deployed)", "[SYNTHETIC] synth_v3_test2 FRESH runs (1st look)")
+        table += spec_rows(rep["test"]["v3b:test"], {}, "v3b (deployed)", "[SYNTHETIC] synth_v3 old test runs (2nd look)")
     rep["latency"] = {} if a.no_latency else latencies(test)
-    table = spec_rows(rep["test"]["gbm"], rep["latency"], "v3 GBM (deployed)")
+    table += spec_rows(rep["test"]["gbm"], rep["latency"], "v3 GBM (history, superseded)")
     if "nn" in rep["test"]:
         table += spec_rows(rep["test"]["nn"], rep["latency"], "TFT + N-HiTS (synth_v3)")
     lat = rep["latency"]
-    for key, model in (("v3_cls_onnx", "v3 GBM classifier ONNX (deployed)"), ("v3_nn_tft_onnx", "TFT ONNX (synth_v3)")):
+    for key, model in (("v3b_cls_onnx", "v3b classifier ONNX (deployed)"), ("v3_cls_onnx", "v3 GBM classifier ONNX"),
+                       ("v3_nn_tft_onnx", "TFT ONNX (synth_v3)")):
         if key in lat:
             table.append({"spec": "S8 / ICS2", "what": "classification latency per window, p95 (1 thread, batch 1)", "op": "<",
                           "target": SPEC_TARGETS["S8_tft_latency_ms"], "measured": lat[key]["p95_ms"], "unit": "ms",
                           "verdict": verdict("<", SPEC_TARGETS["S8_tft_latency_ms"], lat[key]["p95_ms"]),
                           "provenance": "[MEASURED] live on this host (synthetic inputs)", "model": model})
-    for key, model in (("v3_engine_step", "v3 engine step (features+cls+RUL)"), ("v3_nn_engine_step", "TFT+N-HiTS engine step")):
+    for key, model in (("v3b_engine_step", "v3b engine step (features+cls+RUL+post-process, deployed)"),
+                       ("v3_engine_step", "v3 engine step (features+cls+RUL)"), ("v3_nn_engine_step", "TFT+N-HiTS engine step")):
         if key in lat and lat[key]:
             table.append({"spec": "IS1 (ICS leg)", "what": "ICS host leg per bearing-window, p95", "op": "<",
                           "target": SPEC_TARGETS["IS1_e2e_latency_ms"], "measured": lat[key]["p95_ms"], "unit": "ms",

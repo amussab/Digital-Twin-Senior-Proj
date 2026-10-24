@@ -39,6 +39,10 @@ class _Bearing:
         self.onset_t: float | None = None
         self.onset_hi: float | None = None
         self.n = 0
+        # contract v3b `postprocess` state (causal, per bearing)
+        self.pp_r: float | None = None            # previous filtered RUL (windows, unscaled)
+        self.pp_s: int | None = None              # previous post-processed stage
+        self.pp_hist: deque = deque()             # last k raw stages
 
 
 class HybridEngine:
@@ -71,6 +75,7 @@ class HybridEngine:
         self.calib = rul.RULCalibration.from_dict({k: r[k] for k in rul.RULCalibration.__dataclass_fields__ if k in r})
         self.interval_rel = float(r.get("interval_rel", 0.5))
         self.eidx = {n: i for i, n in enumerate(feat.ENGINEERED)}
+        self.pp = self.c.get("postprocess")          # contract v3b: required causal post-processing of the heads
         self.baselines = baselines or {}
         self.reset()
 
@@ -171,8 +176,12 @@ class HybridEngine:
         tau = (t_h - b.onset_t) if b.onset_t is not None else None
         if self.calib.method == "direct_v3":
             # contract v3: the N-HiTS-slot graph outputs [rul_windows, z, stage] directly
-            est = {"rul_hours": float(max(forecast[0], 0.0) * max(cad, 1e-9))}
-            stage = int(forecast[2])
+            r_raw, s_raw = float(max(forecast[0], 0.0)), int(round(float(forecast[2])))
+            est = {"rul_hours": r_raw * max(cad, 1e-9)}
+            stage = s_raw
+            if self.pp:
+                rw, stage = self._postprocess(b, r_raw, s_raw)
+                est = {"rul_hours": rw * max(cad, 1e-9), "rul_hours_raw": est["rul_hours"], "health_stage_raw": s_raw}
         else:
             est = rul.estimate(self.calib, np.asarray(b.hi), forecast, thr_cls, tau, b.onset_hi, max(cad, 1e-9))
             stage = rul.stage_estimate(tau, est["rul_hours"])
@@ -186,6 +195,7 @@ class HybridEngine:
             "confidence": float(probs.max()), "health_index": float(e[self.eidx["hi"]]),
             "health_stage": int(stage), "onset_detected": b.onset_t is not None,
             "rul_hours": est["rul_hours"],
+            **({"rul_hours_raw": est["rul_hours_raw"], "health_stage_raw": est["health_stage_raw"]} if "rul_hours_raw" in est else {}),
             "rul_interval_hours": rul.interval(est["rul_hours"], self.interval_rel),
             "rul_threshold_class": thr_cls,
             "hi_forecast": forecast.tolist(),
@@ -194,6 +204,27 @@ class HybridEngine:
                            "rul": round(t_rul, 3),
                            "total": round(t_feat + t_tft + t_nh + t_rul, 3)},
         }
+
+    def _postprocess(self, b: _Bearing, r_raw: float, s_raw: int) -> tuple[float, int]:
+        """contract `postprocess` (v3b), streaming form of aiengine/up2b.py::pp_stage_unit / pp_rul_unit."""
+        st, rf, sc = self.pp["stage"], self.pp["rul_filter"], self.pp["rul_scale"]
+        k, step = int(st["median_window"]), st.get("max_step")
+        b.pp_hist.append(int(s_raw))
+        while len(b.pp_hist) > k:
+            b.pp_hist.popleft()
+        w = sorted(b.pp_hist)
+        m = int(w[(len(w) - 1) // 2])
+        s = m if (b.pp_s is None or step is None) else b.pp_s + int(np.clip(m - b.pp_s, -int(step), int(step)))
+        b.pp_s = s
+        a = float(rf["alpha"])
+        if b.pp_r is None or a >= 1.0:
+            r = r_raw
+        else:
+            prior = max(b.pp_r - float(rf.get("decrement_windows", 1.0)), 0.0)
+            r = float(np.expm1(a * np.log1p(r_raw) + (1.0 - a) * np.log1p(prior)))
+        b.pp_r = r
+        f = float(sc["scale_if_stage_le_2"]) if s <= 2 else float(sc["scale_if_stage_ge_3"])
+        return r * f, s
 
     def _push(self, b: _Bearing, e: np.ndarray, t_h: float) -> None:
         b.eng.append(e)

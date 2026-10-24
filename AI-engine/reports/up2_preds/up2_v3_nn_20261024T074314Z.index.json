@@ -1,0 +1,46 @@
+{
+ "meta": {
+  "provenance": "[SYNTHETIC] synth_v3",
+  "seed": 20261004,
+  "git_commit": "1e85b84",
+  "git_dirty": true,
+  "command": "python -m aiengine.up2_train predict --threads 16",
+  "utc": "2026-10-24T07:44:21+00:00",
+  "tag": "20261024T074314Z",
+  "rul_selection_on": "validation bearings",
+  "rul_selected": {
+   "method": "trend",
+   "history_windows": 48,
+   "blend_w": 0.5,
+   "u_min": 0.05,
+   "class_thresholds": {
+    "outer_race": 0.9551277756690979,
+    "inner_race": 0.8615266680717468,
+    "cage": 0.7628397345542908,
+    "ball": 0.796046793460846
+   },
+   "pooled_threshold": 0.8247837424278259,
+   "max_rul_factor": 20.0,
+   "loglin_coef": []
+  },
+  "rul_val_mape": 60.57655937215184
+ },
+ "files": {
+  "test": {
+   "cls": "up2_v3_nn_test_20261024T074314Z.cls.csv.gz",
+   "rul": "up2_v3_nn_test_20261024T074314Z.rul.csv.gz"
+  },
+  "synth_v3_noise15": {
+   "cls": "up2_v3_nn_synth_v3_noise15_20261024T074314Z.cls.csv.gz",
+   "rul": "up2_v3_nn_synth_v3_noise15_20261024T074314Z.rul.csv.gz"
+  },
+  "synth_v3_rpm3000": {
+   "cls": "up2_v3_nn_synth_v3_rpm3000_20261024T074314Z.cls.csv.gz",
+   "rul": "up2_v3_nn_synth_v3_rpm3000_20261024T074314Z.rul.csv.gz"
+  },
+  "synth_v3_hard": {
+   "cls": "up2_v3_nn_synth_v3_hard_20261024T074314Z.cls.csv.gz",
+   "rul": "up2_v3_nn_synth_v3_hard_20261024T074314Z.rul.csv.gz"
+  }
+ }
+}

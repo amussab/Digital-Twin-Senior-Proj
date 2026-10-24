@@ -167,3 +167,64 @@ def test_v3_contract_shape():
     par = c["models"]["tft"]["parity"]
     assert par["cls_argmax_mismatch"] == 0 and par["cls_prob_max_abs_diff"] < 1e-5
     assert par["stage_mismatch"] == 0 and par["rul_windows_max_rel_diff"] < 1e-4
+
+
+# --------------------------------------------------------------------------- v3b (post-process, fresh test2, contract)
+
+def test_pp_rul_filter():
+    from aiengine import up2b
+    r = np.array([100.0, 99.0, 98.0, 97.0])
+    np.testing.assert_allclose(up2b.pp_rul_unit(r, 1.0, 1.0), r)                     # alpha 1 = identity
+    np.testing.assert_allclose(up2b.pp_rul_unit(r, 0.2, 1.0), r, rtol=1e-12)          # consistent countdown is a fixed point
+    noisy = np.array([100.0, 150.0, 98.0, 97.0])
+    out = up2b.pp_rul_unit(noisy, 0.2, 1.0)
+    assert out[0] == 100.0 and out[1] < 110.0                                          # an isolated spike is damped
+    assert (up2b.pp_rul_unit(np.array([0.0, -3.0, 0.0]), 0.3, 1.0) >= 0).all()
+
+
+def test_pp_stage_filter_removes_jumps():
+    from aiengine import up2b
+    raw = np.array([1, 1, 1, 4, 1, 1, 2, 2, 2, 3, 3, 3, 6, 3, 3])
+    out = up2b.pp_stage_unit(raw, 3, 1)
+    assert np.abs(np.diff(out)).max() <= 1                                             # never more than one step per window
+    assert out[3] == 1 and out[12] == 3                                                # isolated spikes removed
+    np.testing.assert_array_equal(up2b.pp_stage_unit(raw, 1, None), raw)                # k=1, no limit = identity
+
+
+def test_test2_registered_and_disjoint():
+    sec = json.loads((ROOT / "splits.json").read_text())["sections"]
+    t2 = sec["synth_v3_test2"]["units"]
+    assert set(t2.values()) == {"test"} and len(t2) == 200
+    others = set().union(*[set(v["units"]) for k, v in sec.items() if k != "synth_v3_test2"])
+    assert not (set(t2) & others)
+    assert all(int(u.split(":run")[1].split(":")[0]) >= 50000 for u in t2)              # run ids 50000+
+
+
+def _v3b_exported():
+    return (MODELS_DIR / "model_contract_v3b.json").exists() and (MODELS_DIR / "golden_vectors_v3b.json").exists()
+
+
+@pytest.mark.skipif(not _v3b_exported(), reason="v3b models not exported yet")
+def test_v3b_contract_and_golden():
+    from aiengine.engine import HybridEngine
+    c = json.loads((MODELS_DIR / "model_contract_v3b.json").read_text())
+    assert c["contract_version"] == "3b" and c["provenance"]["synthetic"] is True
+    assert c["classes"]["labels"] == sorted(c["classes"]["labels"]) and "class_order" in c["disclosures"]
+    assert c["postprocess"]["required"] is True and c["rul"]["method"] == "direct_v3"
+    assert c["models"]["tft"]["parity"]["argmax_mismatch"] == 0 and c["models"]["nhits"]["parity"]["stage_mismatch"] == 0
+    g = json.loads((MODELS_DIR / "golden_vectors_v3b.json").read_text())
+    eng = HybridEngine(MODELS_DIR, contract_file="model_contract_v3b.json")
+    outs = {}
+    for w in g["inputs_full"]:
+        f16 = np.asarray(w["features16"], np.float64)
+        outs[w["window_index"]] = eng.process(w["rpm"], np.concatenate([f16, f16]), w["t20_ms"])["bearings"][0]
+    cases = g["cases"] + g["cases_late"]
+    assert len(cases) >= 20
+    for cs in cases:
+        o, e = outs[cs["window_index"]], cs["output"]
+        assert o["fault_class"] == e["fault_class"] and o["health_stage"] == e["health_stage"]
+        assert o["health_stage_raw"] == e["health_stage_raw"]
+        assert o["rul_hours"] == pytest.approx(e["rul_hours"], rel=1e-4, abs=1e-6)
+        assert o["rul_hours_raw"] == pytest.approx(e["rul_hours_raw"], rel=1e-4, abs=1e-6)
+    ev = g["engine_vs_offline"]
+    assert ev["stage_mismatch"] == 0 and ev["rul_hours_max_rel_diff"] < 1e-3
