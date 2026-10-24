@@ -1,0 +1,589 @@
+{
+  "contract_version": "3b",
+  "generated_utc": "2026-10-24T11:47:49+00:00",
+  "generated_by": "AI-engine/aiengine/up2b.py export",
+  "provenance": {
+    "synthetic": true,
+    "datasets": [
+      "synth_v3 (train/val)",
+      "synth_v3_train2 (train)",
+      "synth_v3_train3 (train)",
+      "synth_v3_val2 (val)"
+    ],
+    "run": "up2_v3b_gbm",
+    "git_commit": "c60c878",
+    "seed": 20261004,
+    "selection": {
+      "cls": {
+        "reused": "checkpoints/up2_v3/cls.pkl (v3 classifier, unchanged)",
+        "T": 25
+      },
+      "rul": {
+        "target": "log_l2",
+        "n_seeds": 1,
+        "NL": 48,
+        "levels": false,
+        "transform": "log1p",
+        "objective": "regression",
+        "fits": [
+          {
+            "target": "log_l2",
+            "seed": 20261004,
+            "best_iteration": 1460,
+            "fit_seconds": 828.4,
+            "n_estimators": 3000,
+            "num_leaves": 48,
+            "learning_rate": 0.04,
+            "min_child_samples": 60
+          }
+        ]
+      },
+      "z": {
+        "NL": 48,
+        "z_cut": -0.25,
+        "z_shift": 0.0,
+        "fit": {
+          "best_iteration": 2194,
+          "fit_seconds": 1142.8,
+          "healthy_keep": 0.3,
+          "n_estimators": 3000,
+          "num_leaves": 31,
+          "learning_rate": 0.06,
+          "min_child_samples": 60
+        },
+        "chosen_from": [
+          "current"
+        ]
+      },
+      "postprocess": {
+        "rul_alpha": 0.5,
+        "rul_scale_early": 1.0,
+        "rul_scale_late": 0.97,
+        "stage_k": 1,
+        "stage_max_step": null
+      },
+      "val": {
+        "S7": 12.101320650815945,
+        "true_onset": 14.699555971849456,
+        "pol": 6.053144950389268,
+        "stage": {
+          "max": 1,
+          "n_ge2": 0,
+          "within1": 1.0,
+          "mae": 0.3798346815188083
+        }
+      }
+    },
+    "note": "[SYNTHETIC] v3 classifier (unchanged) + v3b RUL/z heads; selected on validation runs only"
+  },
+  "model_unit": "one biaxial bearing: 16 raw features = X's 8 then Y's 8 (COE C7 order)",
+  "wire_payload": {
+    "size_bytes": 152,
+    "byte_order": "little-endian",
+    "fields": [
+      {
+        "offset": 0,
+        "type": "float32",
+        "name": "rpm"
+      },
+      {
+        "offset": 4,
+        "type": "float32[32]",
+        "name": "features"
+      },
+      {
+        "offset": 132,
+        "type": "float32[4]",
+        "name": [
+          "p1_amp_um",
+          "p1_phase_rad",
+          "p2_amp_um",
+          "p2_phase_rad"
+        ]
+      },
+      {
+        "offset": 148,
+        "type": "uint32",
+        "name": "t20_ms"
+      }
+    ],
+    "bearing_slices": {
+      "1": [
+        0,
+        16
+      ],
+      "2": [
+        16,
+        32
+      ]
+    },
+    "note": "COE doc: 152 bytes; FDR deck: 168 (unreconciled)."
+  },
+  "raw_bearing_feature_order": [
+    "x_bp_rms",
+    "x_bp_kurtosis",
+    "x_bp_crest",
+    "x_env_rms",
+    "x_ftf_mag",
+    "x_bsf_mag",
+    "x_bpfo_mag",
+    "x_bpfi_mag",
+    "y_bp_rms",
+    "y_bp_kurtosis",
+    "y_bp_crest",
+    "y_env_rms",
+    "y_ftf_mag",
+    "y_bsf_mag",
+    "y_bpfo_mag",
+    "y_bpfi_mag"
+  ],
+  "feature_engineering": {
+    "engineered_order": [
+      "hi",
+      "log_env_ratio",
+      "log_bp_ratio",
+      "kurtosis_max",
+      "crest_max",
+      "kurtosis_rise",
+      "axis_asymmetry",
+      "ftf_share",
+      "bsf_share",
+      "bpfo_share",
+      "bpfi_share",
+      "family_contrast",
+      "log_ftf_ratio",
+      "log_bsf_ratio",
+      "log_bpfo_ratio",
+      "log_bpfi_ratio",
+      "raw_ftf_share",
+      "raw_bsf_share",
+      "raw_bpfo_share",
+      "raw_bpfi_share",
+      "rpm_norm"
+    ],
+    "baseline": {
+      "windows": 24,
+      "statistic": "median",
+      "rel_floor": 1e-06,
+      "rig_policy": "commissioning capture (spec M5); else median of first 24 windows"
+    },
+    "eps": 1e-09,
+    "health_index": {
+      "r_ref": 20.0,
+      "curve_k": 1.0,
+      "weights": {
+        "env_rms": 0.45,
+        "bp_rms": 0.3,
+        "family_max": 0.25
+      },
+      "clip_max": 1.5
+    },
+    "rpm_norm": {
+      "center": 2675.0,
+      "scale": 925.0
+    },
+    "reference_impl": "aiengine/features.py::engineer_arrays (unchanged from contract v2)"
+  },
+  "onset": {
+    "sigmas": 3.0,
+    "consecutive": 12,
+    "sigma_floor": 0.01,
+    "baseline_windows": 24,
+    "run_in_skip_windows": 6,
+    "use": "v3: reported as onset_detected only; class, RUL and stage come from the heads"
+  },
+  "classes": {
+    "labels": [
+      "ball",
+      "cage",
+      "healthy",
+      "inner_race",
+      "outer_race"
+    ],
+    "index_is_output_channel": true,
+    "note": "alphabetical; logits = log probabilities, apply softmax (identity on probabilities). No decision gate (plain argmax)."
+  },
+  "models": {
+    "tft": {
+      "onnx": "v3b_cls.onnx",
+      "family": "gradient-boosted trees (xgb) in the TFT slot",
+      "encoder_length": 24,
+      "decoder_length": 1,
+      "columns": [
+        "hi",
+        "log_env_ratio",
+        "log_bp_ratio",
+        "kurtosis_max",
+        "crest_max",
+        "kurtosis_rise",
+        "axis_asymmetry",
+        "ftf_share",
+        "bsf_share",
+        "bpfo_share",
+        "bpfi_share",
+        "family_contrast",
+        "log_ftf_ratio",
+        "log_bsf_ratio",
+        "log_bpfo_ratio",
+        "log_bpfi_ratio",
+        "raw_ftf_share",
+        "raw_bsf_share",
+        "raw_bpfo_share",
+        "raw_bpfi_share",
+        "rpm_norm"
+      ],
+      "scalers": {
+        "hi": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_env_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bp_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "crest_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_rise": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "axis_asymmetry": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "family_contrast": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_ftf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bsf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfo_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfi_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "rpm_norm": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        }
+      },
+      "warmup_windows": 25,
+      "size_kb": 1423.6,
+      "onnx_inputs": [
+        "encoder_cont",
+        "decoder_cont"
+      ],
+      "outputs": [
+        "logits",
+        "variable_weights"
+      ],
+      "batch_dim": "dynamic",
+      "parity": {
+        "windows": 2972,
+        "prob_max_abs_diff": 3.8743019104003906e-07,
+        "argmax_mismatch": 0
+      }
+    },
+    "nhits": {
+      "onnx": "v3b_rul.onnx",
+      "family": "gradient-boosted trees in the N-HiTS slot: RUL = mean of 1 LightGBM (log_l2, transform log1p) + z LightGBM",
+      "encoder_length": 48,
+      "prediction_length": 1,
+      "columns": [
+        "hi",
+        "log_env_ratio",
+        "log_bp_ratio",
+        "kurtosis_max",
+        "crest_max",
+        "kurtosis_rise",
+        "axis_asymmetry",
+        "ftf_share",
+        "bsf_share",
+        "bpfo_share",
+        "bpfi_share",
+        "family_contrast",
+        "log_ftf_ratio",
+        "log_bsf_ratio",
+        "log_bpfo_ratio",
+        "log_bpfi_ratio",
+        "raw_ftf_share",
+        "raw_bsf_share",
+        "raw_bpfo_share",
+        "raw_bpfi_share",
+        "rpm_norm"
+      ],
+      "scalers": {
+        "hi": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_env_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bp_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "crest_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_rise": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "axis_asymmetry": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "family_contrast": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_ftf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bsf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfo_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfi_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "rpm_norm": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        }
+      },
+      "left_pad": "repeat first row",
+      "output": "rul_head [B,3] = [rul_windows, z, stage]",
+      "in_graph_features": {
+        "aggregates": [
+          "last",
+          "mean6",
+          "mean",
+          "mean_q1",
+          "slope",
+          "slope_h2",
+          "std",
+          "max"
+        ],
+        "hi_levels": [],
+        "reference_impl": "aiengine/up2_window.py"
+      },
+      "size_kb": 10156.5,
+      "onnx_inputs": [
+        "encoder_cont"
+      ],
+      "outputs": [
+        "rul_head"
+      ],
+      "batch_dim": "dynamic",
+      "parity": {
+        "windows": 2972,
+        "rul_windows_max_rel_diff": 0.002368014831749381,
+        "z_max_abs_diff": 0.0011084034938099174,
+        "stage_mismatch": 0
+      }
+    }
+  },
+  "rul": {
+    "method": "direct_v3",
+    "procedure": "r_raw = rul_head[0] (windows), s_raw = rul_head[2]; apply `postprocess` (required) -> health_stage, rul_windows; rul_hours = rul_windows * cadence_hours (median spacing of the last <=48 window times). z = rul_head[1]. RUL is meaningful when health_stage >= 2.",
+    "history_windows": 24,
+    "blend_w": 0.5,
+    "u_min": 0.05,
+    "class_thresholds": {},
+    "pooled_threshold": 1.0,
+    "max_rul_factor": 20.0,
+    "loglin_coef": [],
+    "interval_rel": 0.25,
+    "class_smoothing_windows": 5
+  },
+  "stage": "raw (computed inside v3b_rul.onnx): rul_head[2] = 1 if z < -0.25 else min(6, 2 + floor(5 clip(z + 0.0, 0, 1))); deployed: postprocess.stage",
+  "postprocess": {
+    "type": "v3b_stage_median_rul_logema",
+    "version": 1,
+    "applies_to": "contract v3b direct_v3 heads; per bearing, causal, one update per 'ok' window (after warm-up)",
+    "required": true,
+    "state_reset": "on engine reset / new bearing stream (same as the window buffers)",
+    "order": [
+      "stage",
+      "rul_filter",
+      "rul_scale"
+    ],
+    "stage": {
+      "type": "median_then_rate_limit",
+      "median_window": 1,
+      "max_step": null,
+      "input": "s_raw = round(rul_head[2]) (rul_head[2] is an exact integer-valued float)",
+      "procedure": "push s_raw into a FIFO of the last median_window raw stages; m = sorted(fifo)[(len(fifo)-1)//2] (lower median while the FIFO is not full); if first output: s = m; else if max_step is null: s = m; else s = s_prev + clamp(m - s_prev, -max_step, +max_step); s_prev = s; health_stage = s"
+    },
+    "rul_filter": {
+      "type": "log_ema_with_decrement",
+      "alpha": 0.5,
+      "decrement_windows": 1.0,
+      "input": "r_raw = max(rul_head[0], 0) (windows)",
+      "procedure": "if first output or alpha >= 1: r = r_raw; else prior = max(r_prev - 1, 0); r = exp(alpha*ln(1+r_raw) + (1-alpha)*ln(1+prior)) - 1; r_prev = r (UNscaled); compute in float64"
+    },
+    "rul_scale": {
+      "type": "stage_dependent",
+      "scale_if_stage_le_2": 1.0,
+      "scale_if_stage_ge_3": 0.97,
+      "procedure": "rul_windows = r * (scale_if_stage_le_2 if health_stage <= 2 else scale_if_stage_ge_3) using the post-processed health_stage of the same window; rul_hours = rul_windows * cadence_hours"
+    },
+    "outputs": {
+      "rul_hours": "post-processed (deployed)",
+      "health_stage": "post-processed (deployed)",
+      "rul_hours_raw": "rul_head[0] * cadence (diagnostic)",
+      "health_stage_raw": "rul_head[2] (diagnostic)"
+    },
+    "reference_impl": [
+      "aiengine/up2b.py::pp_rul_unit, pp_stage_unit, apply_pp (offline)",
+      "aiengine/engine.py::HybridEngine._postprocess (streaming)"
+    ],
+    "selected_on": "validation runs only (synth_v3 val + synth_v3_val2)"
+  },
+  "disclosures": {
+    "class_order": "classes.labels is ALPHABETICAL (ball, cage, healthy, inner_race, outer_race) = the output-channel order of logits; it is NOT config.FAULT_CLASSES' order and NOT the order used in report tables (healthy, outer_race, inner_race, ball, cage). Always map channels through classes.labels.",
+    "provenance": "[SYNTHETIC] every model in this contract was fitted on synth_v3 generator runs only (physics-informed generated data), never on team-rig data; public-data (XJTU-SY/IMS/MaFaulDa) results belong to contract v2 and are reported separately as [MEASURED on <dataset>].",
+    "test_sets": "synth_v3 test (50 runs): scored once for v3, again for v3b (2nd look). synth_v3_test2 (100 fresh runs, splits.json): registered before any v3b fit, scored once.",
+    "classifier": "v3b reuses the v3 classifier unchanged (v3b_cls.onnx is a re-export of the same trees)."
+  }
+}

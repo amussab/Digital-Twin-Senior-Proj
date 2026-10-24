@@ -228,3 +228,66 @@ def test_v3b_contract_and_golden():
         assert o["rul_hours_raw"] == pytest.approx(e["rul_hours_raw"], rel=1e-4, abs=1e-6)
     ev = g["engine_vs_offline"]
     assert ev["stage_mismatch"] == 0 and ev["rul_hours_max_rel_diff"] < 1e-3
+
+
+@pytest.mark.skipif(not _v3b_exported(), reason="v3b models not exported yet")
+def test_v3b_postprocess_block_for_csharp():
+    """The block the C# IRulPostProcessor hook dispatches on (RulPostProcessors.Create reads `type`)."""
+    pp = json.loads((MODELS_DIR / "model_contract_v3b.json").read_text())["postprocess"]
+    assert pp["type"] == "v3b_stage_median_rul_logema" and pp["order"] == ["stage", "rul_filter", "rul_scale"]
+    assert int(pp["stage"]["median_window"]) >= 1 and pp["stage"]["max_step"] in (None, 1, 2)
+    assert 0.0 < float(pp["rul_filter"]["alpha"]) <= 1.0 and pp["rul_filter"]["decrement_windows"] == 1.0
+    assert {"scale_if_stage_le_2", "scale_if_stage_ge_3"} <= set(pp["rul_scale"])
+    assert "validation" in pp["selected_on"] and "test" not in pp["selected_on"]
+
+
+@pytest.mark.skipif(not _v3b_exported(), reason="v3b models not exported yet")
+def test_v3b_onnx_parity_bounds():
+    """ONNX (float32 tree thresholds) vs native LightGBM/XGBoost (float64) on test2 units, recorded at export."""
+    m = json.loads((MODELS_DIR / "model_contract_v3b.json").read_text())["models"]
+    pc, pr = m["tft"]["parity"], m["nhits"]["parity"]
+    assert pc["prob_max_abs_diff"] < 1e-5 and pc["argmax_mismatch"] == 0
+    assert pr["stage_mismatch"] == 0 and pr["z_max_abs_diff"] < 5e-3 and pr["rul_windows_max_rel_diff"] < 5e-3
+
+
+@pytest.mark.skipif(not _v3b_exported(), reason="v3b models not exported yet")
+def test_v3b_golden_inputs_full_complete():
+    """inputs_full must start at window 0 and be contiguous, so C# can replay the unit from scratch."""
+    g = json.loads((MODELS_DIR / "golden_vectors_v3b.json").read_text())
+    wi = [w["window_index"] for w in g["inputs_full"]]
+    assert wi[0] == 0 and wi == list(range(len(wi)))
+    assert all(len(w["features16"]) == 16 for w in g["inputs_full"])
+    assert max(c["window_index"] for c in g["cases"] + g["cases_late"]) <= wi[-1]
+    assert g["provenance"].startswith("[SYNTHETIC]")
+
+
+def test_v3b_streaming_postprocess_matches_offline():
+    """engine.HybridEngine._postprocess (streaming) == up2b.apply_pp (offline) on a synthetic raw head sequence."""
+    from collections import deque
+    from types import SimpleNamespace
+    from aiengine import up2b
+    from aiengine.engine import HybridEngine
+    rng = np.random.default_rng(3)
+    r_raw = np.maximum(np.linspace(300, 0, 120) * np.exp(rng.normal(0, 0.15, 120)), 0)
+    s_raw = np.clip(np.round(np.linspace(1, 6, 120) + rng.normal(0, 0.7, 120)), 1, 6).astype(int)
+    for pp in ({"rul_alpha": 0.5, "rul_scale_early": 1.0, "rul_scale_late": 0.97, "stage_k": 1, "stage_max_step": None},
+               {"rul_alpha": 0.2, "rul_scale_early": 0.94, "rul_scale_late": 1.03, "stage_k": 5, "stage_max_step": 1}):
+        off = up2b.apply_pp(pd.DataFrame({"unit_id": "u", "window_index": np.arange(120), "rul_pred_windows_raw": r_raw,
+                                          "stage_pred_raw": s_raw}), pp)
+        eng = SimpleNamespace(pp=up2b.postprocess_contract(pp))
+        b = SimpleNamespace(pp_r=None, pp_s=None, pp_hist=deque())
+        on = [HybridEngine._postprocess(eng, b, float(r), int(s)) for r, s in zip(r_raw, s_raw)]
+        np.testing.assert_allclose([o[0] for o in on], off["rul_pred_windows"].to_numpy(), rtol=1e-12)
+        np.testing.assert_array_equal([o[1] for o in on], off["stage_pred"].to_numpy())
+
+
+def test_v3b_test2_scored_once():
+    """Exactly one v3b scoring pass exists (test2 first and only look)."""
+    from aiengine.config import REPORTS_DIR
+    idx = sorted((REPORTS_DIR / "up2_preds").glob("up2_v3b_gbm_*.index.json"))
+    if not idx:
+        pytest.skip("v3b not scored yet")
+    assert len(idx) == 1
+    d = json.loads(idx[0].read_text())
+    assert "test2: FIRST and only" in d["meta"]["touch"]
+    assert {"test", "test2"} <= set(d["files"])
