@@ -1,0 +1,148 @@
+{
+ "meta": {
+  "provenance": "[SYNTHETIC] synth_v3",
+  "seed": 20261004,
+  "git_commit": "9226bff",
+  "git_dirty": true,
+  "command": "python -m aiengine.up2_train predict",
+  "utc": "2026-10-24T17:50:03+00:00",
+  "tag": "20261024T174757Z",
+  "touch": "synth_v3_test3: FIRST and only scoring pass (v3c, ablation, v3b frozen)",
+  "selection": {
+   "v3c": {
+    "physics": true,
+    "rows": "deg",
+    "NL": 48,
+    "warm": 25,
+    "target": "log_l2",
+    "transform": "log1p",
+    "columns": [
+     "hi",
+     "log_env_ratio",
+     "log_bp_ratio",
+     "kurtosis_max",
+     "crest_max",
+     "kurtosis_rise",
+     "axis_asymmetry",
+     "ftf_share",
+     "bsf_share",
+     "bpfo_share",
+     "bpfi_share",
+     "family_contrast",
+     "log_ftf_ratio",
+     "log_bsf_ratio",
+     "log_bpfo_ratio",
+     "log_bpfi_ratio",
+     "raw_ftf_share",
+     "raw_bsf_share",
+     "raw_bpfo_share",
+     "raw_bpfi_share",
+     "rpm_norm",
+     "phys_k_drop",
+     "phys_k_est",
+     "phys_rul_h",
+     "phys_conf"
+    ],
+    "fit": {
+     "target": "log_l2",
+     "seed": 20261004,
+     "best_iteration": 1279,
+     "fit_seconds": 454.3,
+     "n_estimators": 3000,
+     "num_leaves": 48,
+     "learning_rate": 0.04,
+     "min_child_samples": 60,
+     "physics": true,
+     "rows": "deg",
+     "n_train": 425956,
+     "n_features": 200
+    },
+    "postprocess": {
+     "rul_alpha": 0.5,
+     "rul_scale_early": 0.97,
+     "rul_scale_late": 0.97,
+     "stage_k": 1,
+     "stage_max_step": null
+    },
+    "z": {
+     "reused": "v3b z head (checkpoints/up2_v3b/heads.pkl), first 21 columns",
+     "z_cut": -0.25,
+     "z_shift": 0.0
+    },
+    "val": {
+     "S7": 11.556526460517697,
+     "true_onset": 14.273447377230426,
+     "pol": 5.876234008344134
+    }
+   },
+   "ablation": {
+    "physics": false,
+    "rows": "deg",
+    "NL": 48,
+    "warm": 25,
+    "target": "log_l2",
+    "transform": "log1p",
+    "columns": [
+     "hi",
+     "log_env_ratio",
+     "log_bp_ratio",
+     "kurtosis_max",
+     "crest_max",
+     "kurtosis_rise",
+     "axis_asymmetry",
+     "ftf_share",
+     "bsf_share",
+     "bpfo_share",
+     "bpfi_share",
+     "family_contrast",
+     "log_ftf_ratio",
+     "log_bsf_ratio",
+     "log_bpfo_ratio",
+     "log_bpfi_ratio",
+     "raw_ftf_share",
+     "raw_bsf_share",
+     "raw_bpfo_share",
+     "raw_bpfi_share",
+     "rpm_norm"
+    ],
+    "fit": {
+     "target": "log_l2",
+     "seed": 20261004,
+     "best_iteration": 1068,
+     "fit_seconds": 354.7,
+     "n_estimators": 3000,
+     "num_leaves": 48,
+     "learning_rate": 0.04,
+     "min_child_samples": 60,
+     "physics": false,
+     "rows": "deg",
+     "n_train": 425956,
+     "n_features": 168
+    },
+    "postprocess": {
+     "rul_alpha": 0.5,
+     "rul_scale_early": 1.0,
+     "rul_scale_late": 0.97,
+     "stage_k": 1,
+     "stage_max_step": null
+    },
+    "z": {
+     "reused": "v3b z head (checkpoints/up2_v3b/heads.pkl), first 21 columns",
+     "z_cut": -0.25,
+     "z_shift": 0.0
+    },
+    "val": {
+     "S7": 12.024134281028394,
+     "true_onset": 14.63989488030218,
+     "pol": 5.822754797539057
+    }
+   }
+  }
+ },
+ "files": {
+  "cls": "up2_v3c_gbm_test3_20261024T174757Z.cls.csv.gz",
+  "v3b": "up2_v3c_gbm_test3_v3b_20261024T174757Z.rul.csv.gz",
+  "v3c": "up2_v3c_gbm_test3_v3c_20261024T174757Z.rul.csv.gz",
+  "ablation": "up2_v3c_gbm_test3_ablation_20261024T174757Z.rul.csv.gz"
+ }
+}
