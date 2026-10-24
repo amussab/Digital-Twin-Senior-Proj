@@ -41,7 +41,11 @@ TEST4 = ("synth_v3_test4", 100, 1010, 80000)
 WARM_MIN_WINDOW = 24                          # AI warm-up: first scored window index (up2b.WARM - 1)
 
 # ---- FROZEN thresholds (set by `select` on validation only; written here BEFORE test4 is scored) ----------------
-FROZEN = None   # filled in after `select`: {"T_MED": ..., "T_P95": ..., "source": "reports/up2d_is2_select_<ts>.json"}
+# Frozen 2026-10-25 from reports/up2d_is2_select_20261024T225211Z.json (validation: synth_v3_val4 + synth_v3_val2),
+# committed BEFORE synth_v3_test4 was scored. Disclosure: the rule was refined twice ON VALIDATION (margin 1.2 / 0.05 steps
+# -> 1.1 / 0.01 steps + perfect-AI floor term) after the validation negative control "AI = 0.5 L_ref constant" PASSED the
+# first rule; the superseded selection files are in reports/_superseded/. test4 had not been touched at any point.
+FROZEN = {"T_MED": 0.18, "T_P95": 0.63, "source": "reports/up2d_is2_select_20261024T225211Z.json"}
 
 V1_TEXT = ("Physics-AI residual: max relative error between the FE-identified physics RUL and the AI RUL <=5%, "
            "health stage 1->3")
@@ -208,17 +212,61 @@ def sweep(m: pd.DataFrame) -> list[dict]:
     return rows
 
 
+def perfect_ai(m: pd.DataFrame) -> pd.DataFrame:
+    """Same windows with RUL_AI := RUL_true: the disagreement an exact AI would still show against this physics RUL
+    (the physics estimator's own information floor)."""
+    f = m.copy()
+    f["rul_pred_h"] = f["rul_hours"]
+    f["diff_h"] = (f["phys_rul_h"] - f["rul_pred_h"]).abs()
+    f["e_lref"] = f["diff_h"] / f["L_ref"]
+    f["e_v1"] = f["diff_h"] / f["rul_pred_h"]
+    return f
+
+
+def controls(m: pd.DataFrame, t_med: float, t_p95: float) -> list[dict]:
+    """Negative controls (NOT models): deliberately wrong AI RULs on the same windows. A spec that passes these is too loose."""
+    def sub(rul):
+        f = m.copy(); f["rul_pred_h"] = rul
+        f["diff_h"] = (f["phys_rul_h"] - f["rul_pred_h"]).abs(); f["e_lref"] = f["diff_h"] / f["L_ref"]
+        r = is2_v2(f, t_med, t_p95)
+        return {"MED": r["MED"], "P95": r["P95"], "verdict": r["verdict"]}
+    rng = np.random.default_rng(SEED)
+    shuf = m.groupby("unit_id")["rul_pred_h"].transform(lambda x: x.iloc[::-1].to_numpy())
+    return [{"control": k, **sub(v)} for k, v in (
+        ("AI x 1.5 (optimistic bias)", m["rul_pred_h"] * 1.5),
+        ("AI x 0.6 (pessimistic bias)", m["rul_pred_h"] * 0.6),
+        ("AI + 0.3 L_ref", m["rul_pred_h"] + 0.3 * m["L_ref"]),
+        ("AI time-reversed within bearing", shuf),
+        ("AI = 0.5 L_ref constant", 0.5 * m["L_ref"]),
+        ("AI = truth x lognormal(0, 0.5) noise", m["rul_hours"] * np.exp(rng.normal(0, 0.5, len(m)))),
+    )]
+
+
+def flag_auroc(m: pd.DataFrame, bad: float = 0.20) -> dict:
+    """Does a large disagreement flag a bad AI estimate? AUROC of e_lref for |RUL_AI - RUL_true| > bad x L_ref."""
+    from sklearn.metrics import roc_auc_score
+    y = ((m["rul_pred_h"] - m["rul_hours"]).abs() / m["L_ref"] > bad).to_numpy()
+    if y.all() or not y.any():
+        return {"bad_def": bad, "auroc": None}
+    return {"bad_def": f"|AI - truth| > {bad:.2f} L_ref", "share_bad": float(y.mean()),
+            "auroc": float(roc_auc_score(y, m["e_lref"].to_numpy()))}
+
+
 # --------------------------------------------------------------------------- threshold selection (validation only)
 
-ROUND = 0.05     # thresholds are stated in steps of 5 % of L_ref (resolution of a maintenance plan, ~2-4 h)
+ROUND = 0.01
+MARGIN = 1.10
 
 
-def choose(stats: list[dict], margin: float = 1.2) -> dict:
-    """Pre-declared rule: T = ceil_to_ROUND(margin x worst validation value over the validation sets, deployed v3b)."""
-    med = max(s["MED"] for s in stats)
-    p95 = max(s["P95"] for s in stats)
-    up = lambda v: float(np.ceil(margin * v / ROUND - 1e-9) * ROUND)   # noqa: E731
-    return {"T_MED": up(med), "T_P95": up(p95), "rule": f"ceil to {ROUND:.2f} of {margin} x max over validation sets",
+def choose(stats: list[dict], floors: list[dict], margin: float = MARGIN) -> dict:
+    """Pre-declared rule (validation only): T = ceil_to_ROUND(margin x max over validation sets of max(deployed-AI value,
+    perfect-AI floor)). The floor term means the spec never demands closer agreement than the TRUE RUL itself has with
+    the physics RUL; the margin covers set-to-set variation (val4 vs val2). Negative controls must all FAIL (checked)."""
+    med = max(max(s["MED"] for s in stats), max(f["MED"] for f in floors))
+    p95 = max(max(s["P95"] for s in stats), max(f["P95"] for f in floors))
+    up = lambda v: float(round(np.ceil(margin * v / ROUND - 1e-9) * ROUND, 4))   # noqa: E731
+    return {"T_MED": up(med), "T_P95": up(p95),
+            "rule": f"ceil to {ROUND:.2f} of {margin} x max over validation sets of max(v3b value, perfect-AI floor)",
             "val_MED_max": med, "val_P95_max": p95}
 
 
@@ -231,8 +279,15 @@ def cmd_select(a) -> int:
         res[name] = {"index": idx["index_file"]}
         for k in ("v3b", "v3c"):
             m = scored_windows(truth, pr[k])
-            res[name][k] = {"v2": is2_v2(m, None, None), "v1": is2_v1(m), "sweep": sweep(m)}
-    ch = choose([res[n]["v3b"]["v2"] for n in ("val4", "val2")])
+            res[name][k] = {"v2": is2_v2(m, None, None), "v1": is2_v1(m), "sweep": sweep(m),
+                            "flag_auroc": flag_auroc(m)}
+        res[name]["floor_perfect_ai"] = is2_v2(perfect_ai(scored_windows(truth, pr["v3b"])), None, None)
+    ch = choose([res[n]["v3b"]["v2"] for n in ("val4", "val2")], [res[n]["floor_perfect_ai"] for n in ("val4", "val2")])
+    for n in ("val4", "val2"):
+        res[n]["controls"] = controls(scored_windows(load_set(n), latest_preds(n)[1]["v3b"]), ch["T_MED"], ch["T_P95"])
+    ch["controls_all_fail_on_validation"] = all(c["verdict"] == "FAIL" for n in ("val4", "val2") for c in res[n]["controls"])
+    ch["floor_perfect_ai"] = {n: {"MED": res[n]["floor_perfect_ai"]["MED"], "P95": res[n]["floor_perfect_ai"]["P95"]}
+                              for n in ("val4", "val2")}
     out = {"meta": meta({"tool": "aiengine.up2d_is2 select", "data": "VALIDATION ONLY (synth_v3_val4, synth_v3_val2)"}),
            "chosen": ch, "results": res}
     p = REPORTS_DIR / f"up2d_is2_select_{now_tag()}.json"
@@ -243,6 +298,10 @@ def cmd_select(a) -> int:
             v = res[n][k]["v2"]
             print(n, k, "MED %.4f P95 %.4f worst-bearing p95 %.4f window max %.4f | v1 max %.3f" %
                   (v["MED"], v["P95"], v["worst_bearing_p95"], v["window_max"], res[n][k]["v1"]["max"]))
+    for n in ("val4", "val2"):
+        for c in res[n]["controls"]:
+            print(n, "control", c)
+        print(n, "flag", res[n]["v3b"]["flag_auroc"])
     print("->", p)
     return 0
 

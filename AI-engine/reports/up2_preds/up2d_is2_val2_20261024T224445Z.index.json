@@ -1,0 +1,21 @@
+{
+ "meta": {
+  "provenance": "[SYNTHETIC] synth_v3",
+  "seed": 20261004,
+  "git_commit": "0317b5e",
+  "git_dirty": true,
+  "command": "python -m aiengine.up2_train predict --set val2",
+  "utc": "2026-10-24T22:46:14+00:00",
+  "tool": "aiengine.up2d_is2 predict",
+  "set": "val2",
+  "tag": "20261024T224445Z",
+  "frozen": null,
+  "table_hash": "d3bafa93d82e7d7d",
+  "touch": "validation"
+ },
+ "files": {
+  "cls": "up2d_is2_val2_cls_20261024T224445Z.csv.gz",
+  "v3b": "up2d_is2_val2_v3b_20261024T224445Z.csv.gz",
+  "v3c": "up2d_is2_val2_v3c_20261024T224445Z.csv.gz"
+ }
+}

@@ -1,0 +1,475 @@
+{
+ "meta": {
+  "provenance": "[SYNTHETIC] synth_v3",
+  "seed": 20261004,
+  "git_commit": "0317b5e",
+  "git_dirty": true,
+  "command": "python -m aiengine.up2_train select",
+  "utc": "2026-10-24T22:50:06+00:00",
+  "tool": "aiengine.up2d_is2 select",
+  "data": "VALIDATION ONLY (synth_v3_val4, synth_v3_val2)"
+ },
+ "chosen": {
+  "T_MED": 0.2,
+  "T_P95": 0.65,
+  "rule": "ceil to 0.05 of 1.2 x max over validation sets",
+  "val_MED_max": 0.15635037430775928,
+  "val_P95_max": 0.5361504567432254,
+  "floor_perfect_ai": {
+   "val4": {
+    "MED": 0.1531467259609492,
+    "P95": 0.4573476975963958
+   },
+   "val2": {
+    "MED": 0.1553440038611787,
+    "P95": 0.5708983557677738
+   }
+  }
+ },
+ "results": {
+  "val4": {
+   "index": "up2d_is2_val4_20261024T224343Z.index.json",
+   "v3b": {
+    "v2": {
+     "n_windows": 12341,
+     "n_bearings": 64,
+     "MED": 0.15336935483870967,
+     "P95": 0.47666548749091064,
+     "worst_bearing_p95": 0.5612855465604367,
+     "window_max": 0.7276250033494546,
+     "window_p95": 0.375505376344086,
+     "window_median": 0.151253032922232,
+     "share_bearings_p95_le_T": null,
+     "by_stage": {
+      "1": {
+       "n": 6992,
+       "median": 0.17108763030254825,
+       "p95": 0.35420452421890186
+      },
+      "2": {
+       "n": 2686,
+       "median": 0.10661979905559865,
+       "p95": 0.3223242101082539
+      },
+      "3": {
+       "n": 2663,
+       "median": 0.15496344086021505,
+       "p95": 0.4522267176378618
+      }
+     },
+     "by_rpm": {
+      "1750": {
+       "bearings": 27,
+       "MED": 0.12779324186259078,
+       "P95": 0.4808553322686205
+      },
+      "3600": {
+       "bearings": 37,
+       "MED": 0.16099070834908438,
+       "P95": 0.452908825396269
+      }
+     },
+     "share_physics_is_prior": 0.976582124625233,
+     "ai_vs_truth_lref_median": 0.10422260926807185,
+     "phys_vs_truth_lref_median": 0.15657528171612287
+    },
+    "v1": {
+     "text": "Physics-AI residual: max relative error between the FE-identified physics RUL and the AI RUL <=5%, health stage 1->3",
+     "n": 12341,
+     "max": 2.434472694307279,
+     "p95": 0.7489630066548809,
+     "median": 0.2762639908219496,
+     "share_le_5pct": 0.0995867433757394,
+     "verdict": "FAIL"
+    },
+    "sweep": [
+     {
+      "normaliser": "RUL_AI (v1)",
+      "window_max": 2.434472694307279,
+      "window_p95": 0.7489630066548809,
+      "window_median": 0.2762639908219496,
+      "bearing_med_median": 0.291652988843751,
+      "bearing_p95_p95": 1.5946433293064108,
+      "bearing_p95_max": 2.141880603729667
+     },
+     {
+      "normaliser": "L_ref (v2)",
+      "window_max": 0.7276250033494546,
+      "window_p95": 0.375505376344086,
+      "window_median": 0.151253032922232,
+      "bearing_med_median": 0.15336935483870967,
+      "bearing_p95_p95": 0.47666548749091064,
+      "bearing_p95_max": 0.5612855465604367
+     },
+     {
+      "normaliser": "RUL_true",
+      "window_max": 2.628594503860474,
+      "window_p95": 0.6856999969236313,
+      "window_median": 0.23150636635766245,
+      "bearing_med_median": null,
+      "bearing_p95_p95": null,
+      "bearing_p95_max": null
+     }
+    ],
+    "flag_auroc": {
+     "bad_def": "|AI - truth| > 0.20 L_ref",
+     "share_bad": 0.2987602301272182,
+     "auroc": 0.5840284721069142
+    }
+   },
+   "v3c": {
+    "v2": {
+     "n_windows": 12341,
+     "n_bearings": 64,
+     "MED": 0.17405905568791563,
+     "P95": 0.4938440206402145,
+     "worst_bearing_p95": 0.5447405052103023,
+     "window_max": 0.7176101390138064,
+     "window_p95": 0.3928649269534143,
+     "window_median": 0.172411876424056,
+     "share_bearings_p95_le_T": null,
+     "by_stage": {
+      "1": {
+       "n": 6992,
+       "median": 0.20568675202400452,
+       "p95": 0.37661285888671864
+      },
+      "2": {
+       "n": 2686,
+       "median": 0.11361209213118435,
+       "p95": 0.34900537121680475
+      },
+      "3": {
+       "n": 2663,
+       "median": 0.15573690388997394,
+       "p95": 0.45056229078445026
+      }
+     },
+     "by_rpm": {
+      "1750": {
+       "bearings": 27,
+       "MED": 0.14550494104270256,
+       "P95": 0.5038218024880965
+      },
+      "3600": {
+       "bearings": 37,
+       "MED": 0.1877197200980238,
+       "P95": 0.4605078319026166
+      }
+     },
+     "share_physics_is_prior": 0.976582124625233,
+     "ai_vs_truth_lref_median": 0.1057992877746844,
+     "phys_vs_truth_lref_median": 0.15657528171612287
+    },
+    "v1": {
+     "text": "Physics-AI residual: max relative error between the FE-identified physics RUL and the AI RUL <=5%, health stage 1->3",
+     "n": 12341,
+     "max": 2.492402380195934,
+     "p95": 0.7929807292648781,
+     "median": 0.32566810587658873,
+     "share_le_5pct": 0.08435296977554493,
+     "verdict": "FAIL"
+    },
+    "sweep": [
+     {
+      "normaliser": "RUL_AI (v1)",
+      "window_max": 2.492402380195934,
+      "window_p95": 0.7929807292648781,
+      "window_median": 0.32566810587658873,
+      "bearing_med_median": 0.33958541226169914,
+      "bearing_p95_p95": 1.5962445012260738,
+      "bearing_p95_max": 2.28687478136541
+     },
+     {
+      "normaliser": "L_ref (v2)",
+      "window_max": 0.7176101390138064,
+      "window_p95": 0.3928649269534143,
+      "window_median": 0.172411876424056,
+      "bearing_med_median": 0.17405905568791563,
+      "bearing_p95_p95": 0.4938440206402145,
+      "bearing_p95_max": 0.5447405052103023
+     },
+     {
+      "normaliser": "RUL_true",
+      "window_max": 2.6465045038604735,
+      "window_p95": 0.6918422646077473,
+      "window_median": 0.2623372518284817,
+      "bearing_med_median": null,
+      "bearing_p95_p95": null,
+      "bearing_p95_max": null
+     }
+    ],
+    "flag_auroc": {
+     "bad_def": "|AI - truth| > 0.20 L_ref",
+     "share_bad": 0.31739729357426466,
+     "auroc": 0.6105827721275343
+    }
+   },
+   "floor_perfect_ai": {
+    "n_windows": 12341,
+    "n_bearings": 64,
+    "MED": 0.1531467259609492,
+    "P95": 0.4573476975963958,
+    "worst_bearing_p95": 0.6280532027696222,
+    "window_max": 1.024760587248197,
+    "window_p95": 0.5236559119275821,
+    "window_median": 0.15657528171612287,
+    "share_bearings_p95_le_T": null,
+    "by_stage": {
+     "1": {
+      "n": 6992,
+      "median": 0.14971818764431177,
+      "p95": 0.4659498207885305
+     },
+     "2": {
+      "n": 2686,
+      "median": 0.158860968114369,
+      "p95": 0.5565642979214684
+     },
+     "3": {
+      "n": 2663,
+      "median": 0.1588609855529054,
+      "p95": 0.4910394244723853
+     }
+    },
+    "by_rpm": {
+     "1750": {
+      "bearings": 27,
+      "MED": 0.1497181702057755,
+      "P95": 0.5106216909107746
+     },
+     "3600": {
+      "bearings": 37,
+      "MED": 0.1756272401433691,
+      "P95": 0.42007171193331355
+     }
+    },
+    "share_physics_is_prior": 0.976582124625233,
+    "ai_vs_truth_lref_median": 0.0,
+    "phys_vs_truth_lref_median": 0.15657528171612287
+   }
+  },
+  "val2": {
+   "index": "up2d_is2_val2_20261024T224445Z.index.json",
+   "v3b": {
+    "v2": {
+     "n_windows": 20438,
+     "n_bearings": 96,
+     "MED": 0.15635037430775928,
+     "P95": 0.5361504567432254,
+     "worst_bearing_p95": 0.7410078748987102,
+     "window_max": 0.820559447022606,
+     "window_p95": 0.43407153386065417,
+     "window_median": 0.1535780986373658,
+     "share_bearings_p95_le_T": null,
+     "by_stage": {
+      "1": {
+       "n": 10913,
+       "median": 0.15849938720592638,
+       "p95": 0.36779442500945053
+      },
+      "2": {
+       "n": 4784,
+       "median": 0.1228767159075736,
+       "p95": 0.40776678029689384
+      },
+      "3": {
+       "n": 4741,
+       "median": 0.17438089716612187,
+       "p95": 0.5835712688946234
+      }
+     },
+     "by_rpm": {
+      "1750": {
+       "bearings": 49,
+       "MED": 0.1393054028795422,
+       "P95": 0.6067151348482782
+      },
+      "3600": {
+       "bearings": 47,
+       "MED": 0.16835410819104926,
+       "P95": 0.4998702153614
+      }
+     },
+     "share_physics_is_prior": 0.9730404149133967,
+     "ai_vs_truth_lref_median": 0.12917054714293663,
+     "phys_vs_truth_lref_median": 0.17256607949981967
+    },
+    "v1": {
+     "text": "Physics-AI residual: max relative error between the FE-identified physics RUL and the AI RUL <=5%, health stage 1->3",
+     "n": 20438,
+     "max": 3.0373232333174416,
+     "p95": 0.7687200688672075,
+     "median": 0.2683382235598611,
+     "share_le_5pct": 0.1031901360211371,
+     "verdict": "FAIL"
+    },
+    "sweep": [
+     {
+      "normaliser": "RUL_AI (v1)",
+      "window_max": 3.0373232333174416,
+      "window_p95": 0.7687200688672075,
+      "window_median": 0.2683382235598611,
+      "bearing_med_median": 0.2938373480424112,
+      "bearing_p95_p95": 1.0893129514385815,
+      "bearing_p95_max": 2.9542161962330566
+     },
+     {
+      "normaliser": "L_ref (v2)",
+      "window_max": 0.820559447022606,
+      "window_p95": 0.43407153386065417,
+      "window_median": 0.1535780986373658,
+      "bearing_med_median": 0.15635037430775928,
+      "bearing_p95_p95": 0.5361504567432254,
+      "bearing_p95_max": 0.7410078748987102
+     },
+     {
+      "normaliser": "RUL_true",
+      "window_max": 2.560617965183902,
+      "window_p95": 0.6383814243291891,
+      "window_median": 0.2234069922166712,
+      "bearing_med_median": null,
+      "bearing_p95_p95": null,
+      "bearing_p95_max": null
+     }
+    ],
+    "flag_auroc": {
+     "bad_def": "|AI - truth| > 0.20 L_ref",
+     "share_bad": 0.3732752715529895,
+     "auroc": 0.6073928308187012
+    }
+   },
+   "v3c": {
+    "v2": {
+     "n_windows": 20438,
+     "n_bearings": 96,
+     "MED": 0.16253776643111256,
+     "P95": 0.5284000650836636,
+     "worst_bearing_p95": 0.7713858893948349,
+     "window_max": 0.8288903847265449,
+     "window_p95": 0.4334968889326091,
+     "window_median": 0.1729709454712977,
+     "share_bearings_p95_le_T": null,
+     "by_stage": {
+      "1": {
+       "n": 10913,
+       "median": 0.2002555217392667,
+       "p95": 0.3824271514336362
+      },
+      "2": {
+       "n": 4784,
+       "median": 0.11760749772133547,
+       "p95": 0.39462304155859224
+      },
+      "3": {
+       "n": 4741,
+       "median": 0.17544873184696325,
+       "p95": 0.5471929209099285
+      }
+     },
+     "by_rpm": {
+      "1750": {
+       "bearings": 49,
+       "MED": 0.14961461976536544,
+       "P95": 0.5770251324562579
+      },
+      "3600": {
+       "bearings": 47,
+       "MED": 0.17511470901325185,
+       "P95": 0.4805044059545042
+      }
+     },
+     "share_physics_is_prior": 0.9730404149133967,
+     "ai_vs_truth_lref_median": 0.14505964629691645,
+     "phys_vs_truth_lref_median": 0.17256607949981967
+    },
+    "v1": {
+     "text": "Physics-AI residual: max relative error between the FE-identified physics RUL and the AI RUL <=5%, health stage 1->3",
+     "n": 20438,
+     "max": 2.9160300090206106,
+     "p95": 0.7874879865880012,
+     "median": 0.31542520924775064,
+     "share_le_5pct": 0.09443194050298463,
+     "verdict": "FAIL"
+    },
+    "sweep": [
+     {
+      "normaliser": "RUL_AI (v1)",
+      "window_max": 2.9160300090206106,
+      "window_p95": 0.7874879865880012,
+      "window_median": 0.31542520924775064,
+      "bearing_med_median": 0.319630278343053,
+      "bearing_p95_p95": 1.1353721321621624,
+      "bearing_p95_max": 2.8305731514139776
+     },
+     {
+      "normaliser": "L_ref (v2)",
+      "window_max": 0.8288903847265449,
+      "window_p95": 0.4334968889326091,
+      "window_median": 0.1729709454712977,
+      "bearing_med_median": 0.16253776643111256,
+      "bearing_p95_p95": 0.5284000650836636,
+      "bearing_p95_max": 0.7713858893948349
+     },
+     {
+      "normaliser": "RUL_true",
+      "window_max": 2.5345685269816545,
+      "window_p95": 0.6414819183259478,
+      "window_median": 0.24441447689802787,
+      "bearing_med_median": null,
+      "bearing_p95_p95": null,
+      "bearing_p95_max": null
+     }
+    ],
+    "flag_auroc": {
+     "bad_def": "|AI - truth| > 0.20 L_ref",
+     "share_bad": 0.39999021430668363,
+     "auroc": 0.63591068929908
+    }
+   },
+   "floor_perfect_ai": {
+    "n_windows": 20438,
+    "n_bearings": 96,
+    "MED": 0.1553440038611787,
+    "P95": 0.5708983557677738,
+    "worst_bearing_p95": 0.9634196331843552,
+    "window_max": 1.4822868465296615,
+    "window_p95": 0.7417063087008477,
+    "window_median": 0.17256607949981967,
+    "share_bearings_p95_le_T": null,
+    "by_stage": {
+     "1": {
+      "n": 10913,
+      "median": 0.15412189114478342,
+      "p95": 0.5954212805853065
+     },
+     "2": {
+      "n": 4784,
+      "median": 0.18856599763802853,
+      "p95": 0.7417063435779205
+     },
+     "3": {
+      "n": 4741,
+      "median": 0.17714661624716502,
+      "p95": 0.741706326139384
+     }
+    },
+    "by_rpm": {
+     "1750": {
+      "bearings": 49,
+      "MED": 0.17485177461733376,
+      "P95": 0.6831923358194104
+     },
+     "3600": {
+      "bearings": 47,
+      "MED": 0.13620071684587803,
+      "P95": 0.5129032531519514
+     }
+    },
+    "share_physics_is_prior": 0.9730404149133967,
+    "ai_vs_truth_lref_median": 0.0,
+    "phys_vs_truth_lref_median": 0.17256607949981967
+   }
+  }
+ }
+}
