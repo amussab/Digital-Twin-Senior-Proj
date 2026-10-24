@@ -46,8 +46,13 @@ public sealed record RulCalibration(
 }
 
 /// <summary>Typed view over model_contract.json (contract_version 2, per-bearing hybrid engine).</summary>
+/// <summary>Contract "cross_bearing_gate" block (3b-coe): partner_transmission_gate.</summary>
+public sealed record CrossBearingGateSpec(double Tau, IReadOnlyDictionary<string, string> FamilyOfClass);
+
 public sealed class ModelContract
 {
+    /// <summary>Optional contract cross_bearing_gate block (null when absent).</summary>
+    public CrossBearingGateSpec? CrossBearingGate { get; init; }
     public required string Directory { get; init; }
     public int ContractVersion { get; init; }
     public string Provenance { get; init; } = "";
@@ -115,6 +120,9 @@ public sealed class ModelContract
             Tft = ParseModel(models.GetProperty("tft")),
             NhitsPredictionLength = models.GetProperty("nhits").GetProperty("prediction_length").GetInt32(),
             Rul = cal,
+            CrossBearingGate = r.TryGetProperty("cross_bearing_gate", out var cg) && cg.ValueKind == JsonValueKind.Object
+                ? new CrossBearingGateSpec(cg.GetProperty("tau").GetDouble(),
+                    cg.GetProperty("family_of_class").EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString()!)) : null,
             Postprocess = r.TryGetProperty("postprocess", out var pp) && pp.ValueKind == JsonValueKind.Object ? pp.Clone() : null,
         };
     }

@@ -15,6 +15,9 @@ public interface IInferenceEngine
     BearingResult Infer(BearingTracker tracker);
     /// <summary>Builds the per-bearing tracker consistent with this engine's contract.</summary>
     BearingTracker CreateTracker(int bearing, int baselineWindowsOverride);
+    /// <summary>Window-level post-step once all bearings of one payload are classified (contract cross_bearing_gate).
+    /// Default: no change.</summary>
+    IReadOnlyList<BearingResult> PostProcessWindow(IReadOnlyList<BearingResult> results, IReadOnlyList<BearingTracker> trackers) => results;
 }
 
 /// <summary>Digital-twin hook (IS2). A physics agent supplies the real implementation later.</summary>

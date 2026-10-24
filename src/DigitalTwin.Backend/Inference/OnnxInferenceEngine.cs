@@ -70,6 +70,29 @@ public sealed class OnnxInferenceEngine : IInferenceEngine, IDisposable
     public int RequiredHistory => _c.RequiredHistory;
     public ModelContract Contract => _c;
 
+    /// <summary>Contract cross_bearing_gate (3b-coe), literal port of engine.py HybridEngine._gate: decided from the PRE-gate
+    /// classes of both bearings of the same window; a faulty bearing whose excess family ratio is below tau x its partner's
+    /// is reported healthy with TransmittedFromPartner = true (class_probs left unchanged).</summary>
+    public IReadOnlyList<BearingResult> PostProcessWindow(IReadOnlyList<BearingResult> results, IReadOnlyList<BearingTracker> trackers)
+    {
+        var g = _c.CrossBearingGate;
+        if (g is null || results.Count != 2 || trackers.Count != 2) return results;
+        var outp = results.ToArray();
+        bool Ok(int i) => results[i].State == BearingStates.Ready;
+        for (var i = 0; i < 2; i++)
+        {
+            if (!Ok(i)) continue;
+            var j = 1 - i;
+            if (results[i].FaultClass == "healthy" || !Ok(j)) continue;
+            if (!g.FamilyOfClass.TryGetValue(results[i].FaultClass, out var colName)) continue;
+            var col = _c.Features.Index(colName);
+            var xk = Math.Exp(trackers[i].Latest![col]) - 1.0;
+            var xp = Math.Exp(trackers[j].Latest![col]) - 1.0;
+            if (xp > 0 && xk < g.Tau * xp) outp[i] = results[i] with { FaultClass = "healthy", TransmittedFromPartner = true };
+        }
+        return outp;
+    }
+
     public BearingTracker CreateTracker(int bearing, int baselineWindowsOverride) =>
         new(bearing, new FeatureEngineer(_c.Features), baselineWindowsOverride > 0 ? baselineWindowsOverride : _c.Features.BaselineWindows,
             _c.RequiredHistory, _c.HistoryCap);

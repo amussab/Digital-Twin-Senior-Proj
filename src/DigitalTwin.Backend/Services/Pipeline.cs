@@ -91,6 +91,7 @@ public sealed class Pipeline
                         tr.State == BearingStates.Commissioning ? _trackers[0].Required : tr.Required));
                 }
             }
+            results = _engine.PostProcessWindow(results, _trackers).ToList();
             var worst = SnapshotFactory.Worst(results);
             var phys = worst is null ? null : _twin.EstimateRulHours(window!, worst);
             var decodeMs = LatencyRecorder.ToMs(t1 - t0);

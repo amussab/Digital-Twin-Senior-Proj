@@ -24,7 +24,8 @@ public sealed record BearingResult(
     IReadOnlyDictionary<string, double>? ClassProbs,
     int BufferFill,
     int BufferRequired,
-    BearingDetails? Details = null);
+    BearingDetails? Details = null,
+    bool TransmittedFromPartner = false);
 
 /// <summary>Extra per-bearing engine output (stage, forecast, threshold class, RUL interval) for the API and parity tests.</summary>
 public sealed record BearingDetails(

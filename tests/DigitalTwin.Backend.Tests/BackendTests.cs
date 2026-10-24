@@ -515,6 +515,68 @@ public class GoldenV3bParityTests
     }
 }
 
+/// <summary>Contract "3b-coe": v3b models + COE-adapted classifier + cross_bearing_gate (replays golden rig_stream).</summary>
+public class GoldenV3bCoeParityTests
+{
+    private readonly ITestOutputHelper _out;
+    public GoldenV3bCoeParityTests(ITestOutputHelper o) => _out = o;
+
+    [Fact]
+    public void CoeContract_Loads_WithGate()
+    {
+        var c = ModelContract.Load(Path.Combine(Golden.Dir(), "model_contract_v3b_coe.json"));
+        Assert.Equal(3, c.ContractVersion);
+        Assert.NotNull(c.CrossBearingGate);
+        Assert.Equal(0.6, c.CrossBearingGate!.Tau);
+        Assert.Equal("log_bpfo_ratio", c.CrossBearingGate.FamilyOfClass["outer_race"]);
+    }
+
+    [Fact]
+    public void RigStream_MatchesPythonGoldenIncludingGate()
+    {
+        var dir = Golden.Dir();
+        var contract = ModelContract.Load(Path.Combine(dir, "model_contract_v3b_coe.json"));
+        using var engine = new OnnxInferenceEngine(contract, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "golden_vectors_v3b_coe.json")));
+        var rig = doc.RootElement.GetProperty("rig_stream");
+        var inputs = rig.GetProperty("inputs").EnumerateArray().ToArray();
+        var outputs = rig.GetProperty("outputs").EnumerateArray().ToArray();
+        Assert.Equal(inputs.Length, outputs.Length);
+        var trackers = new[] { engine.CreateTracker(1, 0), engine.CreateTracker(2, 0) };
+        double t0 = -1, maxProb = 0; int compared = 0, gated = 0;
+        for (var w = 0; w < inputs.Length; w++)
+        {
+            var inp = inputs[w];
+            var f = inp.GetProperty("features32").EnumerateArray().Select(x => (float)x.GetDouble()).ToArray();
+            var ms = inp.GetProperty("t20_ms").GetUInt32();
+            if (t0 < 0) t0 = ms;
+            var res = new List<BearingResult>();
+            foreach (var tr in trackers)
+            {
+                tr.Update(f, inp.GetProperty("rpm").GetDouble(), (ms - t0) / 3.6e6);
+                res.Add(tr.State == BearingStates.Ready ? engine.Infer(tr)
+                    : new BearingResult(tr.Bearing, tr.State, "warming_up", 0, tr.LatestHi, null, null, tr.Fill, tr.Required));
+            }
+            var post = engine.PostProcessWindow(res, trackers);
+            var exp = outputs[w].EnumerateArray().ToArray();
+            for (var k = 0; k < 2; k++)
+            {
+                if (exp[k].GetProperty("status").GetString() != "ok") { Assert.NotEqual(BearingStates.Ready, post[k].State); continue; }
+                Assert.Equal(BearingStates.Ready, post[k].State);
+                Assert.Equal(exp[k].GetProperty("fault_class").GetString(), post[k].FaultClass);
+                Assert.Equal(exp[k].GetProperty("transmitted_from_partner").GetBoolean(), post[k].TransmittedFromPartner);
+                if (post[k].TransmittedFromPartner) gated++;
+                foreach (var p in exp[k].GetProperty("class_probs").EnumerateObject())
+                    maxProb = Math.Max(maxProb, Math.Abs(p.Value.GetDouble() - post[k].ClassProbs![p.Name]));
+                compared++;
+            }
+        }
+        _out.WriteLine($"[SIMULATION] COE rig_stream: windows={inputs.Length} bearing-windows compared={compared} gated={gated} max|prob|={maxProb:E2}");
+        Assert.True(compared > 0);
+        Assert.True(maxProb < 1e-4, $"probs {maxProb}");
+    }
+}
+
 public class V3EngineFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder b)
