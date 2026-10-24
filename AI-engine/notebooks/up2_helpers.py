@@ -59,7 +59,6 @@ def err(what: str, e: BaseException) -> dict:
 ITEMS = [  # id, short text, owner dept, PPR status (old, from FACTS.md "Final PPR state")
     ("C1", "OH-2 (API 610) pumps, Goulds 3196 STi+MTi class: drivers <=40/~122 HP, 1750/3500 rpm, housing <=10 mm/s RMS", "ME", "NOT EVIDENCED"),
     ("C2", "Mains-powered node; SELV (<=50 V DC) IEPE excitation 24 V/4 mA over coax, AC-coupled to ADC range", "COE", "NOT EVIDENCED"),
-    ("C3", "Node BOM <=4,000 SAR (placeholder); target sell price <=8,000 SAR/node", "ME (ICS rejected)", "NOT EVIDENCED"),
     ("C4", "All real-time DAQ and signal processing run on local hardware, no cloud reliance", "COE (counted for ICS)", "MET"),
     ("C5", "Dashboard accessible only on the local network; no external/cloud exposure of vibration data", "ICS", "MET"),
     ("C6", "Enclosure from UV-stabilized weather-resistant polymer (ABS/PETG)", "ME", "NOT EVIDENCED"),
@@ -76,6 +75,17 @@ ITEMS = [  # id, short text, owner dept, PPR status (old, from FACTS.md "Final P
     ("IS2", "Physics-AI residual <=5 % (max relative error FE-identified physics RUL vs AI RUL), stage 1->3", "Integrated", "NOT MET"),
     ("IS3", "macro-F1 >=85 % over {Healthy,OD,ID,BD,CF}; stage error <=1; any injected fault caught by stage 3", "Integrated", "NOT MET"),
 ]
+EXCLUDED = {"C3": "Node BOM <= 4,000 SAR: EXCLUDED by the reviewer ('constraint not related to CS'); not one of the counted items."}
+N_ITEMS = len(ITEMS)                       # 17
+BAR = int(0.75 * N_ITEMS) + 1              # MORE THAN 75 % -> 13 of 17
+
+# EASY UPDATE POINT: when an owner supplies evidence, add an entry here, e.g.
+#   OVERRIDES["S1"] = {"status": "MET [CITED]", "value": "datasheet 100 mV/g", "target": "100 mV/g", "rank": 3, "firm": False,
+#                      "prov": "[CITED] datasheet", "source": "ME/S1_datasheet.pdf"}
+# Any field of the master table row can be overridden (status, value, target, note, rank, achievable, step, prov, source, firm).
+# Counts, the >75 % verdict and the firm / design-level tally are all recomputed from the master table.
+OVERRIDES: dict[str, dict] = {}
+
 ICS_OWN = {"constraint": ["C5"], "specs": ["S7", "S8"]}   # the department's 1 constraint + 2 specs (S9 approval still 'No')
 
 REG: dict[str, dict] = {}
@@ -100,7 +110,12 @@ def rescore_v3b() -> dict:
         t2 = up2b.load_test2()
         cp, rp = E.load_preds(idx, "test2")
         s = E.score_set(cp, rp, t2, 24)
-        return {"status": "ok", "index": idx["index_file"], "seconds": round(time.perf_counter() - t0, 1),
+        h = rp[rp["window_index"] >= 24].merge(t2[["unit_id", "window_index", "run_to_failure", "health_stage"]], on=["unit_id", "window_index"])
+        h = h[~h["run_to_failure"]]
+        healthy_stage2 = float((h["stage_pred"] == 2).mean()) if len(h) else None
+        healthy_true_stage1 = float((h["health_stage"] == 1).mean()) if len(h) else None
+        return {"healthy_stage2_share": healthy_stage2, "healthy_true_stage1_share": healthy_true_stage1, "healthy_windows": int(len(h)),
+                "status": "ok", "index": idx["index_file"], "seconds": round(time.perf_counter() - t0, 1),
                 "S7": s["rul"]["S7_mape_pct"], "S7_strict": s["rul"]["alt_mape_true_onset_pct"],
                 "S7_pol": s["rul"]["alt_percent_of_life_error_pts"], "n_rtf": s["rul"]["n_bearings"],
                 "F1": s["classification"]["macro_f1"], "acc": s["classification"]["accuracy"],
@@ -336,7 +351,8 @@ def stored_integration() -> tuple[Path | None, dict]:
 
 # --------------------------------------------------------------------------- IS2
 def residual_latest() -> tuple[Path | None, dict | None]:
-    p = newest(REPORTS, "up2_residual_*.json")
+    cands = list(REPORTS.glob("up2_residual_*.json")) + list(REPORTS.glob("up2_is2_*.json"))
+    p = max(cands, key=lambda q: q.stat().st_mtime) if cands else None
     return p, load_json(p)
 
 
@@ -381,18 +397,20 @@ def verdict_counts(df: pd.DataFrame) -> dict:
     part = s.str.startswith("PARTIAL").sum()
     notmet = s.str.startswith("NOT MET").sum()
     noev = s.str.startswith("NOT EVIDENCED").sum()
-    return {"MET": int(met), "PARTIAL": int(part), "NOT MET": int(notmet), "NOT EVIDENCED": int(noev), "total": len(df),
-            "pct_met": 100.0 * met / len(df), "gt75": bool(met >= 14)}
+    firm = int(((df["UP2 status"].str.startswith("MET")) & (df["Firm?"] == "yes")).sum())
+    return {"firm": firm, "design_level": int(met) - firm, "MET": int(met), "PARTIAL": int(part), "NOT MET": int(notmet), "NOT EVIDENCED": int(noev), "total": len(df),
+            "pct_met": 100.0 * met / len(df), "bar": BAR, "gt75": bool(met >= BAR)}
 
 
 def master_frame() -> pd.DataFrame:
     rows = []
     for iid, text, owner, ppr in ITEMS:
-        r = REG.get(iid, {})
+        r = {**REG.get(iid, {}), **OVERRIDES.get(iid, {})}
         rows.append({"ID": iid, "Item": text, "Owner dept": owner, "PPR status (old)": ppr,
                      "UP2 status": r.get("status", "NOT EVIDENCED"), "Measured": r.get("value", "-"),
                      "Target": r.get("target", "-"), "Verdict / note": r.get("note", ""),
-                     "Rank achieved": r.get("rank", 0), "Rank achievable": r.get("achievable", "-"),
+                     "Model actually deployed": r.get("deployed", "-"), "Spec-named model (N-HiTS/TFT), same data": r.get("specnamed", "-"),
+                     "Firm?": ("yes" if r.get("firm") else "no"), "Rank achieved": r.get("rank", 0), "Rank achievable": r.get("achievable", "-"),
                      "Step that raises it": r.get("step", ""), "Provenance": r.get("prov", "-"), "Source": r.get("source", "-")})
     return pd.DataFrame(rows)
 
@@ -432,3 +450,74 @@ def demo_timeline(out_png: Path | None = None):
     if out_png:
         fig.savefig(out_png, dpi=130)
     return df, fig, meta
+
+
+# --------------------------------------------------------------------------- live ONNX run of the DEPLOYED heads
+def live_engine_run(step: int = 5, n_healthy: int = 8) -> dict:
+    """Runs the DEPLOYED v3b engine (ONNX heads + features + post-process, `aiengine.engine.HybridEngine`) live on
+    freshly regenerated [SYNTHETIC] synth_v3_test2 windows: every `step`-th run-to-failure bearing plus `n_healthy`
+    healthy-companion bearings. The full metric set (S7 MAPE, macro-F1, stage error, caught-by-stage-3, latency) is
+    recomputed here FROM THE MODEL OUTPUTS (not from stored predictions). It is a SUBSET of test2 (labelled with n)."""
+    try:
+        from aiengine import up2, up2b, up2_metrics as M
+        from aiengine.config import MODELS_DIR
+        from aiengine.engine import HybridEngine
+        from aiengine.up2_train import TRUTH
+        t0 = time.perf_counter()
+        t2 = up2b.load_test2()
+        rtf = sorted(t2[t2["run_to_failure"]].unit_id.unique())[::step]
+        hl = sorted(t2[~t2["run_to_failure"]].unit_id.unique())[: n_healthy]
+        eng = HybridEngine(MODELS_DIR, contract_file="model_contract_v3b.json")
+        cls_rows, rul_rows, lat = [], [], []
+        for u in rtf + hl:
+            g = t2[t2.unit_id == u].sort_values("window_index")
+            for wi, o in zip(g.window_index.to_numpy(), eng.run_unit(g, 1)):
+                if o.get("status") != "ok" or wi < 24:
+                    continue
+                cls_rows.append({"unit_id": u, "window_index": int(wi), "pred_class": o["fault_class"]})
+                rul_rows.append({"unit_id": u, "window_index": int(wi), "rul_pred_h": o["rul_hours"], "stage_pred": o["health_stage"]})
+                lat.append(o["latency_ms"]["total"])
+        cp, rp = pd.DataFrame(cls_rows), pd.DataFrame(rul_rows)
+        c = up2.merge_truth(cp, t2, TRUTH)
+        r = up2.merge_truth(rp, t2, TRUTH)
+        rr = r[r["run_to_failure"]]
+        j = c.merge(rp[["unit_id", "window_index", "stage_pred"]], on=["unit_id", "window_index"], how="left")
+        out = {"status": "ok", "n_rtf": len(rtf), "n_healthy": len(hl), "windows": int(len(cp)), "seconds": round(time.perf_counter() - t0, 1),
+               "rul": M.rul(rr), "cls": M.classification(c), "stage": M.stage(rr), "caught": M.caught_by_stage3(j),
+               "lat_p50": float(np.percentile(lat, 50)), "lat_p95": float(np.percentile(lat, 95)), "lat_max": float(np.max(lat))}
+        # agreement with the stored predictions of the same windows
+        try:
+            from aiengine import up2_eval as E
+            idx = E.latest_index("gbm", prefix="up2_v3b")
+            scp, srp = E.load_preds(idx, "test2")
+            m = rp.merge(srp[["unit_id", "window_index", "rul_pred_h"]], on=["unit_id", "window_index"], suffixes=("", "_stored"))
+            mc = cp.merge(scp[["unit_id", "window_index", "pred_class"]], on=["unit_id", "window_index"], suffixes=("", "_stored"))
+            out["agree_rul_median_abs_rel_diff_pct"] = float(np.median(np.abs(m.rul_pred_h - m.rul_pred_h_stored) / np.maximum(m.rul_pred_h_stored, 1e-9)) * 100)
+            out["agree_class_frac"] = float((mc.pred_class == mc.pred_class_stored).mean())
+        except Exception:  # noqa: BLE001
+            pass
+        return out
+    except Exception as e:  # noqa: BLE001
+        return err("live ONNX engine run", e)
+
+
+def spec_named_models(spec: dict | None) -> dict:
+    """N-HiTS / TFT numbers on the same synth_v3 test data from the stored spec check (the spec-named models)."""
+    try:
+        nn = spec["test"]["nn"]
+        lat = spec["latency"]["v3_nn_tft_onnx"]
+        return {"S7": nn["rul"]["S7_mape_pct"], "F1": nn["classification"]["macro_f1"], "stage_max": nn["stage"]["max_abs_error"],
+                "caught": f"{nn['caught']['caught_by_stage3']}/{nn['caught']['rtf_bearings']}", "tft_p95": lat["p95_ms"]}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def is1_sensitivity(backend_p95: float, backend_max: float, coe_ms: float, hops=(("sim 10-60 ms (max)", 60.0), ("100 ms", 100.0), ("300 ms", 300.0))) -> pd.DataFrame:
+    """[CALCULATED] IS1 budget = Wi-Fi hop + measured backend leg + COE leg. No new measurement."""
+    rows = []
+    for name, hop in hops:
+        rows.append({"Wi-Fi hop assumed": name, "COE leg ms": coe_ms, "backend p95 ms": backend_p95, "backend max ms": backend_max,
+                     "total (p95 backend) ms": round(hop + backend_p95 + coe_ms, 1), "total (max backend) ms": round(hop + backend_max + coe_ms, 1),
+                     "< 500 ms": "yes" if hop + backend_max + coe_ms < 500 else "NO"})
+    brk = 500 - backend_max - coe_ms
+    return pd.DataFrame(rows), brk
