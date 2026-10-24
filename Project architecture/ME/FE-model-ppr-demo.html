@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FE digital twin: bearing stiffness from shaft displacement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF2F5; --panel:#FFFFFF; --ink:#17212B; --muted:#5A6878; --line:#CBD4DC;
+  --shaft:#2B5C8A; --spring:#C98210; --probe:#16836B; --pass:#1F7A4D; --fail:#B3261E; --ghost:#9AA8B6;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11171D; --panel:#1A222B; --ink:#E4EAF0; --muted:#98A6B4; --line:#2E3A46;
+    --shaft:#6FA3D6; --spring:#E3A33A; --probe:#3DBE9C; --pass:#4CC08A; --fail:#EF6B60; --ghost:#4E5D6C;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11171D; --panel:#1A222B; --ink:#E4EAF0; --muted:#98A6B4; --line:#2E3A46;
+  --shaft:#6FA3D6; --spring:#E3A33A; --probe:#3DBE9C; --pass:#4CC08A; --fail:#EF6B60; --ghost:#4E5D6C;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5}
+main{max-width:1180px;margin:0 auto;padding:28px 20px 48px}
+h1{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;font-weight:600;
+  font-size:clamp(1.6rem,3.2vw,2.3rem);line-height:1.15;margin:0 0 6px;letter-spacing:-0.01em}
+.sub{color:var(--muted);margin:0 0 20px;max-width:75ch}
+.rotor{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px 4px;overflow-x:auto}
+.rotor svg{display:block;width:100%;min-width:640px;height:auto}
+.grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(300px,1.15fr);gap:18px;margin-top:18px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+section.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+h2{font-size:1.05rem;font-weight:600;margin:0 0 12px}
+.ctl{margin-bottom:16px}
+.ctl label{display:flex;justify-content:space-between;gap:10px;font-size:.93rem}
+.ctl label b{font-weight:600;font-variant-numeric:tabular-nums}
+.ctl small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+input[type=range]{width:100%;accent-color:var(--shaft);margin:6px 0 0}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+button{font:inherit;font-size:.93rem;font-weight:500;padding:9px 14px;border-radius:7px;cursor:pointer;
+  border:1px solid var(--shaft);background:var(--shaft);color:#fff}
+button.alt{background:transparent;color:var(--shaft)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--spring);outline-offset:2px}
+.verdict{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:8px;margin-bottom:14px;
+  border:2px solid var(--pass)}
+.verdict.fail{border-color:var(--fail)}
+.verdict .big{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;font-size:2.4rem;font-weight:600;
+  line-height:1;font-variant-numeric:tabular-nums}
+.verdict .tag{font-weight:600;color:var(--pass)}
+.verdict.fail .tag{color:var(--fail)}
+table{width:100%;border-collapse:collapse;font-size:.93rem}
+td{padding:6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:12px}
+tr:last-child td{border-bottom:0}
+.note{color:var(--muted);font-size:.86rem;margin:10px 0 0}
+.plot{margin-top:18px}
+.plot svg{display:block;width:100%;height:auto}
+.plotwrap{overflow-x:auto}
+.plotwrap svg{min-width:560px}
+details{margin-top:18px}
+summary{cursor:pointer;font-weight:600}
+.params{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px}
+.params label{font-size:.88rem;color:var(--muted);display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.params input{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.foot{color:var(--muted);font-size:.86rem;margin-top:22px;max-width:90ch}
+.foot ol{padding-left:1.2em;margin:6px 0}
+.form{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin-bottom:18px}
+.form h2{margin-bottom:10px}
+.form dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0;font-size:.93rem}
+.form dt{font-weight:600}
+.form dd{margin:0;color:var(--ink)}
+.form code{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace;font-size:.9em;background:var(--bg);padding:1px 5px;border-radius:4px}
+@media (max-width:600px){.form dl{grid-template-columns:1fr}.form dd{margin-bottom:6px}}
+.hand{margin-top:18px}
+.hand h3{font-size:1rem;font-weight:600;margin:22px 0 6px;padding-top:12px;border-top:1px solid var(--line)}
+.hand h3:first-of-type{border-top:0;padding-top:0;margin-top:4px}
+.hand p{margin:10px 0 4px;font-size:.93rem}
+.hand .eq{overflow-x:auto;padding:4px 0}
+.hand math{font-size:1.08em}
+.hand math[display="block"]{margin:2px 0}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Bearing stiffness from shaft displacement</h1>
+  <p class="sub">Finite-element digital twin of the Bently Nevada RK4 rotor with one 810 g disk at mid-span. The model is given only the two probe readings and has to find the bearing stiffness K. Specification 2: within 10% of a known reference stiffness.</p>
+
+
+  <section class="form" aria-labelledby="h-form">
+    <h2 id="h-form">Formulation</h2>
+    <dl>
+      <dt>Method</dt><dd>Finite element method (FEM), 1D beam model of the shaft</dd>
+      <dt>Element type</dt><dd>Euler–Bernoulli beam elements (bending only, shear ignored)</dd>
+      <dt>Mesh</dt><dd>20 elements, 21 nodes, 2 degrees of freedom per node (deflection and slope), 42 in total</dd>
+      <dt>Shaft</dt><dd>Steel, E = 200 GPa, ρ = 7850 kg/m³, diameter 10 mm, bearing span 400 mm</dd>
+      <dt>Bearings</dt><dd>Linear springs of stiffness K at both ends of the span (same K for both)</dd>
+      <dt>Disk</dt><dd>Point mass of 810 g at the middle node</dd>
+      <dt>Load</dt><dd>Unbalance force at the disk: <code>F = m·e·ω²</code></dd>
+      <dt>Equation solved</dt><dd><code>[K − ω²M]·x = F</code> (stiffness minus mass effect at running speed, times displacement, equals force)</dd>
+      <dt>Identification</dt><dd>Try 1,200 values of K, predict the probe readings for each, keep the K with the smallest mismatch</dd>
+      <dt>Check</dt><dd>Rigid bearings + 10 N at mid-span reproduces the textbook deflection <code>PL³/48EI</code></dd>
+    </dl>
+    <h2 style="margin-top:16px">Assumptions</h2>
+    <ol style="margin:0;padding-left:1.3em;font-size:.93rem">
+      <li>Bearings are linear springs, no damping.</li>
+      <li>The unbalance (test mass × radius) is known.</li>
+      <li>Symmetric rotor, so one K for both bearings.</li>
+      <li>Probe readings are the steady once-per-revolution (1×) response, with phase from the Keyphasor.</li>
+      <li>Shaft overhang beyond the bearings and the motor coupling are left out.</li>
+      <li>Probes are calibrated on the shaft (datasheet scale factor 7.87 V/mm, unit-to-unit error +12.5% / −20%).</li>
+      <li>Reference bearing stiffness K = 10 MN/m, from a Hertz contact calculation for a 6200 carrying 5.5 N (range 10–15 MN/m). A calculation, not a measurement; see hand calculation B.</li>
+      <li>Probe noise 0.2 µm per window. Conservative: published eddy-current sensors resolve 0.065–3 µm (Nabavi &amp; Nihtianov, IEEE J. Solid-State Circuits, 2013; Sensors (MDPI), 2022), and even 3 µm gives only 0.03 µm per window; see hand calculation C.</li>
+    </ol>
+  </section>
+
+  <div class="rotor" aria-label="Rotor schematic with deflected shaft shape">
+    <svg id="rotor" viewBox="0 0 1000 340" role="img"></svg>
+  </div>
+
+  <div class="grid">
+    <section class="box" aria-labelledby="h-ctl">
+      <h2 id="h-ctl">Test setup</h2>
+      <div class="ctl">
+        <label for="kTrue">Reference bearing stiffness K <b id="kTrueV"></b></label>
+        <input id="kTrue" type="range" min="4" max="7.5" step="0.01" value="7">
+        <small>The "known case". 10 MN/m is a Hertz-contact estimate for a 6200 carrying about 5 N (a calculation, not a measurement). The model does not see this number.</small>
+      </div>
+      <div class="ctl">
+        <label for="rpm">Shaft speed <b id="rpmV"></b></label>
+        <input id="rpm" type="range" min="1000" max="3600" step="10" value="1750">
+      </div>
+      <div class="ctl">
+        <label for="probe">Probe distance from bearing <b id="probeV"></b></label>
+        <input id="probe" type="range" min="0" max="10" step="1" value="5">
+        <small>Report model: probes at quarter span (100 mm).</small>
+      </div>
+      <div class="ctl">
+        <label for="noise">Probe noise per window <b id="noiseV"></b></label>
+        <input id="noise" type="range" min="0" max="1" step="0.01" value="0.20">
+        <small>Conservative upper bound, see the note at the bottom. To be measured on the rig.</small>
+      </div>
+      <div class="ctl">
+        <label for="avg">Windows averaged <b id="avgV"></b></label>
+        <input id="avg" type="range" min="1" max="200" step="1" value="50">
+        <small>Each window is 20 shaft revolutions.</small>
+      </div>
+      <div class="btns">
+        <button id="measure">Take a measurement</button>
+        <button id="trials" class="alt">Run 2000 measurements</button>
+      </div>
+    </section>
+
+    <section class="box" aria-labelledby="h-res" aria-live="polite">
+      <h2 id="h-res">Result</h2>
+      <div id="verdict" class="verdict">
+        <span class="big" id="errBig">–</span>
+        <span><span class="tag" id="tag">–</span><br><span id="verdictText" class="note" style="margin:0"></span></span>
+      </div>
+      <table>
+        <tr><td>Probe reading, measured (both probes, averaged)</td><td id="rMeas">–</td></tr>
+        <tr><td>Same reading at the Proximitor output (200 mV/mil)</td><td id="rMv">–</td></tr>
+        <tr><td>K identified by the model</td><td id="rKid">–</td></tr>
+        <tr><td>K reference (known case)</td><td id="rKtrue">–</td></tr>
+        <tr><td>Probe change if K drops 10%</td><td id="rSens">–</td></tr>
+        <tr><td>Noise left after averaging</td><td id="rNoise">–</td></tr>
+        <tr><td id="trialLabel">2000 repeated measurements<br><span style="color:var(--muted);font-size:.8rem">Pass = 99% of trials within 10%</span></td><td id="rTrials" style="white-space:normal">not run</td></tr>
+        <tr><td>Model's first critical speed at this K</td><td id="rCrit">–</td></tr>
+      </table>
+      <p class="note" id="sensNote"></p>
+    </section>
+  </div>
+
+  <section class="box plot" aria-labelledby="h-plot">
+    <h2 id="h-plot">How the model finds K</h2>
+    <p class="note" style="margin:0 0 8px">It tries 1,200 stiffness values. For each one it predicts the probe readings, compares them with the measurement, and keeps the value with the smallest mismatch.</p>
+    <div class="plotwrap"><svg id="plot" viewBox="0 0 960 300" role="img" aria-label="Mismatch between predicted and measured probe reading versus trial stiffness"></svg></div>
+  </section>
+
+  <section class="box hand" aria-labelledby="h-hand">
+    <h2 id="h-hand">Hand calculations</h2>
+    <h3>A. FE model checked by hand</h3>
+    <p>A1. Shaft section properties (<span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mo>=</mo><mn>10</mn></mrow><annotation encoding="application/x-tex">d = 10</annotation></semantics></math></span> mm, <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo>=</mo><mn>200</mn></mrow><annotation encoding="application/x-tex">E = 200</annotation></semantics></math></span> GPa, <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ρ</mi><mo>=</mo><mn>7850</mn></mrow><annotation encoding="application/x-tex">\rho = 7850</annotation></semantics></math></span> kg/m³)</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>I</mi><mo>=</mo><mfrac><mrow><mi>π</mi><msup><mi>d</mi><mn>4</mn></msup></mrow><mn>64</mn></mfrac><mo>=</mo><mfrac><mrow><mi>π</mi><mo stretchy="false">(</mo><mn>0.010</mn><msup><mo stretchy="false">)</mo><mn>4</mn></msup></mrow><mn>64</mn></mfrac><mo>=</mo><mn>4.909</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup><mtext> </mtext><msup><mtext>m</mtext><mn>4</mn></msup></mrow><annotation encoding="application/x-tex">I = \frac{\pi d^4}{64} = \frac{\pi(0.010)^4}{64} = 4.909\times10^{-10}\ \text{m}^4</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>E</mi><mi>I</mi><mo>=</mo><mo stretchy="false">(</mo><mn>200</mn><mo>×</mo><msup><mn>10</mn><mn>9</mn></msup><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mn>4.909</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup><mo stretchy="false">)</mo><mo>=</mo><mn>98.17</mn><mtext> </mtext><msup><mtext>N⋅m</mtext><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">EI = (200\times10^{9})(4.909\times10^{-10}) = 98.17\ \text{N·m}^2</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>A</mi><mo>=</mo><mfrac><mrow><mi>π</mi><msup><mi>d</mi><mn>2</mn></msup></mrow><mn>4</mn></mfrac><mo>=</mo><mn>7.854</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup><mtext> </mtext><msup><mtext>m</mtext><mn>2</mn></msup><mo separator="true">,</mo><mspace width="2em"/><mi>ρ</mi><mi>A</mi><mo>=</mo><mn>0.6165</mn><mtext> kg/m</mtext></mrow><annotation encoding="application/x-tex">A = \frac{\pi d^2}{4} = 7.854\times10^{-5}\ \text{m}^2,\qquad \rho A = 0.6165\ \text{kg/m}</annotation></semantics></math></span></div>
+    <p>A2. One beam element (<span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>l</mi><mi>e</mi></msub><mo>=</mo><mi>L</mi><mi mathvariant="normal">/</mi><mn>20</mn><mo>=</mo><mn>0.020</mn></mrow><annotation encoding="application/x-tex">l_e = L/20 = 0.020</annotation></semantics></math></span> m). These are the grids <code>k</code> and <code>mm</code> in the code; 20 of them are added into the 42×42 <code>Ks</code> and <code>Ms</code>.</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>k</mi><mi>e</mi></msub><mo>=</mo><mfrac><mrow><mi>E</mi><mi>I</mi></mrow><msubsup><mi>l</mi><mi>e</mi><mn>3</mn></msubsup></mfrac><mrow><mo fence="true">[</mo><mtable rowspacing="0.16em" columnalign="center center center center" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>12</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>6</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>12</mn></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>6</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>6</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4</mn><msubsup><mi>l</mi><mi>e</mi><mn>2</mn></msubsup></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>6</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>2</mn><msubsup><mi>l</mi><mi>e</mi><mn>2</mn></msubsup></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>12</mn></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>6</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>12</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>6</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>6</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>2</mn><msubsup><mi>l</mi><mi>e</mi><mn>2</mn></msubsup></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>6</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4</mn><msubsup><mi>l</mi><mi>e</mi><mn>2</mn></msubsup></mrow></mstyle></mtd></mtr></mtable><mo fence="true">]</mo></mrow><mo separator="true">,</mo><mspace width="2em"/><mfrac><mrow><mi>E</mi><mi>I</mi></mrow><msubsup><mi>l</mi><mi>e</mi><mn>3</mn></msubsup></mfrac><mo>=</mo><mfrac><mn>98.17</mn><mrow><mo stretchy="false">(</mo><mn>0.020</mn><msup><mo stretchy="false">)</mo><mn>3</mn></msup></mrow></mfrac><mo>=</mo><mn>1.227</mn><mo>×</mo><msup><mn>10</mn><mn>7</mn></msup><mtext> N/m</mtext></mrow><annotation encoding="application/x-tex">k_e = \frac{EI}{l_e^3}\begin{bmatrix}12 &amp; 6l_e &amp; -12 &amp; 6l_e\\ 6l_e &amp; 4l_e^2 &amp; -6l_e &amp; 2l_e^2\\ -12 &amp; -6l_e &amp; 12 &amp; -6l_e\\ 6l_e &amp; 2l_e^2 &amp; -6l_e &amp; 4l_e^2\end{bmatrix},\qquad \frac{EI}{l_e^3} = \frac{98.17}{(0.020)^3} = 1.227\times10^{7}\ \text{N/m}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>m</mi><mi>e</mi></msub><mo>=</mo><mfrac><mrow><mi>ρ</mi><mi>A</mi><msub><mi>l</mi><mi>e</mi></msub></mrow><mn>420</mn></mfrac><mrow><mo fence="true">[</mo><mtable rowspacing="0.16em" columnalign="center center center center" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>156</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>22</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>54</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>13</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>22</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4</mn><msubsup><mi>l</mi><mi>e</mi><mn>2</mn></msubsup></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>13</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>3</mn><msubsup><mi>l</mi><mi>e</mi><mn>2</mn></msubsup></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>54</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>13</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mn>156</mn></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>22</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>13</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>3</mn><msubsup><mi>l</mi><mi>e</mi><mn>2</mn></msubsup></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mo>−</mo><mn>22</mn><msub><mi>l</mi><mi>e</mi></msub></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mn>4</mn><msubsup><mi>l</mi><mi>e</mi><mn>2</mn></msubsup></mrow></mstyle></mtd></mtr></mtable><mo fence="true">]</mo></mrow><mo separator="true">,</mo><mspace width="2em"/><mfrac><mrow><mi>ρ</mi><mi>A</mi><msub><mi>l</mi><mi>e</mi></msub></mrow><mn>420</mn></mfrac><mo>=</mo><mn>2.936</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup><mtext> kg</mtext></mrow><annotation encoding="application/x-tex">m_e = \frac{\rho A l_e}{420}\begin{bmatrix}156 &amp; 22l_e &amp; 54 &amp; -13l_e\\ 22l_e &amp; 4l_e^2 &amp; 13l_e &amp; -3l_e^2\\ 54 &amp; 13l_e &amp; 156 &amp; -22l_e\\ -13l_e &amp; -3l_e^2 &amp; -22l_e &amp; 4l_e^2\end{bmatrix},\qquad \frac{\rho A l_e}{420} = 2.936\times10^{-5}\ \text{kg}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mrow><mo fence="true">[</mo><mi mathvariant="bold">K</mi><mo>−</mo><msup><mi>ω</mi><mn>2</mn></msup><mi mathvariant="bold">M</mi><mo fence="true">]</mo></mrow><mi mathvariant="bold">x</mi><mo>=</mo><mi mathvariant="bold">F</mi></mrow><annotation encoding="application/x-tex">\left[\mathbf{K} - \omega^2\mathbf{M}\right]\mathbf{x} = \mathbf{F}</annotation></semantics></math></span></div>
+    <p>A3. Validation: rigid bearings, 10 N at mid-span, no rotation</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>δ</mi><mo>=</mo><mfrac><mrow><mi>P</mi><msup><mi>L</mi><mn>3</mn></msup></mrow><mrow><mn>48</mn><mi>E</mi><mi>I</mi></mrow></mfrac><mo>=</mo><mfrac><mrow><mo stretchy="false">(</mo><mn>10</mn><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mn>0.400</mn><msup><mo stretchy="false">)</mo><mn>3</mn></msup></mrow><mrow><mn>48</mn><mo stretchy="false">(</mo><mn>98.17</mn><mo stretchy="false">)</mo></mrow></mfrac><mo>=</mo><mn>1.358</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup><mtext> m</mtext><mo>=</mo><mn>135.8</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext><mspace width="2em"/><mo stretchy="false">(</mo><mtext>FE: </mtext><mn>135.81</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\delta = \frac{PL^3}{48EI} = \frac{(10)(0.400)^3}{48(98.17)} = 1.358\times10^{-4}\ \text{m} = 135.8\ \mu\text{m}\qquad(\text{FE: }135.81\ \mu\text{m})</annotation></semantics></math></span></div>
+    <p>A4. Critical speed, one-mass approximation (shaft and both bearings as springs in series; 17/35 is Rayleigh's equivalent share of the shaft's mass)</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>k</mi><mi>s</mi></msub><mo>=</mo><mfrac><mrow><mn>48</mn><mi>E</mi><mi>I</mi></mrow><msup><mi>L</mi><mn>3</mn></msup></mfrac><mo>=</mo><mfrac><mrow><mn>48</mn><mo stretchy="false">(</mo><mn>98.17</mn><mo stretchy="false">)</mo></mrow><mrow><mo stretchy="false">(</mo><mn>0.400</mn><msup><mo stretchy="false">)</mo><mn>3</mn></msup></mrow></mfrac><mo>=</mo><mn>73,630</mn><mtext> N/m</mtext></mrow><annotation encoding="application/x-tex">k_s = \frac{48EI}{L^3} = \frac{48(98.17)}{(0.400)^3} = 73{,}630\ \text{N/m}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>k</mi><mrow><mi>e</mi><mi>q</mi></mrow></msub><mo>=</mo><msup><mrow><mo fence="true">(</mo><mfrac><mn>1</mn><msub><mi>k</mi><mi>s</mi></msub></mfrac><mo>+</mo><mfrac><mn>1</mn><mrow><mn>2</mn><mi>K</mi></mrow></mfrac><mo fence="true">)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>=</mo><msup><mrow><mo fence="true">(</mo><mfrac><mn>1</mn><mn>73,630</mn></mfrac><mo>+</mo><mfrac><mn>1</mn><mrow><mn>2</mn><mo stretchy="false">(</mo><mn>10</mn><mo>×</mo><msup><mn>10</mn><mn>6</mn></msup><mo stretchy="false">)</mo></mrow></mfrac><mo fence="true">)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>=</mo><mn>73,360</mn><mtext> N/m</mtext></mrow><annotation encoding="application/x-tex">k_{eq} = \left(\frac{1}{k_s} + \frac{1}{2K}\right)^{-1} = \left(\frac{1}{73{,}630} + \frac{1}{2(10\times10^{6})}\right)^{-1} = 73{,}360\ \text{N/m}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>m</mi><mrow><mi>e</mi><mi>q</mi></mrow></msub><mo>=</mo><msub><mi>m</mi><mi>d</mi></msub><mo>+</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>17</mn><mn>35</mn></mfrac></mstyle><mi>ρ</mi><mi>A</mi><mi>L</mi><mo>=</mo><mn>0.810</mn><mo>+</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>17</mn><mn>35</mn></mfrac></mstyle><mo stretchy="false">(</mo><mn>0.2466</mn><mo stretchy="false">)</mo><mo>=</mo><mn>0.930</mn><mtext> kg</mtext></mrow><annotation encoding="application/x-tex">m_{eq} = m_d + \tfrac{17}{35}\rho A L = 0.810 + \tfrac{17}{35}(0.2466) = 0.930\ \text{kg}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>ω</mi><mi>n</mi></msub><mo>=</mo><msqrt><mfrac><msub><mi>k</mi><mrow><mi>e</mi><mi>q</mi></mrow></msub><msub><mi>m</mi><mrow><mi>e</mi><mi>q</mi></mrow></msub></mfrac></msqrt><mo>=</mo><msqrt><mfrac><mn>73,360</mn><mn>0.930</mn></mfrac></msqrt><mo>=</mo><mn>280.9</mn><mtext> rad/s</mtext><mo>=</mo><mn>2682</mn><mtext> rpm</mtext><mspace width="2em"/><mo stretchy="false">(</mo><mtext>FE: </mtext><mn>2682</mn><mtext> rpm</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\omega_n = \sqrt{\frac{k_{eq}}{m_{eq}}} = \sqrt{\frac{73{,}360}{0.930}} = 280.9\ \text{rad/s} = 2682\ \text{rpm}\qquad(\text{FE: }2682\ \text{rpm})</annotation></semantics></math></span></div>
+    <p>A5. Response at 1750 rpm with the 5 g test mass at 30.5 mm</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>ω</mi><mo>=</mo><mfrac><mrow><mn>2</mn><mi>π</mi><mo stretchy="false">(</mo><mn>1750</mn><mo stretchy="false">)</mo></mrow><mn>60</mn></mfrac><mo>=</mo><mn>183.3</mn><mtext> rad/s</mtext><mo separator="true">,</mo><mspace width="2em"/><mi>F</mi><mo>=</mo><mi>m</mi><mi>e</mi><msup><mi>ω</mi><mn>2</mn></msup><mo>=</mo><mo stretchy="false">(</mo><mn>0.005</mn><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mn>0.0305</mn><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mn>183.3</mn><msup><mo stretchy="false">)</mo><mn>2</mn></msup><mo>=</mo><mn>5.12</mn><mtext> N</mtext></mrow><annotation encoding="application/x-tex">\omega = \frac{2\pi(1750)}{60} = 183.3\ \text{rad/s},\qquad F = me\omega^2 = (0.005)(0.0305)(183.3)^2 = 5.12\ \text{N}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>X</mi><mo>=</mo><mfrac><mi>F</mi><mrow><msub><mi>k</mi><mrow><mi>e</mi><mi>q</mi></mrow></msub><mo>−</mo><msub><mi>m</mi><mrow><mi>e</mi><mi>q</mi></mrow></msub><msup><mi>ω</mi><mn>2</mn></msup></mrow></mfrac><mo>=</mo><mfrac><mn>5.12</mn><mrow><mn>73,360</mn><mo>−</mo><mn>0.930</mn><mo stretchy="false">(</mo><mn>33,584</mn><mo stretchy="false">)</mo></mrow></mfrac><mo>=</mo><mn>1.216</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup><mtext> m</mtext><mo>=</mo><mn>121.6</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext><mspace width="2em"/><mo stretchy="false">(</mo><mtext>FE: </mtext><mn>121.6</mn><mtext> </mtext><mi>μ</mi><mtext>m at the disk</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">X = \frac{F}{k_{eq} - m_{eq}\omega^2} = \frac{5.12}{73{,}360 - 0.930(33{,}584)} = 1.216\times10^{-4}\ \text{m} = 121.6\ \mu\text{m}\qquad(\text{FE: }121.6\ \mu\text{m at the disk})</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>X</mi><mrow><mi>L</mi><mi mathvariant="normal">/</mi><mn>4</mn></mrow></msub><mo>≈</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>11</mn><mn>16</mn></mfrac></mstyle><mi>X</mi><mo>=</mo><mn>83.6</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext><mspace width="2em"/><mo stretchy="false">(</mo><mtext>FE: </mtext><mn>83.9</mn><mtext> </mtext><mi>μ</mi><mtext>m at the probes</mtext><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">X_{L/4} \approx \tfrac{11}{16}X = 83.6\ \mu\text{m}\qquad(\text{FE: }83.9\ \mu\text{m at the probes})</annotation></semantics></math></span></div>
+    <p>The 11/16 comes from the beam deflection curve <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo stretchy="false">(</mo><mi>x</mi><mo stretchy="false">)</mo><mo>=</mo><mi>P</mi><mi>x</mi><mo stretchy="false">(</mo><mn>3</mn><msup><mi>L</mi><mn>2</mn></msup><mo>−</mo><mn>4</mn><msup><mi>x</mi><mn>2</mn></msup><mo stretchy="false">)</mo><mi mathvariant="normal">/</mi><mn>48</mn><mi>E</mi><mi>I</mi></mrow><annotation encoding="application/x-tex">\delta(x) = Px(3L^2-4x^2)/48EI</annotation></semantics></math></span> evaluated at <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mi>L</mi><mi mathvariant="normal">/</mi><mn>4</mn></mrow><annotation encoding="application/x-tex">x = L/4</annotation></semantics></math></span>.</p>
+    <h3>B. Bearing stiffness by Hertz contact theory</h3>
+    <p>Inputs for a 6200: <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi><mo>=</mo><mn>8</mn></mrow><annotation encoding="application/x-tex">Z = 8</annotation></semantics></math></span> balls, ball diameter <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>D</mi><mi>w</mi></msub><mo>=</mo><mn>4.762</mn></mrow><annotation encoding="application/x-tex">D_w = 4.762</annotation></semantics></math></span> mm, pitch diameter <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>d</mi><mi>m</mi></msub><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">d_m = 20</annotation></semantics></math></span> mm, groove radius <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><mi>g</mi></msub><mo>=</mo><mn>0.52</mn><msub><mi>D</mi><mi>w</mi></msub><mo>=</mo><mn>2.476</mn></mrow><annotation encoding="application/x-tex">r_g = 0.52D_w = 2.476</annotation></semantics></math></span> mm, steel <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo>=</mo><mn>206</mn></mrow><annotation encoding="application/x-tex">E = 206</annotation></semantics></math></span> GPa, <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ν</mi><mo>=</mo><mn>0.3</mn></mrow><annotation encoding="application/x-tex">\nu = 0.3</annotation></semantics></math></span>. Check <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Z</mi></mrow><annotation encoding="application/x-tex">Z</annotation></semantics></math></span> and <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>D</mi><mi>w</mi></msub></mrow><annotation encoding="application/x-tex">D_w</annotation></semantics></math></span> on the delivered bearings.</p>
+    <p>B1. Load per bearing (disk + 0.5 m of shaft, shared by two bearings)</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>W</mi><mo>=</mo><mfrac><mrow><mo stretchy="false">(</mo><msub><mi>m</mi><mi>d</mi></msub><mo>+</mo><msub><mi>m</mi><mrow><mi>s</mi><mi>h</mi><mi>a</mi><mi>f</mi><mi>t</mi></mrow></msub><mo stretchy="false">)</mo><mtext> </mtext><mi>g</mi></mrow><mn>2</mn></mfrac><mo>=</mo><mfrac><mrow><mo stretchy="false">(</mo><mn>0.810</mn><mo>+</mo><mn>0.308</mn><mo stretchy="false">)</mo><mo stretchy="false">(</mo><mn>9.81</mn><mo stretchy="false">)</mo></mrow><mn>2</mn></mfrac><mo>=</mo><mn>5.49</mn><mtext> N</mtext></mrow><annotation encoding="application/x-tex">W = \frac{(m_d + m_{shaft})\,g}{2} = \frac{(0.810 + 0.308)(9.81)}{2} = 5.49\ \text{N}</annotation></semantics></math></span></div>
+    <p>B2. Effective modulus (steel on steel)</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><mi>E</mi><mo mathvariant="normal" lspace="0em" rspace="0em">′</mo></msup><mo>=</mo><mfrac><mi>E</mi><mrow><mn>1</mn><mo>−</mo><msup><mi>ν</mi><mn>2</mn></msup></mrow></mfrac><mo>=</mo><mfrac><mrow><mn>206</mn><mo>×</mo><msup><mn>10</mn><mn>9</mn></msup></mrow><mrow><mn>1</mn><mo>−</mo><msup><mn>0.3</mn><mn>2</mn></msup></mrow></mfrac><mo>=</mo><mn>226.4</mn><mtext> GPa</mtext></mrow><annotation encoding="application/x-tex">E&#x27; = \frac{E}{1-\nu^2} = \frac{206\times10^{9}}{1-0.3^2} = 226.4\ \text{GPa}</annotation></semantics></math></span></div>
+    <p>B3. Contact radii (x = rolling direction, y = across the groove)</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>r</mi><mi>b</mi></msub><mo>=</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><msub><mi>D</mi><mi>w</mi></msub><mn>2</mn></mfrac></mstyle><mo>=</mo><mn>2.381</mn><mo separator="true">,</mo><mspace width="1em"/><msub><mi>r</mi><mi>i</mi></msub><mo>=</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mrow><msub><mi>d</mi><mi>m</mi></msub><mo>−</mo><msub><mi>D</mi><mi>w</mi></msub></mrow><mn>2</mn></mfrac></mstyle><mo>=</mo><mn>7.619</mn><mo separator="true">,</mo><mspace width="1em"/><msub><mi>r</mi><mi>o</mi></msub><mo>=</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mrow><msub><mi>d</mi><mi>m</mi></msub><mo>+</mo><msub><mi>D</mi><mi>w</mi></msub></mrow><mn>2</mn></mfrac></mstyle><mo>=</mo><mn>12.381</mn><mtext> mm</mtext></mrow><annotation encoding="application/x-tex">r_b = \tfrac{D_w}{2} = 2.381,\quad r_i = \tfrac{d_m - D_w}{2} = 7.619,\quad r_o = \tfrac{d_m + D_w}{2} = 12.381\ \text{mm}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>Inner: </mtext><msub><mi>R</mi><mi>x</mi></msub><mo>=</mo><msup><mrow><mo fence="true">(</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>1</mn><msub><mi>r</mi><mi>b</mi></msub></mfrac></mstyle><mo>+</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>1</mn><msub><mi>r</mi><mi>i</mi></msub></mfrac></mstyle><mo fence="true">)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>=</mo><mn>1.814</mn><mtext> mm</mtext><mo separator="true">,</mo><mspace width="2em"/><msub><mi>R</mi><mi>y</mi></msub><mo>=</mo><msup><mrow><mo fence="true">(</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>1</mn><msub><mi>r</mi><mi>b</mi></msub></mfrac></mstyle><mo>−</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>1</mn><msub><mi>r</mi><mi>g</mi></msub></mfrac></mstyle><mo fence="true">)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>=</mo><mn>61.9</mn><mtext> mm</mtext></mrow><annotation encoding="application/x-tex">\text{Inner: } R_x = \left(\tfrac{1}{r_b} + \tfrac{1}{r_i}\right)^{-1} = 1.814\ \text{mm},\qquad R_y = \left(\tfrac{1}{r_b} - \tfrac{1}{r_g}\right)^{-1} = 61.9\ \text{mm}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>Outer: </mtext><msub><mi>R</mi><mi>x</mi></msub><mo>=</mo><msup><mrow><mo fence="true">(</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>1</mn><msub><mi>r</mi><mi>b</mi></msub></mfrac></mstyle><mo>−</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>1</mn><msub><mi>r</mi><mi>o</mi></msub></mfrac></mstyle><mo fence="true">)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo>=</mo><mn>2.948</mn><mtext> mm</mtext><mo separator="true">,</mo><mspace width="2em"/><msub><mi>R</mi><mi>y</mi></msub><mo>=</mo><mn>61.9</mn><mtext> mm</mtext></mrow><annotation encoding="application/x-tex">\text{Outer: } R_x = \left(\tfrac{1}{r_b} - \tfrac{1}{r_o}\right)^{-1} = 2.948\ \text{mm},\qquad R_y = 61.9\ \text{mm}</annotation></semantics></math></span></div>
+    <p>B4. Contact constant for each contact (Hamrock &amp; Brewe, 1983), so that <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo>=</mo><msub><mi>K</mi><mi>c</mi></msub><mtext> </mtext><msup><mi>δ</mi><mrow><mn>3</mn><mi mathvariant="normal">/</mi><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">Q = K_c\,\delta^{3/2}</annotation></semantics></math></span>. Here <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi></mrow><annotation encoding="application/x-tex">k</annotation></semantics></math></span> is the contact ellipticity and <span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo separator="true">,</mo><mi>φ</mi></mrow><annotation encoding="application/x-tex">\varepsilon, \varphi</annotation></semantics></math></span> are elliptic-integral factors.</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>α</mi><mo>=</mo><mfrac><msub><mi>R</mi><mi>y</mi></msub><msub><mi>R</mi><mi>x</mi></msub></mfrac><mo separator="true">,</mo><mspace width="1em"/><mi>k</mi><mo>=</mo><mn>1.0339</mn><mtext> </mtext><msup><mi>α</mi><mn>0.636</mn></msup><mo separator="true">,</mo><mspace width="1em"/><mi>ε</mi><mo>=</mo><mn>1.0003</mn><mo>+</mo><mfrac><mn>0.5968</mn><mi>α</mi></mfrac><mo separator="true">,</mo><mspace width="1em"/><mi>φ</mi><mo>=</mo><mn>1.5277</mn><mo>+</mo><mn>0.6023</mn><mi>ln</mi><mo>⁡</mo><mi>α</mi><mo separator="true">,</mo><mspace width="1em"/><msup><mi>R</mi><mo mathvariant="normal" lspace="0em" rspace="0em">′</mo></msup><mo>=</mo><msup><mrow><mo fence="true">(</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>1</mn><msub><mi>R</mi><mi>x</mi></msub></mfrac></mstyle><mo>+</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>1</mn><msub><mi>R</mi><mi>y</mi></msub></mfrac></mstyle><mo fence="true">)</mo></mrow><mrow><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\alpha = \frac{R_y}{R_x},\quad k = 1.0339\,\alpha^{0.636},\quad \varepsilon = 1.0003 + \frac{0.5968}{\alpha},\quad \varphi = 1.5277 + 0.6023\ln\alpha,\quad R&#x27; = \left(\tfrac{1}{R_x} + \tfrac{1}{R_y}\right)^{-1}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>K</mi><mi>c</mi></msub><mo>=</mo><mi>π</mi><mi>k</mi><msup><mi>E</mi><mo mathvariant="normal" lspace="0em" rspace="0em">′</mo></msup><msqrt><mfrac><mrow><mn>2</mn><mi>ε</mi><msup><mi>R</mi><mo mathvariant="normal" lspace="0em" rspace="0em">′</mo></msup></mrow><mn>9</mn></mfrac></msqrt><mtext>  </mtext><msup><mi>φ</mi><mrow><mo>−</mo><mn>3</mn><mi mathvariant="normal">/</mi><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">K_c = \pi k E&#x27; \sqrt{\frac{2\varepsilon R&#x27;}{9}}\;\varphi^{-3/2}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>Inner: </mtext><mi>α</mi><mo>=</mo><mn>34.1</mn><mo separator="true">,</mo><mtext> </mtext><mi>k</mi><mo>=</mo><mn>9.76</mn><mo separator="true">,</mo><mtext> </mtext><mi>ε</mi><mo>=</mo><mn>1.018</mn><mo separator="true">,</mo><mtext> </mtext><mi>φ</mi><mo>=</mo><mn>3.654</mn><mo separator="true">,</mo><mtext> </mtext><msup><mi>R</mi><mo mathvariant="normal" lspace="0em" rspace="0em">′</mo></msup><mo>=</mo><mn>1.762</mn><mtext> mm</mtext><mtext>  </mtext><mo>⇒</mo><mtext>  </mtext><msub><mi>K</mi><mi>i</mi></msub><mo>=</mo><mn>1.98</mn><mo>×</mo><msup><mn>10</mn><mn>10</mn></msup><mtext> </mtext><msup><mtext>N/m</mtext><mn>1.5</mn></msup></mrow><annotation encoding="application/x-tex">\text{Inner: } \alpha = 34.1,\ k = 9.76,\ \varepsilon = 1.018,\ \varphi = 3.654,\ R&#x27; = 1.762\ \text{mm} \;\Rightarrow\; K_i = 1.98\times10^{10}\ \text{N/m}^{1.5}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mtext>Outer: </mtext><mi>α</mi><mo>=</mo><mn>21.0</mn><mo separator="true">,</mo><mtext> </mtext><mi>k</mi><mo>=</mo><mn>7.17</mn><mo separator="true">,</mo><mtext> </mtext><mi>ε</mi><mo>=</mo><mn>1.029</mn><mo separator="true">,</mo><mtext> </mtext><mi>φ</mi><mo>=</mo><mn>3.361</mn><mo separator="true">,</mo><mtext> </mtext><msup><mi>R</mi><mo mathvariant="normal" lspace="0em" rspace="0em">′</mo></msup><mo>=</mo><mn>2.814</mn><mtext> mm</mtext><mtext>  </mtext><mo>⇒</mo><mtext>  </mtext><msub><mi>K</mi><mi>o</mi></msub><mo>=</mo><mn>2.10</mn><mo>×</mo><msup><mn>10</mn><mn>10</mn></msup><mtext> </mtext><msup><mtext>N/m</mtext><mn>1.5</mn></msup></mrow><annotation encoding="application/x-tex">\text{Outer: } \alpha = 21.0,\ k = 7.17,\ \varepsilon = 1.029,\ \varphi = 3.361,\ R&#x27; = 2.814\ \text{mm} \;\Rightarrow\; K_o = 2.10\times10^{10}\ \text{N/m}^{1.5}</annotation></semantics></math></span></div>
+    <p>B5. Inner and outer contact in series (one ball between two races)</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>K</mi><mi>n</mi></msub><mo>=</mo><msup><mrow><mo fence="true">(</mo><msubsup><mi>K</mi><mi>i</mi><mrow><mo>−</mo><mn>2</mn><mi mathvariant="normal">/</mi><mn>3</mn></mrow></msubsup><mo>+</mo><msubsup><mi>K</mi><mi>o</mi><mrow><mo>−</mo><mn>2</mn><mi mathvariant="normal">/</mi><mn>3</mn></mrow></msubsup><mo fence="true">)</mo></mrow><mrow><mo>−</mo><mn>3</mn><mi mathvariant="normal">/</mi><mn>2</mn></mrow></msup><mo>=</mo><mn>7.21</mn><mo>×</mo><msup><mn>10</mn><mn>9</mn></msup><mtext> </mtext><msup><mtext>N/m</mtext><mn>1.5</mn></msup></mrow><annotation encoding="application/x-tex">K_n = \left(K_i^{-2/3} + K_o^{-2/3}\right)^{-3/2} = 7.21\times10^{9}\ \text{N/m}^{1.5}</annotation></semantics></math></span></div>
+    <p>B6. At this light load with normal clearance, the bottom ball carries the load</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>δ</mi><mo>=</mo><msup><mrow><mo fence="true">(</mo><mfrac><mi>W</mi><msub><mi>K</mi><mi>n</mi></msub></mfrac><mo fence="true">)</mo></mrow><mrow><mn>2</mn><mi mathvariant="normal">/</mi><mn>3</mn></mrow></msup><mo>=</mo><msup><mrow><mo fence="true">(</mo><mfrac><mn>5.49</mn><mrow><mn>7.21</mn><mo>×</mo><msup><mn>10</mn><mn>9</mn></msup></mrow></mfrac><mo fence="true">)</mo></mrow><mrow><mn>2</mn><mi mathvariant="normal">/</mi><mn>3</mn></mrow></msup><mo>=</mo><mn>0.833</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext></mrow><annotation encoding="application/x-tex">\delta = \left(\frac{W}{K_n}\right)^{2/3} = \left(\frac{5.49}{7.21\times10^{9}}\right)^{2/3} = 0.833\ \mu\text{m}</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>K</mi><mo>=</mo><mfrac><mrow><mi>d</mi><mi>Q</mi></mrow><mrow><mi>d</mi><mi>δ</mi></mrow></mfrac><mo>=</mo><mstyle scriptlevel="0" displaystyle="false"><mfrac><mn>3</mn><mn>2</mn></mfrac></mstyle><msub><mi>K</mi><mi>n</mi></msub><msup><mi>δ</mi><mrow><mn>1</mn><mi mathvariant="normal">/</mi><mn>2</mn></mrow></msup><mo>=</mo><mfrac><mrow><mn>1.5</mn><mtext> </mtext><mi>W</mi></mrow><mi>δ</mi></mfrac><mo>=</mo><mfrac><mrow><mn>1.5</mn><mo stretchy="false">(</mo><mn>5.49</mn><mo stretchy="false">)</mo></mrow><mrow><mn>0.833</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>6</mn></mrow></msup></mrow></mfrac><mo>=</mo><mn>9.9</mn><mo>×</mo><msup><mn>10</mn><mn>6</mn></msup><mtext> N/m</mtext><mo>≈</mo><mn>10</mn><mtext> MN/m</mtext></mrow><annotation encoding="application/x-tex">K = \frac{dQ}{d\delta} = \tfrac{3}{2}K_n\delta^{1/2} = \frac{1.5\,W}{\delta} = \frac{1.5(5.49)}{0.833\times10^{-6}} = 9.9\times10^{6}\ \text{N/m} \approx 10\ \text{MN/m}</annotation></semantics></math></span></div>
+    <p>With zero clearance, several balls share the load and the same method gives about 15 MN/m. So K = 10–15 MN/m. This is a calculation, not a measurement, and it leaves out the housing's own flexibility.</p>
+    <h3>C. Probe noise</h3>
+    <p>Worst published eddy-current sensor resolution: 3 µm (Sensors, MDPI, 2022). Samples in one 20-revolution window at 1750 rpm and 25 kS/s:</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>N</mi><mo>=</mo><msub><mi>f</mi><mi>s</mi></msub><mtext> </mtext><msub><mi>t</mi><mrow><mi>w</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>o</mi><mi>w</mi></mrow></msub><mo>=</mo><mn>25,000</mn><mo>×</mo><mfrac><mrow><mn>20</mn><mo>×</mo><mn>60</mn></mrow><mn>1750</mn></mfrac><mo>=</mo><mn>17,143</mn></mrow><annotation encoding="application/x-tex">N = f_s\,t_{window} = 25{,}000 \times \frac{20 \times 60}{1750} = 17{,}143</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>σ</mi><mrow><mn>1</mn><mo>×</mo></mrow></msub><mo>=</mo><msub><mi>σ</mi><mrow><mi>r</mi><mi>a</mi><mi>w</mi></mrow></msub><msqrt><mfrac><mn>2</mn><mi>N</mi></mfrac></msqrt><mo>=</mo><mn>3</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext><mo>×</mo><msqrt><mfrac><mn>2</mn><mn>17,143</mn></mfrac></msqrt><mo>=</mo><mn>0.032</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext></mrow><annotation encoding="application/x-tex">\sigma_{1\times} = \sigma_{raw}\sqrt{\frac{2}{N}} = 3\ \mu\text{m}\times\sqrt{\frac{2}{17{,}143}} = 0.032\ \mu\text{m}</annotation></semantics></math></span></div>
+    <p>The demo uses 0.2 µm per window, about 6 times larger, then averages 50 windows and 2 probes:</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>σ</mi><mrow><mi>a</mi><mi>v</mi><mi>g</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>0.2</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext></mrow><msqrt><mrow><mn>50</mn><mo>×</mo><mn>2</mn></mrow></msqrt></mfrac><mo>=</mo><mn>0.020</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext></mrow><annotation encoding="application/x-tex">\sigma_{avg} = \frac{0.2\ \mu\text{m}}{\sqrt{50 \times 2}} = 0.020\ \mu\text{m}</annotation></semantics></math></span></div>
+  </section>
+
+  <details>
+    <summary>Rig parameters</summary>
+    <p class="note">Shaft diameter is from the RK4 datasheet. Span and disk mass are from a published RK4 test; check them on our rig. The unbalance is a known test mass screwed into a disk balance slot; weigh the screw you use.</p>
+    <div class="params">
+      <label>Shaft diameter, mm (datasheet)<input id="pD" type="number" value="10" step="0.5"></label>
+      <label>Bearing span, mm (measure)<input id="pL" type="number" value="400" step="10"></label>
+      <label>Disk mass, g (weigh)<input id="pM" type="number" value="810" step="5"></label>
+      <label>Test mass in balance slot, g (weigh)<input id="pTm" type="number" value="5" step="0.5"></label>
+      <label>Balance slot radius, mm<input id="pR" type="number" value="30.5" step="0.5"></label>
+    </div>
+  </details>
+
+  <div class="foot">
+    <p id="valid"></p>
+
+    <p>Sources: Bently Nevada RK4 Rotor Kit datasheet 141592 Rev. P (10 mm shaft, Proximitor output 200 mV/mil). NASA/TM NTRS 20060047685, RK4 test rig with one 810 g disk, 400 mm bearing span, balance slots at 30.5 mm radius, first critical speed about 2000 rpm on the stock journal bearings.</p>
+  </div>
+</main>
+
+<script>
+(function(){
+  const E = 200e9, RHO = 7850, NE = 20;
+  const $ = id => document.getElementById(id);
+  let P = {}, Ks = null, Ms = null, grid = [], preds = [], last = null;
+  let rng = mulberry32(7);
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  function gauss(){let u=0,v=0;while(!u)u=rng();v=rng();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+
+  function readParams(){
+    P.L = (+$('pL').value || 400)/1000;
+    P.d = (+$('pD').value || 10)/1000;
+    P.md = (+$('pM').value || 810)/1000;
+    P.me = (+$('pTm').value || 0.5)*1e-3 * (+$('pR').value || 30.5)*1e-3;
+    P.I = Math.PI*P.d**4/64; P.A = Math.PI*P.d**2/4; P.EI = E*P.I; P.le = P.L/NE;
+  }
+
+  function assemble(){
+    const n = 2*(NE+1), le = P.le, c = P.EI/le**3, m = RHO*P.A*le/420;
+    const k = [[12,6*le,-12,6*le],[6*le,4*le*le,-6*le,2*le*le],[-12,-6*le,12,-6*le],[6*le,2*le*le,-6*le,4*le*le]];
+    const mm = [[156,22*le,54,-13*le],[22*le,4*le*le,13*le,-3*le*le],[54,13*le,156,-22*le],[-13*le,-3*le*le,-22*le,4*le*le]];
+    Ks = Array.from({length:n},()=>new Float64Array(n));
+    Ms = Array.from({length:n},()=>new Float64Array(n));
+    for(let e=0;e<NE;e++){const i=2*e;
+      for(let a=0;a<4;a++)for(let b=0;b<4;b++){Ks[i+a][i+b]+=c*k[a][b];Ms[i+a][i+b]+=m*mm[a][b];}}
+    Ms[NE][NE] += P.md; // disk at mid-span node (NE/2) -> DOF 2*(NE/2) = NE
+  }
+
+  function solve(A,b){ // Gaussian elimination with partial pivoting
+    const n=b.length, M=A.map(r=>Float64Array.from(r)), x=Float64Array.from(b);
+    for(let i=0;i<n;i++){let p=i;for(let r=i+1;r<n;r++)if(Math.abs(M[r][i])>Math.abs(M[p][i]))p=r;
+      [M[i],M[p]]=[M[p],M[i]];[x[i],x[p]]=[x[p],x[i]];
+      for(let r=i+1;r<n;r++){const f=M[r][i]/M[i][i];if(!f)continue;for(let c=i;c<n;c++)M[r][c]-=f*M[i][c];x[r]-=f*x[i];}}
+    for(let i=n-1;i>=0;i--){let s=x[i];for(let c=i+1;c<n;c++)s-=M[i][c]*x[c];x[i]=s/M[i][i];}
+    return x;
+  }
+
+  function response(Kb, rpm, force){ // full deflection vector (every node)
+    const n=2*(NE+1), w=rpm*2*Math.PI/60;
+    const A = Ks.map((r,i)=>Float64Array.from(r,(v,j)=>v - w*w*Ms[i][j]));
+    A[0][0]+=Kb; A[n-2][n-2]+=Kb;
+    const F=new Float64Array(n); F[NE] = force!==undefined ? force : P.me*w*w;
+    const x=solve(A,F); const out=[];for(let i=0;i<=NE;i++)out.push(x[2*i]);return out;
+  }
+  const probeNode = () => +$('probe').value; // node index from bearing 1 (each node = L/20)
+  function probeReading(Kb,rpm){const w=response(Kb,rpm), j=probeNode();return (w[j]+w[NE-j])/2;}
+
+  function buildGrid(){
+    const rpm=+$('rpm').value; grid=[];preds=[];
+    for(let i=0;i<1200;i++){const K=10**(3.5+i*(9-3.5)/1199);grid.push(K);preds.push(probeReading(K,rpm));}
+  }
+  function identify(meas){let best=0,bv=Infinity,mis=[];
+    for(let i=0;i<grid.length;i++){const d=Math.abs(preds[i]-meas);mis.push(d);if(d<bv){bv=d;best=i;}}
+    return {K:grid[best],mis};}
+
+  const sigma = () => (+$('noise').value*1e-6)/Math.sqrt(+$('avg').value)/Math.SQRT2; // two probes averaged
+  function measureOnce(Ktrue,rpm){return probeReading(Ktrue,rpm)+gauss()*sigma();}
+
+  const fmtK = K => K>=1e6 ? (K/1e6).toFixed(2)+' MN/m' : (K/1e3).toFixed(0)+' kN/m';
+  const fmtUm = x => (x*1e6).toFixed(3)+' µm';
+
+  function measure(){
+    const Kt=10**+$('kTrue').value, rpm=+$('rpm').value;
+    const meas=measureOnce(Kt,rpm), id=identify(meas), err=Math.abs(id.K-Kt)/Kt*100;
+    last={Kt,rpm,meas,id,err}; showResult(); drawPlot(); drawRotor();
+  }
+
+  function showResult(){
+    const {Kt,rpm,meas,id,err}=last, ok=err<=10;
+    $('errBig').textContent=err.toFixed(1)+'%';
+    $('tag').textContent= ok?'Within 10%: pass':'Over 10%: fail';
+    $('verdictText').textContent='Identification error for this measurement';
+    $('verdict').className='verdict'+(ok?'':' fail');
+    $('rMeas').textContent=fmtUm(Math.abs(meas));
+    $('rMv').textContent=(Math.abs(meas)*1e6*200/25.4).toFixed(1)+' mV';
+    $('rCrit').textContent=critSpeed(Kt)+' rpm';
+    $('rKid').textContent=fmtK(id.K);
+    $('rKtrue').textContent=fmtK(Kt);
+    const p0=probeReading(Kt,rpm), p9=probeReading(0.9*Kt,rpm), s=Math.abs(p9/p0-1)*100;
+    $('rSens').textContent=s.toFixed(2)+'% ('+fmtUm(Math.abs(p9-p0))+')';
+    $('rNoise').textContent=fmtUm(sigma());
+    const ratio=Math.abs(p9-p0)/sigma();
+    $('sensNote').textContent = ratio<5
+      ? `A 10% change in K moves the reading by only ${ratio.toFixed(1)}× the noise, so K is hard to pin down. Average more windows, move the probes, or change speed.`
+      : `A 10% change in K moves the reading by ${ratio.toFixed(0)}× the noise, so the model can tell K apart.`;
+  }
+
+  const critCache={};
+  function critSpeed(K){ // speed where the disk response peaks
+    const key=K.toPrecision(4)+'|'+P.L+P.d+P.md; if(critCache[key])return critCache[key];
+    let best=0,bv=0;
+    for(let r=300;r<=10000;r+=25){const v=Math.abs(response(K,r)[NE/2]);if(v>bv){bv=v;best=r;}}
+    for(let r=best-25;r<=best+25;r+=1){const v=Math.abs(response(K,r)[NE/2]);if(v>bv){bv=v;best=r;}}
+    return critCache[key]=best;
+  }
+
+  function runTrials(){
+    const Kt=10**+$('kTrue').value, rpm=+$('rpm').value, N=2000;
+    const saved=rng; rng=mulberry32(12345); // fixed seed: same sliders give the same numbers every press
+    const errs=[];
+    for(let t=0;t<N;t++)errs.push(Math.abs(identify(measureOnce(Kt,rpm)).K-Kt)/Kt*100);
+    rng=saved; errs.sort((x,y)=>x-y);
+    const mean=errs.reduce((x,y)=>x+y,0)/N, p99=errs[Math.floor(0.99*N)-1], worst=errs[N-1];
+    const within=errs.filter(e=>e<=10).length/N*100;
+    $('rTrials').innerHTML=`mean ${mean.toFixed(1)}%, worst ${worst.toFixed(1)}%<br>${within.toFixed(1)}% of trials within 10%<br>99% of trials under ${p99.toFixed(1)}% `+(p99<=10?'(pass)':'(fail)');
+  }
+
+  // ---------- drawing ----------
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  function drawRotor(){
+    const svg=$('rotor'), Kt=10**+$('kTrue').value, rpm=+$('rpm').value;
+    const w=response(Kt,rpm), x0=110, x1=850, yc=175, j=probeNode();
+    const maxAbs=Math.max(...w.map(Math.abs))||1, scale=70/maxAbs;
+    const X=i=>x0+(x1-x0)*i/NE, Y=i=>yc - w[i]*scale;
+    let path='M'+X(0)+' '+Y(0); for(let i=1;i<=NE;i++)path+=' L'+X(i)+' '+Y(i);
+    const spring=(x,top)=>{let s='M'+x+' '+top;const seg=8,h=(290-top)/(seg+2);s+=' L'+x+' '+(top+h);
+      for(let i=0;i<seg;i++)s+=' L'+(x+(i%2?-12:12))+' '+(top+h*(i+1.5));s+=' L'+x+' '+(top+h*(seg+1))+' L'+x+' 290';return s;};
+    const sh=css('--shaft'),sp=css('--spring'),pr=css('--probe'),gh=css('--ghost'),ink=css('--ink'),mu=css('--muted');
+    const pX1=X(j), pX2=X(NE-j);
+    svg.innerHTML=`
+      <line x1="${x0}" y1="${yc}" x2="${x1}" y2="${yc}" stroke="${gh}" stroke-width="1.5" stroke-dasharray="6 6"/>
+      <path d="${path}" fill="none" stroke="${sh}" stroke-width="7" stroke-linecap="round"/>
+      ${w.map((_,i)=>`<circle cx="${X(i)}" cy="${Y(i)}" r="2.5" fill="${mu}"/>`).join('')}
+      <path d="${spring(X(0),Y(0)+4)}" fill="none" stroke="${sp}" stroke-width="3"/>
+      <path d="${spring(X(NE),Y(NE)+4)}" fill="none" stroke="${sp}" stroke-width="3"/>
+      <line x1="${X(0)-40}" y1="292" x2="${X(0)+40}" y2="292" stroke="${ink}" stroke-width="3"/>
+      <line x1="${X(NE)-40}" y1="292" x2="${X(NE)+40}" y2="292" stroke="${ink}" stroke-width="3"/>
+      <rect x="${X(NE/2)-9}" y="${Y(NE/2)-52}" width="18" height="104" rx="3" fill="${ink}" opacity=".85"/>
+      <circle cx="${X(NE/2)}" cy="${Y(NE/2)-40}" r="5" fill="${sp}"/>
+      <g fill="${pr}" stroke="${pr}">
+        <rect x="${pX1-6}" y="${Y(j)-66}" width="12" height="34" rx="2"/><line x1="${pX1}" y1="${Y(j)-32}" x2="${pX1}" y2="${Y(j)-10}" stroke-width="2"/>
+        <rect x="${pX2-6}" y="${Y(NE-j)-66}" width="12" height="34" rx="2"/><line x1="${pX2}" y1="${Y(NE-j)-32}" x2="${pX2}" y2="${Y(NE-j)-10}" stroke-width="2"/>
+      </g>
+      <g font-family="IBM Plex Sans, system-ui, sans-serif" font-size="15" fill="${ink}">
+        <text x="${X(0)}" y="322" text-anchor="middle">Bearing 1, spring K</text>
+        <text x="${X(NE)}" y="322" text-anchor="middle">Bearing 2, spring K</text>
+        <text x="${X(NE/2)}" y="${Y(NE/2)-62}" text-anchor="middle">Disk with unbalance</text>
+        <text x="${pX1}" y="${Y(j)-74}" text-anchor="middle" fill="${pr}">Probe 1</text>
+        <text x="${pX2}" y="${Y(NE-j)-74}" text-anchor="middle" fill="${pr}">Probe 2</text>
+        <text x="${x1+18}" y="${yc+5}" fill="${mu}" font-size="13">shaft centreline</text>
+        <text x="${X(NE/2)}" y="322" text-anchor="middle" fill="${mu}" font-size="13">Deflected shape at ${rpm} rpm, exaggerated. Peak ${(maxAbs*1e6).toFixed(2)} µm</text>
+      </g>`;
+  }
+
+  function drawPlot(){
+    const svg=$('plot'); if(!last){svg.innerHTML='';return;}
+    const {Kt,id}=last, L=40,R=930,T=24,B=250;
+    const lx=K=>L+(R-L)*(Math.log10(K)-3.5)/(9-3.5);
+    const vals=id.mis.map(v=>Math.max(v,1e-11)), lo=Math.log10(Math.min(...vals)), hi=Math.log10(Math.max(...vals));
+    const ly=v=>B-(B-T)*(Math.log10(Math.max(v,1e-11))-lo)/((hi-lo)||1);
+    let p='';grid.forEach((K,i)=>{p+=(i?' L':'M')+lx(K).toFixed(1)+' '+ly(vals[i]).toFixed(1);});
+    const sh=css('--shaft'),sp=css('--spring'),pr=css('--probe'),mu=css('--muted'),ln=css('--line'),ink=css('--ink');
+    let ticks='';for(let e=4;e<=9;e++){const x=lx(10**e);ticks+=`<line x1="${x}" y1="${T}" x2="${x}" y2="${B}" stroke="${ln}"/>
+      <text x="${x}" y="${B+20}" text-anchor="middle">${e<6?(10**e/1e3)+' kN/m':e<9?(10**e/1e6)+' MN/m':'1 GN/m'}</text>`;}
+    const band1=lx(Kt*0.9), band2=lx(Kt*1.1);
+    svg.innerHTML=`<g font-family="IBM Plex Sans, system-ui, sans-serif" font-size="13" fill="${mu}">
+      ${ticks}
+      <rect x="${band1}" y="${T}" width="${band2-band1}" height="${B-T}" fill="${pr}" opacity=".15"/>
+      <path d="${p}" fill="none" stroke="${sh}" stroke-width="2.5"/>
+      <line x1="${lx(Kt)}" y1="${T}" x2="${lx(Kt)}" y2="${B}" stroke="${pr}" stroke-width="2" stroke-dasharray="5 4"/>
+      <circle cx="${lx(id.K)}" cy="${ly(Math.max(Math.abs(id.mis[grid.indexOf(id.K)]),1e-11))}" r="7" fill="${sp}" stroke="${ink}" stroke-width="1.5"/>
+      <text x="${L}" y="${B+42}">Trial bearing stiffness K (log scale)</text>
+      <text x="${L}" y="${T-8}">Mismatch between predicted and measured reading (log)</text>
+      <text x="${lx(Kt)+8}" y="${T+30}" fill="${pr}">Reference K, shaded ±10%</text>
+      <text x="${lx(id.K)+10}" y="${B-12}" fill="${ink}">Model's pick</text></g>`;
+  }
+
+  function validate(){ // rigid supports, static load at mid-span vs textbook PL^3/48EI
+    const Fst=10, w=response(1e15,0,Fst)[NE/2], exact=Fst*P.L**3/(48*P.EI);
+    $('valid').textContent=`Model check: with rigid bearings and a 10 N load at mid-span, the model gives ${(w*1e6).toFixed(2)} µm; the textbook formula PL³/48EI gives ${(exact*1e6).toFixed(2)} µm (difference ${(Math.abs(w-exact)/exact*100).toFixed(3)}%).`;
+  }
+
+  function labels(){
+    const K=10**+$('kTrue').value; $('kTrueV').textContent=fmtK(K);
+    $('rpmV').textContent=$('rpm').value+' rpm';
+    $('probeV').textContent=(probeNode()*P.le*1000).toFixed(0)+' mm';
+    $('noiseV').textContent=(+$('noise').value).toFixed(2)+' µm';
+    $('avgV').textContent=$('avg').value;
+  }
+
+  let t=null;
+  function refresh(full){labels();clearTimeout(t);t=setTimeout(()=>{if(full){readParams();assemble();validate();}
+    buildGrid();$('rTrials').textContent='not run';measure();},60);}
+
+  ['kTrue','noise','avg'].forEach(id=>$(id).addEventListener('input',()=>{labels();$('rTrials').textContent='not run';measure();}));
+  ['rpm','probe'].forEach(id=>$(id).addEventListener('input',()=>refresh(false)));
+  ['pL','pD','pM','pTm','pR'].forEach(id=>$(id).addEventListener('change',()=>refresh(true)));
+  $('measure').addEventListener('click',measure);
+  $('trials').addEventListener('click',runTrials);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawRotor();drawPlot();});
+
+  readParams();assemble();validate();labels();buildGrid();measure();
+})();
+</script>
+</body>
+</html>

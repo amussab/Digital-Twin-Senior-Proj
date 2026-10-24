@@ -78,3 +78,12 @@ through and note what replaced it.
   ~100 %).
 - Models: v2 = XJTU-SY + IMS + MaFaulDa, export a78a828. C# golden parity passes.
   v2 was the second look at the XJTU/IMS test bearings (disclosed).
+
+## UP2 block (coordinator, 2026-10-24)
+- Branch `feature/up2-prototype` (worktree `Repo/DT-up2`), cut from feature/integration db25980.
+  origin/main (23dabfa) holds docs only (COE/ICS/ME design + CAD); code lives on feature/*.
+- 18 items: C1-C6, S1-S9, IS1-IS3 (xlsx IDs used by code/evidence). Need >75% = at least 14 met.
+- Status at start: MET C4, C5, S8, S9; PARTIAL IS1; NOT MET S7, IS2, IS3.
+- Plan: COE pipeline in code (simulated source, hardware-ready), synthetic run-to-failure data +
+  XGBoost/AutoGluon/N-HiTS/TFT, physics-AI residual on synthetic, backend wired, UP2 evidence file.
+- UP2: in-class with coach only, 25/26 Oct 2026. Resume ledger: `.claude/UP2_STATE.md`.
