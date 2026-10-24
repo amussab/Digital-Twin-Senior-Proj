@@ -105,7 +105,7 @@ public sealed class ModelContract
         return new ModelContract
         {
             Directory = Path.GetDirectoryName(Path.GetFullPath(path))!,
-            ContractVersion = r.GetProperty("contract_version").GetInt32(),
+            ContractVersion = ParseVersion(r.GetProperty("contract_version")),
             Provenance = provText,
             Features = feats,
             ClassLabels = r.GetProperty("classes").GetProperty("labels").EnumerateArray().Select(e => e.GetString()!).ToList(),
@@ -117,6 +117,14 @@ public sealed class ModelContract
             Rul = cal,
             Postprocess = r.TryGetProperty("postprocess", out var pp) && pp.ValueKind == JsonValueKind.Object ? pp.Clone() : null,
         };
+    }
+
+    /// <summary>contract_version is a number (2, 3) or a string such as "3b"; the leading integer is the major version.</summary>
+    private static int ParseVersion(JsonElement e)
+    {
+        if (e.ValueKind == JsonValueKind.Number) return e.GetInt32();
+        var txt = new string((e.GetString() ?? "").TakeWhile(char.IsDigit).ToArray());
+        return int.TryParse(txt, out var v) ? v : 0;
     }
 
     private static SubModelSpec ParseModel(JsonElement m)

@@ -456,6 +456,65 @@ public class GoldenV3ParityTests
     }
 }
 
+/// <summary>Contract v3 ("direct_v3"): GBM heads in the TFT/N-HiTS ONNX slots; RUL/stage come straight from rul_head.</summary>
+public class GoldenV3bParityTests
+{
+    private readonly ITestOutputHelper _out;
+    public GoldenV3bParityTests(ITestOutputHelper o) => _out = o;
+    private static double[] Arr(JsonElement e) => e.EnumerateArray().Select(x => x.GetDouble()).ToArray();
+
+    [Fact]
+    public void V3bContract_Loads_WithPostprocess()
+    {
+        var c = ModelContract.Load(Path.Combine(Golden.Dir(), "model_contract_v3b.json"));
+        Assert.NotNull(c.Postprocess);
+        Assert.True(c.DirectRul);
+        Assert.Equal(48, c.Nhits.EncoderLength);
+        Assert.Contains("SYNTHETIC", c.Provenance);
+    }
+
+    [Fact]
+    public void CSharpPipeline_MatchesPythonGoldenVectorsV3b()
+    {
+        var dir = Golden.Dir();
+        var contract = ModelContract.Load(Path.Combine(dir, "model_contract_v3b.json"));
+        using var engine = new OnnxInferenceEngine(contract, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "golden_vectors_v3b.json")));
+        var root = doc.RootElement;
+        var cases = root.GetProperty("cases").EnumerateArray().Concat(root.GetProperty("cases_late").EnumerateArray()).ToDictionary(c => c.GetProperty("window_index").GetInt32());
+        var tr = engine.CreateTracker(1, 0);
+        double t0 = -1, maxEng = 0, maxEnc = 0, maxProb = 0, maxHi = 0, maxRulRel = 0;
+        var checkedN = 0;
+        foreach (var inp in root.GetProperty("inputs_full").EnumerateArray())
+        {
+            var f16 = Arr(inp.GetProperty("features16")).Select(v => (float)v).ToArray();
+            var ms = inp.GetProperty("t20_ms").GetUInt32();
+            if (t0 < 0) t0 = ms;
+            tr.Update(f16.Concat(f16).ToArray(), inp.GetProperty("rpm").GetDouble(), (ms - t0) / 3.6e6);
+            var wi = inp.GetProperty("window_index").GetInt32();
+            if (!cases.TryGetValue(wi, out var cs)) { if (tr.State == BearingStates.Ready) engine.Infer(tr); continue; }
+            Assert.Equal(BearingStates.Ready, tr.State);
+            var r = engine.Infer(tr);
+            var o = cs.GetProperty("output");
+            maxEng = Math.Max(maxEng, Arr(cs.GetProperty("engineered")).Zip(tr.Latest!).Max(p => Math.Abs(p.First - p.Second)));
+            Assert.Equal(o.GetProperty("fault_class").GetString(), r.FaultClass);
+            foreach (var p in o.GetProperty("class_probs").EnumerateObject())
+                maxProb = Math.Max(maxProb, Math.Abs(p.Value.GetDouble() - r.ClassProbs![p.Name]));
+            maxHi = Math.Max(maxHi, Math.Abs(o.GetProperty("health_index").GetDouble() - r.HealthIndex!.Value));
+            var rulPy = o.GetProperty("rul_hours").GetDouble();
+            maxRulRel = Math.Max(maxRulRel, Math.Abs(rulPy - r.RulHours!.Value) / Math.Max(Math.Abs(rulPy), 1e-9));
+            Assert.Equal(o.GetProperty("health_stage").GetInt32(), r.Details!.HealthStage);
+            checkedN++;
+        }
+        _out.WriteLine($"[SYNTHETIC] V3 PARITY cases={checkedN}: max|engineered|={maxEng:E2} max|tft enc|={maxEnc:E2} max|prob|={maxProb:E2} max|HI|={maxHi:E2} max rel RUL={maxRulRel:E2}");
+        Assert.Equal(cases.Count, checkedN);
+        Assert.True(maxEng < 1e-6, $"engineered {maxEng}");
+                Assert.True(maxProb < 1e-4, $"probs {maxProb}");
+        Assert.True(maxHi < 1e-4, $"hi {maxHi}");
+        Assert.True(maxRulRel < 1e-3, $"rul rel {maxRulRel}");
+    }
+}
+
 public class V3EngineFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder b)

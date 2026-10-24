@@ -164,7 +164,7 @@ public sealed class OnnxInferenceEngine : IInferenceEngine, IDisposable
         {
             // contract v3 (engine.py "direct_v3"): the N-HiTS-slot graph outputs [rul_windows, z, stage]; no RulEstimator, no onset Stage().
             est = Math.Max(forecast[0], 0.0) * Math.Max(cad, 1e-9);
-            stage = (int)forecast[2];
+            stage = (int)Math.Round(forecast[2]);
             if (_post is not null) (est, stage) = _post.Apply(t, est, stage, forecast, Math.Max(cad, 1e-9));
         }
         else
@@ -226,7 +226,54 @@ public interface IRulPostProcessor
 public static class RulPostProcessors
 {
     /// <summary>Returns the processor for the block's "type", or null when unknown.</summary>
-    public static IRulPostProcessor? Create(System.Text.Json.JsonElement block) => null;
+    public static IRulPostProcessor? Create(System.Text.Json.JsonElement block)
+    {
+        var type = block.TryGetProperty("type", out var ty) ? ty.GetString() : null;
+        return type == "v3b_stage_median_rul_logema" ? V3bStageMedianRulLogEma.FromContract(block) : null;
+    }
+}
+
+/// <summary>Port of AI-engine engine.py HybridEngine._postprocess (contract postprocess type v3b_stage_median_rul_logema).
+/// All constants come from the contract block; state is per bearing in BearingTracker.PostState.</summary>
+public sealed class V3bStageMedianRulLogEma : IRulPostProcessor
+{
+    private sealed class State { public readonly Queue<int> Hist = new(); public int? S; public double? R; }
+
+    private readonly int _k; private readonly int? _maxStep;
+    private readonly double _alpha, _decrement, _scaleLe2, _scaleGe3;
+
+    private V3bStageMedianRulLogEma(int k, int? maxStep, double alpha, double dec, double le2, double ge3)
+    { _k = Math.Max(1, k); _maxStep = maxStep; _alpha = alpha; _decrement = dec; _scaleLe2 = le2; _scaleGe3 = ge3; }
+
+    public static V3bStageMedianRulLogEma FromContract(System.Text.Json.JsonElement b)
+    {
+        var st = b.GetProperty("stage"); var rf = b.GetProperty("rul_filter"); var sc = b.GetProperty("rul_scale");
+        int? step = st.TryGetProperty("max_step", out var ms) && ms.ValueKind == System.Text.Json.JsonValueKind.Number ? ms.GetInt32() : null;
+        return new V3bStageMedianRulLogEma(st.GetProperty("median_window").GetInt32(), step, rf.GetProperty("alpha").GetDouble(),
+            rf.TryGetProperty("decrement_windows", out var dw) ? dw.GetDouble() : 1.0,
+            sc.GetProperty("scale_if_stage_le_2").GetDouble(), sc.GetProperty("scale_if_stage_ge_3").GetDouble());
+    }
+
+    public (double RulHours, int Stage) Apply(BearingTracker t, double rulHours, int stage, double[] head, double cadenceHours)
+    {
+        var st = t.PostState as State ?? (State)(t.PostState = new State());
+        var rRaw = Math.Max(head[0], 0.0); var sRaw = (int)Math.Round(head[2]);
+        st.Hist.Enqueue(sRaw);
+        while (st.Hist.Count > _k) st.Hist.Dequeue();
+        var w = st.Hist.OrderBy(v => v).ToArray();
+        var m = w[(w.Length - 1) / 2];
+        var s = st.S is null || _maxStep is null ? m : st.S.Value + Math.Clamp(m - st.S.Value, -_maxStep.Value, _maxStep.Value);
+        st.S = s;
+        double r;
+        if (st.R is null || _alpha >= 1.0) r = rRaw;
+        else
+        {
+            var prior = Math.Max(st.R.Value - _decrement, 0.0);
+            r = Math.Exp(_alpha * Math.Log(1.0 + rRaw) + (1.0 - _alpha) * Math.Log(1.0 + prior)) - 1.0;
+        }
+        st.R = r;
+        return (r * (s <= 2 ? _scaleLe2 : _scaleGe3) * cadenceHours, s);
+    }
 }
 
 /// <summary>Port of aiengine/rul.py (trend_steps, estimate with method "loglin"/"trend"/"onset"/blend, stage_estimate).</summary>
