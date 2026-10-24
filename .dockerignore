@@ -14,3 +14,12 @@ artifacts/
 .claude/
 Project architecture/
 Component selection (pugh matrix)/
+AI-engine/lightning_logs/
+AI-engine/.venv/
+AI-test/artifacts/
+tests/**/bin/
+tests/**/obj/
+tools/**/bin/
+tools/**/obj/
+**/*.pyc
+.git

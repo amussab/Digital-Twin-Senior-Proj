@@ -1,11 +1,26 @@
-# One command:  docker compose up -d backend      -> http://localhost:5080/
-# AI engine:    docker compose --profile ai run --rm ai-engine            (selftest)
-# Notebook:     docker compose --profile notebook up notebook             -> http://localhost:8888/
+# UP2 prototype, fully in Docker (same idea as the PPR prototype, extended). Build context = repo root.
+#
+#   docker compose up -d backend                       default: v3b contract + UP2 synthetic replay -> http://localhost:5080/
+#   docker compose --profile coe up -d backend-coe coe-sim   COE-pipeline simulator -> UDP -> backend (3b-coe contract) -> http://localhost:5081/
+#   docker compose --profile ai run --rm ai-engine           selftest;  ... run --rm ai-engine python -m aiengine.up2_eval  (see below)
+#   docker compose --profile test run --rm test              pytest (coe, up2, up2c, coe_adapt, twin_up2)
+#   docker compose --profile test run --rm test-dotnet       dotnet test (backend + twin)
+#   docker compose --profile evidence run --rm evidence      executes UP2_Evidence.ipynb headless -> ./artifacts/evidence/UP2_Evidence.html
+#   docker compose --profile notebook up notebook            Jupyter lab -> http://localhost:8888/lab/tree/UP2_Evidence.ipynb
 #
 # C5 (LAN-only, no cloud): a plain "5080:5080" publishes on ALL host interfaces. To bind one
 # interface, put its address in front, e.g.  "192.168.1.50:5080:5080/tcp"  and  "192.168.1.50:5005:5005/udp".
-# The backend's PrivateNetworkGuard also returns 403 to non-private client addresses.
+# The backend's PrivateNetworkGuard also returns 403 to non-private client addresses (HTTP) and drops them (UDP).
 # Note: Docker Desktop NATs published ports, so the guard sees the Docker gateway address as the client.
+# Provenance: the UP2 streams are [SYNTHETIC] / [SIMULATION] (coach-approved substitute for rig data); the dashboard header says so.
+x-health: &backend-health
+  # the aspnet image has no curl/wget: use a bash /dev/tcp probe (CMD-SHELL would run dash)
+  test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/5080 && printf 'GET /api/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 && head -n1 <&3 | grep -q 200"]
+  interval: 10s
+  timeout: 5s
+  retries: 6
+  start_period: 15s
+
 services:
   backend:
     build:
@@ -14,21 +29,53 @@ services:
     image: dt-backend:integration
     ports:
       - "5080:5080/tcp"
-      - "5005:5005/udp"
+      - "5005:5005/udp"      # a real COE node (or the coe simulator on the host) sends 152-byte payloads here
     environment:
-      Backend__Replay__Enabled: "true"
-      Backend__Replay__Source: "${DT_SOURCE:-demo}"      # demo | twin-sim | synthetic
+      # UP2 default: v3b contract (v3b_cls + v3b_rul, synthetic-trained) fed by the up2 replay stream.
+      # PPR (historical): DT_CONTRACT=AI-engine/models/model_contract.json DT_SOURCE=demo
+      Backend__ModelContractPath: "${DT_CONTRACT:-AI-engine/models/model_contract_v3b.json}"
+      Backend__Replay__Enabled: "${DT_REPLAY:-true}"
+      Backend__Replay__Source: "${DT_SOURCE:-up2}"      # up2 | demo | twin-sim | synthetic
       Backend__Replay__RateHz: "${DT_RATE_HZ:-10}"
       Backend__Replay__Loop: "true"
-    healthcheck:
-      # the aspnet image has no curl/wget: use a bash /dev/tcp probe (CMD-SHELL would run dash)
-      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/5080 && printf 'GET /api/health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 && head -n1 <&3 | grep -q 200"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 15s
+      Backend__PhysicsTwin: "${DT_PHYSICS:-None}"       # None for up2/demo; set to the FE twin value with twin-sim
+      Backend__MachineId: "OH2-PUMP-01 [SYNTHETIC / SIMULATED SOURCE]"
+    healthcheck: *backend-health
     restart: unless-stopped
 
+  # ---- profile coe: COE pipeline simulator -> UDP -> backend with the COE-adapted contract ----
+  backend-coe:
+    profiles: ["coe"]
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    image: dt-backend:integration
+    ports:
+      - "5081:5080/tcp"
+      - "5006:5005/udp"
+    environment:
+      Backend__ModelContractPath: "AI-engine/models/model_contract_v3b_coe.json"   # v3b + COE-adapted classifier + cross_bearing_gate
+      Backend__Replay__Enabled: "false"                                            # data comes only from the sender
+      Backend__PhysicsTwin: "None"
+      Backend__MachineId: "OH2-PUMP-01 [SYNTHETIC / SIMULATED SOURCE: COE sim]"
+    healthcheck: *backend-health
+    restart: unless-stopped
+
+  coe-sim:
+    profiles: ["coe"]
+    build:
+      context: .
+      dockerfile: docker/ai-engine.Dockerfile
+    image: dt-ai-engine:integration
+    depends_on:
+      backend-coe:
+        condition: service_healthy
+    working_dir: /work/AI-engine
+    # healthy 40 windows, then an outer-race ramp (bearing 1); bearing 2 stays healthy. --hours-per-window = RUL time base of the heads.
+    command: ["python", "/work/scripts/coe_fault_scenario.py", "--udp", "backend-coe:5005", "--rate", "${DT_COE_RATE:-2}", "--hours-per-window", "0.1667"]
+    restart: "no"
+
+  # ---- profile ai ----
   ai-engine:
     profiles: ["ai"]
     build:
@@ -36,9 +83,25 @@ services:
       dockerfile: docker/ai-engine.Dockerfile
     image: dt-ai-engine:integration
     volumes:
-      - ./AI-engine/data:/work/AI-engine/data:ro     # raw/cached public datasets (git-ignored, not in the image)
+      - ./AI-engine/data:/work/AI-engine/data:ro     # raw/cached datasets (git-ignored, not in the image); absent -> cells say "missing"
+    # selftest; UP2 scoring:  docker compose --profile ai run --rm ai-engine python -m aiengine.up2_eval --help
     command: ["python", "app.py", "selftest"]
 
+  # ---- profile evidence: execute the UP2 notebook headless ----
+  evidence:
+    profiles: ["evidence"]
+    build:
+      context: .
+      dockerfile: docker/ai-engine.Dockerfile
+    image: dt-ai-engine:integration
+    volumes:
+      - ./AI-engine/data:/work/AI-engine/data:ro
+      - ./artifacts/evidence:/out                    # HTML + a copy of the regenerated evidence/ folder land here
+    working_dir: /work/AI-engine/notebooks
+    # Cells that need git-ignored data or the dotnet SDK report "missing" (not a crash); the committed evidence/ is never overwritten.
+    command: ["sh", "-c", "jupyter nbconvert --to html --execute UP2_Evidence.ipynb --ExecutePreprocessor.timeout=3600 --ExecutePreprocessor.kernel_name=python3 --output-dir /out && cp -r /work/evidence /out/evidence_regenerated"]
+
+  # ---- profile notebook ----
   notebook:
     profiles: ["notebook"]
     build:
@@ -50,4 +113,22 @@ services:
     volumes:
       - ./AI-engine/notebooks:/work/AI-engine/notebooks
       - ./AI-engine/data:/work/AI-engine/data:ro
-    command: ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--ServerApp.token=", "--ServerApp.password=", "--notebook-dir=/work/AI-engine/notebooks"]
+    command: ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--ServerApp.token=", "--ServerApp.password=", "--notebook-dir=/work/AI-engine/notebooks", "--LabApp.default_url=/lab/tree/UP2_Evidence.ipynb"]
+
+  # ---- profile test ----
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: docker/ai-engine.Dockerfile
+    image: dt-ai-engine:integration
+    volumes:
+      - ./AI-engine/data:/work/AI-engine/data:ro
+    command: ["python", "-m", "pytest", "tests/coe", "tests/up2", "tests/up2c", "tests/coe_adapt", "tests/twin_up2", "-q", "-p", "no:cacheprovider"]
+
+  test-dotnet:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: docker/dotnet-test.Dockerfile
+    image: dt-dotnet-test:integration
