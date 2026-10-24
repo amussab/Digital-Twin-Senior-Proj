@@ -189,6 +189,32 @@ def ensure(table: pd.DataFrame, force: bool = False) -> dict:
     return splits
 
 
+def register_holdout(table: pd.DataFrame, section: str, split: str, note: str = "") -> dict:
+    """Freeze a whole dataset as ONE split (e.g. a fresh test set of new runs: every unit -> 'test').
+
+    Created once; later calls only verify that the unit set is identical (never re-assigns). Used for UP2 v3b:
+    synth_v3_val2 (all 'val') and synth_v3_test2 (all 'test', registered before any model was fitted or scored)."""
+    splits = load()
+    units = sorted(table["unit_id"].unique())
+    clash = set(units) & set(unit_split_map({"sections": {k: v for k, v in splits["sections"].items() if k != section}}))
+    if clash:
+        raise RuntimeError(f"{len(clash)} unit id(s) of '{section}' already belong to another section")
+    sec = splits["sections"].get(section)
+    if sec:
+        if sorted(sec["units"]) != units or set(sec["units"].values()) != {split}:
+            raise RuntimeError(f"splits.json section '{section}' is frozen and differs from this table")
+        return splits
+    splits["sections"][section] = {
+        "policy": f"register_holdout (whole dataset -> {split})",
+        "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "counts": {split: len(units)},
+        "note": note,
+        "units": {u: split for u in units},
+    }
+    save(splits)
+    return splits
+
+
 def assign(table: pd.DataFrame, splits: dict | None = None) -> pd.Series:
     m = unit_split_map(splits or load())
     s = table["unit_id"].map(m)
