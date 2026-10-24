@@ -23,3 +23,11 @@ specs; >=14 of 18 items MET with evidence; hardware-ready source boundary; UP2 e
 - 2026-10-24: setup done.
 - 2026-10-24: datasets found at sibling checkout (see FACTS); ML agent told to use AIENGINE_DATA_DIR.
 - 2026-10-24: step 1 done. AI-engine/aiengine/coe/ (sources, pipeline, udp_sender, run, verify, README), tests/coe (24 pass), reports/coe_verification.{md,json}. Run: `python -m pytest tests/coe -q`, `python -m aiengine.coe.verify` (~25 min, 1-h C6 sim). COE1/COE3 MET (design, simulation); COE2 host max 9.0 ms, STM32 est. 28 ms pessimistic (calculated); C6 0.13% end-to-end (assumed loss rates). Built with system python (venv lacked numpy at the time).
+- 2026-10-24 (ml-engineer, steps 2-3, NOT ticked): [SYNTHETIC] synth_v3 generator at PAYLOAD level (not yet through the COE raw pipeline),
+  splits frozen (splits.json synth_v3: 155/35/50 runs + 480 train-only runs). Deployed v3 = GBM heads (xgb cls T=25, lgbm RUL+z NL=48)
+  in the TFT/N-HiTS ONNX slots: models/{v3_cls,v3_rul}.onnx + model_contract_v3.json + golden_vectors_v3.json (parity: prob diff 3.6e-7,
+  0 argmax/stage mismatches). TFT+N-HiTS on same runs: models/v3_nn_* + model_contract_v3_nn.json. Single test pass, report
+  reports/up2_spec_check_20261024T060741Z.md: GBM S7 15.53 % FAIL (val 13.40; %-of-life alt 6.18 pts), IS3a 0.961 PASS, IS3b max 2 FAIL
+  (99.88 % within +/-1, 18 windows on 2 bearings), IS3c 40/40 PASS, S8 p95 0.34 ms PASS; TFT+N-HiTS: S7 54.6 % FAIL, F1 0.928 PASS,
+  stage max 4 FAIL, 40/40 PASS, TFT p95 10.8 ms PASS. Re-score: `cd AI-engine; .venv/Scripts/python.exe -m aiengine.up2_eval`.
+  C# needs a small change for rul.method "direct_v3" (see ml-engineer report). Demo stream: models/up2_demo_payloads.bin.
