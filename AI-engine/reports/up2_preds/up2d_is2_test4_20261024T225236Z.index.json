@@ -1,0 +1,25 @@
+{
+ "meta": {
+  "provenance": "[SYNTHETIC] synth_v3",
+  "seed": 20261004,
+  "git_commit": "355831c",
+  "git_dirty": true,
+  "command": "python -m aiengine.up2_train predict --set test4",
+  "utc": "2026-10-24T22:53:44+00:00",
+  "tool": "aiengine.up2d_is2 predict",
+  "set": "test4",
+  "tag": "20261024T225236Z",
+  "frozen": {
+   "T_MED": 0.18,
+   "T_P95": 0.63,
+   "source": "reports/up2d_is2_select_20261024T225211Z.json"
+  },
+  "table_hash": "8fa18243ff54183b",
+  "touch": "FIRST and only scoring pass"
+ },
+ "files": {
+  "cls": "up2d_is2_test4_cls_20261024T225236Z.csv.gz",
+  "v3b": "up2d_is2_test4_v3b_20261024T225236Z.csv.gz",
+  "v3c": "up2d_is2_test4_v3c_20261024T225236Z.csv.gz"
+ }
+}
