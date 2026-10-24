@@ -105,7 +105,30 @@ class HybridEngine:
             return {"error": "invalid window (shape/non-finite)"}
         t_h = self._hours(int(t20_ms))
         out = [self.step(k, f[(k - 1) * 16:k * 16], float(rpm), t_h) for k in (1, 2)]
+        if self.c.get("cross_bearing_gate"):
+            self._gate(out)
         return {"rpm": float(rpm), "t20_ms": int(t20_ms), "bearings": out}
+
+    def _gate(self, out: list[dict]) -> None:
+        """contract 3b-coe `cross_bearing_gate`: a bearing predicted faulty whose excess defect-family ratio is below
+        tau x its partner's (same family, same window) only sees the partner's transmitted vibration -> healthy.
+        Decided from the PRE-gate classes of both bearings (reference: aiengine/coe_adapt.py::gate)."""
+        g = self.c["cross_bearing_gate"]
+        tau, fam = float(g["tau"]), g["family_of_class"]
+        pre = [o.get("fault_class") if o.get("status") == "ok" else None for o in out]
+        for i, o in enumerate(out):
+            if pre[i] is None:
+                continue
+            o["transmitted_from_partner"] = False
+            j = 1 - i
+            if pre[i] == "healthy" or pre[j] is None:
+                continue
+            col = self.eidx[fam[pre[i]]]
+            xk = float(np.expm1(self.b[i + 1].eng[-1][col]))
+            xp = float(np.expm1(self.b[j + 1].eng[-1][col]))
+            if xp > 0 and xk < tau * xp:
+                o["fault_class"] = "healthy"
+                o["transmitted_from_partner"] = True
 
     # ------------------------------------------------------------------ per bearing
     def step(self, k: int, raw16: np.ndarray, rpm: float, t_h: float) -> dict:

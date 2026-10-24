@@ -32,6 +32,21 @@ python -m aiengine.coe.verify [--quick]                         # writes reports
 * Features are plain sums / one rFFT / band sums: portable to C#. They differ slightly from `aiengine.dsp` (which uses zero-phase
   `sosfiltfilt` offline); this module is causal, as the STM32 is. Units: bp_rms in m/s2.
 
+## COE time base (RUL hours) and the COE-adapted contract
+
+* The backend converts the RUL head's output (remaining life in WINDOWS) to hours with the median spacing of the last
+  48 `t20_ms` stamps. The RUL/stage heads were trained on one window per 10-minute snapshot (synth_v3 cadence 0.1667 h).
+  Simulator (and a free-running node) windows are contiguous, ~0.69 s apart at 1750 rpm, so RUL "hours" from such a
+  stream are seconds-scale and **meaningless**, and the 48-window trend the head reads spans ~33 s instead of 8 h.
+  For demos use `--hours-per-window 0.1667` (re-stamps `t20_ms`; features unchanged). On hardware the recommended
+  setting is the same cadence: the node (or the backend ingest) forwards ONE 20-rev window per 10-minute snapshot to the
+  RUL/stage path; the classifier may still run on every window. Severity in the simulator is constant or a short ramp,
+  never run-to-failure, so RUL from `coe.run` is never a validated number.
+* The deployed v3b classifier was trained on payload-level synth_v3 features, not on this pipeline's output; with the
+  simulator's partner-bearing transmission it flags the healthy bearing too. Use `models/model_contract_v3b_coe.json`
+  for COE-pipeline sources (classifier adapted on COE-pipeline windows; study and C# notes:
+  `python -m aiengine.coe_adapt_eval`, `reports/coe_adapt_*.md`). [SIMULATION] only, not validated on hardware.
+
 ## Assumptions (COE doc ambiguous or silent) — confirm with COE
 
 1. Envelope low-pass: 4th-order Butterworth at 2 kHz (= 5 kS/s / 2.5, same as `aiengine.dsp`); band-pass 4th-order Butterworth (8 poles).
