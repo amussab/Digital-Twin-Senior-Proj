@@ -108,7 +108,7 @@ def split_check(df: pd.DataFrame) -> dict:
 # --------------------------------------------------------------------------- tabular features
 
 def unit_features(df: pd.DataFrame, T: int, with_decoder: bool, columns: list[str] = COLUMNS,
-                  warm: int | None = None) -> tuple[np.ndarray, pd.DataFrame]:
+                  warm: int | None = None, levels: bool = False) -> tuple[np.ndarray, pd.DataFrame]:
     """Aggregator features for every window with >= `warm` engineered rows of history.
     warm defaults to T (classifier slot: T-1 encoder rows + current). Returns X and the index frame."""
     warm = T if warm is None else warm
@@ -119,10 +119,9 @@ def unit_features(df: pd.DataFrame, T: int, with_decoder: bool, columns: list[st
         keep = np.arange(len(g)) >= warm - 1
         if not keep.any():
             continue
-        Xs.append(b[keep])
+        Xs.append(uw.compute(b[keep], with_decoder, levels=levels))     # per unit: bounded memory for long T
         idx.append(g.loc[keep, ["unit_id", "window_index"]])
-    blocks_ = np.concatenate(Xs) if Xs else np.zeros((0, T, len(columns)), np.float32)
-    X = uw.compute(blocks_, with_decoder)
+    X = np.concatenate(Xs) if Xs else np.zeros((0, uw.n_features(len(columns), levels)), np.float32)
     return X, pd.concat(idx, ignore_index=True)
 
 
@@ -198,7 +197,8 @@ def unit_balanced_weights(units: pd.Series) -> np.ndarray:
     return w / w.mean()
 
 
-def stage_from_z(z: np.ndarray) -> np.ndarray:
+def stage_from_z(z: np.ndarray, z_cut: float = 0.0) -> np.ndarray:
+    """1 if z < z_cut (before onset) else min(6, 2 + floor(5 clip(z, 0, 1))). z_cut <= 0 is chosen on validation."""
     z = np.asarray(z, float)
     st = np.minimum(2 + np.floor(np.clip(z, 0, 1) * 5), 6)
-    return np.where(z < 0, 1, st).astype(int)
+    return np.where(z < z_cut, 1, st).astype(int)

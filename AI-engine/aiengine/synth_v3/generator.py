@@ -53,16 +53,23 @@ EXTRA_COLUMNS = ["true_onset_index", "u_true", "damage", "true_stage", "run_id",
 
 @dataclass
 class Knobs:
-    """Generator difficulty knobs (all reported in every output's provenance)."""
+    """Generator difficulty knobs (all reported in every output's provenance).
+
+    2026-10-24 (ml-engineer), decided on VALIDATION runs before any test score existed: with the wider
+    first-draft ranges (shape_a 0.25-0.35, shape_p 2.0-3.0, eol_sev 0.75-1.25) the best validation RUL MAPE
+    was ~17-18 %, because the end-of-life level and curve shape were nearly unobservable nuisances. They were
+    narrowed so that the per-run degradation RATE is observable from the trend ("realistic-but-learnable");
+    the first-draft ranges are kept as the `synth_v3_hard` robustness set so the sensitivity is reported.
+    """
     noise_scale: float = 1.0          # multiplies every lognormal noise sigma
     life_ref_h: float = 50.0          # median degradation duration at 1750 rpm (hours)
     life_sigma: float = 0.35          # lognormal sigma of the per-run degradation-rate factor
     life_clip_windows: tuple = (80, 720)
     healthy_windows: tuple = (60, 200)  # pre-onset run-in per fault run
     healthy_run_windows: tuple = (250, 700)
-    shape_a: tuple = (0.25, 0.35)     # linear share of the damage curve
-    shape_p: tuple = (2.0, 3.0)       # power of the accelerating part
-    eol_sev: tuple = (0.75, 1.25)     # end-of-life severity factor (failure is not one fixed HI)
+    shape_a: tuple = (0.28, 0.32)     # linear share of the damage curve (narrowed 2026-10-24, see note)
+    shape_p: tuple = (2.3, 2.7)       # power of the accelerating part (narrowed 2026-10-24)
+    eol_sev: tuple = (0.85, 1.15)     # end-of-life severity factor (failure is not one fixed HI)
     transmission: tuple = (0.04, 0.10)  # fraction of the faulted bearing's growth seen by the partner
     leak: float = 0.12                # generic leakage of the fault family into the other families
     signature: float = 1.0            # multiplies every fault-family gain (lower = harder)

@@ -43,14 +43,18 @@ class _Bearing:
 
 class HybridEngine:
     def __init__(self, model_dir: Path = MODELS_DIR, threads: int = 1,
-                 baselines: dict[int, np.ndarray] | None = None):
+                 baselines: dict[int, np.ndarray] | None = None, contract_file: str = "model_contract.json"):
         import onnxruntime as ort
         self.dir = Path(model_dir)
-        self.c = json.loads((self.dir / "model_contract.json").read_text())
+        self.c = json.loads((self.dir / contract_file).read_text())
         opts = ort.SessionOptions()
         opts.intra_op_num_threads = threads
-        self.tft = ort.InferenceSession(str(self.dir / "tft.onnx"), opts, providers=["CPUExecutionProvider"])
-        self.nh = ort.InferenceSession(str(self.dir / "nhits.onnx"), opts, providers=["CPUExecutionProvider"])
+        mods = self.c["models"]
+        self.tft = ort.InferenceSession(str(self.dir / mods["tft"].get("onnx", "tft.onnx")), opts,
+                                        providers=["CPUExecutionProvider"])
+        self.nh = ort.InferenceSession(str(self.dir / mods["nhits"].get("onnx", "nhits.onnx")), opts,
+                                       providers=["CPUExecutionProvider"])
+        self.nh_out = self.nh.get_outputs()[0].name
         self.tft_in = {i.name for i in self.tft.get_inputs()}
         self.nh_in = {i.name for i in self.nh.get_inputs()}
         mt, mn = self.c["models"]["tft"], self.c["models"]["nhits"]
@@ -153,7 +157,7 @@ class HybridEngine:
         nenc = infer.scale(rows, self.ncols, self.nsc)[None]
         ndec = np.repeat(nenc[:, -1:, :], self.NH, axis=1)
         nfeed = {k2: v for k2, v in {"encoder_cont": nenc, "decoder_cont": ndec}.items() if k2 in self.nh_in}
-        forecast = self.nh.run(["hi_forecast"], nfeed)[0].reshape(-1).astype(np.float64)
+        forecast = self.nh.run([self.nh_out], nfeed)[0].reshape(-1).astype(np.float64)
         t_nh = (time.perf_counter() - t2) * 1000
 
         # RUL + stage
@@ -165,8 +169,13 @@ class HybridEngine:
         ts = np.asarray(b.t)
         cad = float(np.median(np.diff(ts))) if len(ts) > 1 else 0.0
         tau = (t_h - b.onset_t) if b.onset_t is not None else None
-        est = rul.estimate(self.calib, np.asarray(b.hi), forecast, thr_cls, tau, b.onset_hi, max(cad, 1e-9))
-        stage = rul.stage_estimate(tau, est["rul_hours"])
+        if self.calib.method == "direct_v3":
+            # contract v3: the N-HiTS-slot graph outputs [rul_windows, z, stage] directly
+            est = {"rul_hours": float(max(forecast[0], 0.0) * max(cad, 1e-9))}
+            stage = int(forecast[2])
+        else:
+            est = rul.estimate(self.calib, np.asarray(b.hi), forecast, thr_cls, tau, b.onset_hi, max(cad, 1e-9))
+            stage = rul.stage_estimate(tau, est["rul_hours"])
         t_rul = (time.perf_counter() - t3) * 1000
 
         top = sorted(zip(self.tcols, vw[0].tolist()), key=lambda kv: -kv[1])[:5]
@@ -222,6 +231,20 @@ class HybridEngine:
         return {"p50_ms": float(np.percentile(a, 50)), "p95_ms": float(np.percentile(a, 95)),
                 "max_ms": float(a.max()), "mean_ms": float(a.mean()), "n": int(len(a)),
                 "note": "per bearing-window, features+TFT+N-HiTS+RUL via ONNX Runtime"}
+
+    def golden_cases_at(self, unit, window_indices: list[int]) -> list[dict]:
+        """Engine outputs (+ the model input tensors) at chosen window indices of one unit fed from window 0."""
+        from .config import BEARING_FEATURES
+        self.reset()
+        want, cases = set(window_indices), []
+        for r in unit.sort_values("window_index").itertuples(index=False):
+            f16 = np.array([getattr(r, c) for c in BEARING_FEATURES], np.float64)
+            t_ms = int(round(float(r.t_hours) * 3.6e6)) % (2 ** 32)
+            out = self.process(float(r.rpm), np.concatenate([f16, f16]), t_ms)["bearings"][0]
+            if int(r.window_index) in want and out.get("status") == "ok":
+                cases.append({"window_index": int(r.window_index), "engineered": self.b[1].eng[-1].tolist(),
+                              "output": {k: v for k, v in out.items() if k != "latency_ms"}})
+        return cases
 
     def golden_vectors(self, unit, n: int = 12) -> dict:
         """Input->output vectors for C# parity tests: the first `n` 'ok' windows after warm-up,

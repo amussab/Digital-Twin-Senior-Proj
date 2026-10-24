@@ -1,0 +1,328 @@
+{
+ "meta": {
+  "provenance": "[SYNTHETIC] synth_v3",
+  "seed": 20261004,
+  "git_commit": "04c4511",
+  "git_dirty": true,
+  "command": "python -m aiengine.up2_train select-gbm --threads 20 --reuse-cls",
+  "utc": "2026-10-24T01:58:38+00:00",
+  "selection": "validation runs only",
+  "counts": {
+   "runs_in_multiple_splits": 0,
+   "units_in_multiple_splits": 0,
+   "runs_per_split": {
+    "test": 50,
+    "train": 155,
+    "val": 35
+   },
+   "faulted_runs_per_split_class": {
+    "test": {
+     "ball": 10,
+     "cage": 10,
+     "inner_race": 10,
+     "outer_race": 10
+    },
+    "train": {
+     "ball": 31,
+     "cage": 31,
+     "inner_race": 31,
+     "outer_race": 31
+    },
+    "val": {
+     "ball": 7,
+     "cage": 7,
+     "inner_race": 7,
+     "outer_race": 7
+    }
+   },
+   "windows_per_split": {
+    "train": 117876,
+    "test": 42292,
+    "val": 29646
+   }
+  }
+ },
+ "grid": {
+  "cls": [
+   {
+    "kind": "xgb",
+    "T": 13,
+    "best_iteration": 93,
+    "fit_seconds": 81.8,
+    "class_weight_power": 0.5,
+    "val_macro_f1": 0.9538559387984622,
+    "val_per_class_f1": {
+     "healthy": 0.9826129460233224,
+     "outer_race": 0.9414301113905857,
+     "inner_race": 0.9663716814159292,
+     "ball": 0.9435831180017227,
+     "cage": 0.9352818371607515
+    }
+   },
+   {
+    "kind": "xgb",
+    "T": 25,
+    "best_iteration": 83,
+    "fit_seconds": 64.8,
+    "class_weight_power": 0.5,
+    "val_macro_f1": 0.9590389640464704,
+    "val_per_class_f1": {
+     "healthy": 0.9837714949089414,
+     "outer_race": 0.9438282647584973,
+     "inner_race": 0.9680473372781065,
+     "ball": 0.958616159404423,
+     "cage": 0.9409315638823835
+    }
+   },
+   {
+    "kind": "lgbm",
+    "T": 13,
+    "best_iteration": 76,
+    "fit_seconds": 40.4,
+    "class_weight_power": 0.5,
+    "val_macro_f1": 0.9547098468261156,
+    "val_per_class_f1": {
+     "healthy": 0.9833147425171965,
+     "outer_race": 0.9429084380610413,
+     "inner_race": 0.9610849056603774,
+     "ball": 0.94921875,
+     "cage": 0.9370223978919631
+    }
+   },
+   {
+    "kind": "lgbm",
+    "T": 25,
+    "best_iteration": 72,
+    "fit_seconds": 36.4,
+    "class_weight_power": 0.5,
+    "val_macro_f1": 0.9611333241864362,
+    "val_per_class_f1": {
+     "healthy": 0.9849399044263165,
+     "outer_race": 0.9445041174364482,
+     "inner_race": 0.965150620200827,
+     "ball": 0.9619194364957077,
+     "cage": 0.9491525423728814
+    }
+   }
+  ],
+  "rul": [
+   {
+    "kind": "xgb",
+    "NL": 24,
+    "levels": false,
+    "rul": {
+     "kind": "xgb",
+     "best_iteration": 278,
+     "fit_seconds": 17.3
+    },
+    "z": {
+     "kind": "xgb",
+     "best_iteration": 180,
+     "fit_seconds": 28.8
+    },
+    "val_S7_mape_pct": 20.868644710796815,
+    "val_percent_of_life_pts": 9.429049243383488,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9997148017872421,
+    "val_stage_mae": 0.17235478657667078
+   },
+   {
+    "kind": "xgb",
+    "NL": 48,
+    "levels": false,
+    "rul": {
+     "kind": "xgb",
+     "best_iteration": 168,
+     "fit_seconds": 12.7
+    },
+    "z": {
+     "kind": "xgb",
+     "best_iteration": 120,
+     "fit_seconds": 20.6
+    },
+    "val_S7_mape_pct": 18.55933829964093,
+    "val_percent_of_life_pts": 8.694419232687787,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9995246696454035,
+    "val_stage_mae": 0.1816712615267611
+   },
+   {
+    "kind": "lgbm",
+    "NL": 24,
+    "levels": false,
+    "rul": {
+     "kind": "lgbm",
+     "best_iteration": 320,
+     "fit_seconds": 16.5
+    },
+    "z": {
+     "kind": "lgbm",
+     "best_iteration": 551,
+     "fit_seconds": 33.8
+    },
+    "val_S7_mape_pct": 20.76256511320971,
+    "val_percent_of_life_pts": 9.533101180614526,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9994296035744843,
+    "val_stage_mae": 0.16940773837817283
+   },
+   {
+    "kind": "lgbm",
+    "NL": 48,
+    "levels": false,
+    "rul": {
+     "kind": "lgbm",
+     "best_iteration": 300,
+     "fit_seconds": 15.5
+    },
+    "z": {
+     "kind": "lgbm",
+     "best_iteration": 239,
+     "fit_seconds": 18.7
+    },
+    "val_S7_mape_pct": 18.595362469206403,
+    "val_percent_of_life_pts": 8.774190327744465,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9992394714326457,
+    "val_stage_mae": 0.1774883544063124
+   },
+   {
+    "kind": "xgb",
+    "NL": 48,
+    "levels": true,
+    "rul": {
+     "kind": "xgb",
+     "best_iteration": 207,
+     "fit_seconds": 12.8
+    },
+    "z": {
+     "kind": "xgb",
+     "best_iteration": 122,
+     "fit_seconds": 20.5
+    },
+    "val_S7_mape_pct": 18.556560126052613,
+    "val_percent_of_life_pts": 8.689027276583603,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9991444053617264,
+    "val_stage_mae": 0.1809107329594068
+   },
+   {
+    "kind": "xgb",
+    "NL": 96,
+    "levels": true,
+    "rul": {
+     "kind": "xgb",
+     "best_iteration": 179,
+     "fit_seconds": 11.6
+    },
+    "z": {
+     "kind": "xgb",
+     "best_iteration": 123,
+     "fit_seconds": 19.9
+    },
+    "val_S7_mape_pct": 19.92739747041557,
+    "val_percent_of_life_pts": 8.991696759367127,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9865956840003802,
+    "val_stage_mae": 0.2193174256107995
+   },
+   {
+    "kind": "xgb",
+    "NL": 144,
+    "levels": true,
+    "rul": {
+     "kind": "xgb",
+     "best_iteration": 179,
+     "fit_seconds": 11.2
+    },
+    "z": {
+     "kind": "xgb",
+     "best_iteration": 139,
+     "fit_seconds": 19.9
+    },
+    "val_S7_mape_pct": 21.149395128471046,
+    "val_percent_of_life_pts": 9.603447162290278,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9825078429508508,
+    "val_stage_mae": 0.25211522007795417
+   },
+   {
+    "kind": "lgbm",
+    "NL": 48,
+    "levels": true,
+    "rul": {
+     "kind": "lgbm",
+     "best_iteration": 300,
+     "fit_seconds": 19.1
+    },
+    "z": {
+     "kind": "lgbm",
+     "best_iteration": 337,
+     "fit_seconds": 28.2
+    },
+    "val_S7_mape_pct": 18.662843311498296,
+    "val_percent_of_life_pts": 8.832508753378685,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9991444053617264,
+    "val_stage_mae": 0.17596729727160376
+   },
+   {
+    "kind": "lgbm",
+    "NL": 96,
+    "levels": true,
+    "rul": {
+     "kind": "lgbm",
+     "best_iteration": 387,
+     "fit_seconds": 23.6
+    },
+    "z": {
+     "kind": "lgbm",
+     "best_iteration": 250,
+     "fit_seconds": 23.2
+    },
+    "val_S7_mape_pct": 20.00412107548822,
+    "val_percent_of_life_pts": 8.828390891250129,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9905884589789904,
+    "val_stage_mae": 0.2169407738378173
+   },
+   {
+    "kind": "lgbm",
+    "NL": 144,
+    "levels": true,
+    "rul": {
+     "kind": "lgbm",
+     "best_iteration": 324,
+     "fit_seconds": 20.7
+    },
+    "z": {
+     "kind": "lgbm",
+     "best_iteration": 269,
+     "fit_seconds": 24.3
+    },
+    "val_S7_mape_pct": 21.678303622266203,
+    "val_percent_of_life_pts": 9.724425267923294,
+    "val_stage_max": 2,
+    "val_stage_within1": 0.9848844947238331,
+    "val_stage_mae": 0.2508793611560034
+   }
+  ]
+ },
+ "selected": {
+  "cls": {
+   "kind": "lgbm",
+   "T": 25
+  },
+  "rul": {
+   "kind": "xgb",
+   "NL": 48,
+   "levels": true
+  },
+  "z": {
+   "kind": "xgb",
+   "NL": 48,
+   "levels": true,
+   "note": "refit at the RUL head's window (one ONNX slot)"
+  }
+ }
+}
