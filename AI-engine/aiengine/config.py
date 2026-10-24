@@ -11,7 +11,12 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]           # AI-engine/
-DATA_DIR = ROOT / "data"
+import os as _os
+
+# AIENGINE_DATA_DIR points at a (read-only) copy of the public-dataset raw files + caches, e.g. the
+# main checkout's AI-engine/data. UP2 synthetic outputs never go there: see UP2_CACHE_DIR.
+DATA_DIR = Path(_os.environ["AIENGINE_DATA_DIR"]) if _os.environ.get("AIENGINE_DATA_DIR") else ROOT / "data"
+UP2_CACHE_DIR = ROOT / "data" / "cache_up2"     # always local to this checkout (gitignored data/)
 RAW_DIR = DATA_DIR / "raw"
 CACHE_DIR = DATA_DIR / "cache"
 MODELS_DIR = ROOT / "models"

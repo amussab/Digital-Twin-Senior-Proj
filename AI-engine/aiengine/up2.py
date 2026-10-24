@@ -28,7 +28,8 @@ import pandas as pd
 from . import features as feat
 from . import labels, splits
 from . import up2_window as uw
-from .config import CACHE_DIR, CHECKPOINT_DIR, SEED
+from .config import CHECKPOINT_DIR, SEED
+from .config import UP2_CACHE_DIR as CACHE_DIR
 from .synth_v3 import generator as gen
 
 CLASS_ORDER = ["ball", "cage", "healthy", "inner_race", "outer_race"]   # alphabetical = channel order

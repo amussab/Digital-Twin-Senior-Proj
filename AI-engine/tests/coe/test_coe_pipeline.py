@@ -193,3 +193,17 @@ def test_file_replay_matches_live(tmp_path):
 def test_hardware_stub_is_explicit():
     with pytest.raises(NotImplementedError):
         next(HardwareSource().blocks())
+
+
+def test_udp_sender_delivers_one_152_byte_datagram_per_window():
+    import socket
+    from aiengine.coe.udp_sender import UdpSender, stream
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx.bind(("127.0.0.1", 0))
+    rx.settimeout(2.0)
+    tx = UdpSender("127.0.0.1", rx.getsockname()[1])
+    n = stream(CoePipeline(sim("outer_race", 0.5)).windows(), tx, rate_hz=0.0, max_windows=2)
+    got = [rx.recvfrom(4096)[0] for _ in range(n)]
+    assert n == 2 and all(len(g) == 152 for g in got)
+    assert payload.decode(got[0]).rpm == pytest.approx(1750, rel=0.01)
+    tx.close(); rx.close()
