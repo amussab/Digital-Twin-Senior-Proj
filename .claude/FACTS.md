@@ -87,3 +87,4 @@ through and note what replaced it.
 - Plan: COE pipeline in code (simulated source, hardware-ready), synthetic run-to-failure data +
   XGBoost/AutoGluon/N-HiTS/TFT, physics-AI residual on synthetic, backend wired, UP2 evidence file.
 - UP2: in-class with coach only, 25/26 Oct 2026. Resume ledger: `.claude/UP2_STATE.md`.
+- Public datasets are on disk (read-only): AIENGINE_DATA_DIR=C:\Users\lenovo\Documents\KFUPM\Term261\ICS414\Repo\Digital-Twin-Senior-Proj\AI-engine\data (raw/xjtu_sy, raw/ims, raw/mafaulda, cache/*.parquet). Corrects the earlier "data not on disk" note (2026-10-24).

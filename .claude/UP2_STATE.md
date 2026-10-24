@@ -21,3 +21,4 @@ specs; >=14 of 18 items MET with evidence; hardware-ready source boundary; UP2 e
 
 ## Log (append, newest last)
 - 2026-10-24: setup done.
+- 2026-10-24: datasets found at sibling checkout (see FACTS); ML agent told to use AIENGINE_DATA_DIR.
