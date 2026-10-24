@@ -483,6 +483,7 @@ def build_rul_onnx(rul_models: list, transform: str, z_model, NL_: int, R: int, 
 
 def postprocess_contract(pp: dict) -> dict:
     return {
+        "type": "v3b_stage_median_rul_logema",      # dispatch key for C# RulPostProcessors.Create
         "version": 1,
         "applies_to": "contract v3b direct_v3 heads; per bearing, causal, one update per 'ok' window (after warm-up)",
         "required": True,
@@ -490,7 +491,7 @@ def postprocess_contract(pp: dict) -> dict:
         "order": ["stage", "rul_filter", "rul_scale"],
         "stage": {"type": "median_then_rate_limit", "median_window": int(pp["stage_k"]),
                   "max_step": None if pp["stage_max_step"] is None else int(pp["stage_max_step"]),
-                  "input": "s_raw = round(rul_head[2])",
+                  "input": "s_raw = round(rul_head[2]) (rul_head[2] is an exact integer-valued float)",
                   "procedure": "push s_raw into a FIFO of the last median_window raw stages; m = sorted(fifo)[(len(fifo)-1)//2] "
                                "(lower median while the FIFO is not full); if first output: s = m; else if max_step is null: s = m; "
                                "else s = s_prev + clamp(m - s_prev, -max_step, +max_step); s_prev = s; health_stage = s"},
