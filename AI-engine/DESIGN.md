@@ -206,3 +206,11 @@ parity tests.
   validation could not see: IMS B4 ball → inner_race (IMS B3 inner race is the only IMS-domain fault in
   training). Next lever (needs a fresh, untouched test set to claim anything): domain-balanced training
   or per-dataset baseline normalisation of the order-band shares.
+- 2026-10-24 (ml-engineer, UP2 contract v3, [SYNTHETIC]): `aiengine/synth_v3` generator (2 bearings x biaxial, payload
+  level; magnitudes calibrated to XJTU-SY end-of-life envelope ratio; knobs narrowed on VALIDATION, first-draft ranges kept
+  as the `synth_v3_hard` robustness set). Splits by run frozen in `splits.json` section `synth_v3` (155/35/50 runs) +
+  480 training-only runs (`synth_v3_train2`). Deployed v3 heads = gradient-boosted trees behind an in-graph window
+  aggregator (`up2_window.py`), exported into the existing TFT/N-HiTS ONNX slots (`models/model_contract_v3.json`,
+  `rul.method = direct_v3`); TFT + N-HiTS retrained on the same runs (`models/model_contract_v3_nn.json`). S7 uses the
+  section 7 pre-registered window (detected onset); the true-onset variant is reported alongside. Single test pass
+  20261024T025531Z (GBM) / NN index in `reports/up2_preds/`. Re-score: `python -m aiengine.up2_eval`.
