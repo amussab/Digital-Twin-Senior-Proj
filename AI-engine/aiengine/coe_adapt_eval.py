@@ -412,7 +412,14 @@ def markdown(o: dict) -> str:
           "data exists. Re-fit the calibration / gate threshold on commissioning + seeded-fault data from the rig.",
           "- A per-bearing classifier cannot separate 'small own defect' from 'partner defect transmitted' from its own "
           "16 features; the gate uses the partner bearing of the same window for that.",
-          "- RUL/stage heads were not re-fitted: COE simulator runs are not run-to-failure (no truth for RUL)."]
+          "- RUL/stage heads were not re-fitted: COE simulator runs are not run-to-failure (no truth for RUL). The "
+          "diagnostic above shows the unchanged v3b stage head is NOT usable on COE-pipeline features: healthy COE "
+          "bearings get raw z around -0.1 (synth_v3 healthy target -0.2, stage cut -0.25), i.e. stage >= 2 on every "
+          "healthy window. Fix = COE run-to-failure trajectories (simulator severity driven by the synth_v3 damage "
+          "curve) and a COE-refitted z/RUL head, or a z_cut recalibrated on commissioning data; not done here.",
+          "- Missed faults rise with the gate (22.8 % on test): mostly the lowest severities (ramp starts, severity "
+          "<= 0.2), where the defect is weaker than the threshold and, in both-faulted runs, the weaker of two "
+          "same-family defects is suppressed by design."]
     return "\n".join(L) + "\n"
 
 

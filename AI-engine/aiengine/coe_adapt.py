@@ -226,8 +226,10 @@ def coe_metrics(pred: pd.DataFrame, truth: pd.DataFrame) -> dict:
         per_b[str(b)] = {r: {c: int(v) for c, v in row.items()} for r, row in tab.to_dict(orient="index").items()}
     out["per_bearing_roles"] = per_b
     out["macro_f1_by_rpm"] = {str(k): float(M.classification(g)["macro_f1"]) for k, g in p.groupby("rpm_nominal")}
-    out["recall_by_severity"] = {f"{k:g}": float((g["pred_class"] == g["observable_class"]).mean())
-                                 for k, g in p[p["observable_class"] != "healthy"].groupby("severity")}
+    fq = p[p["observable_class"] != "healthy"]
+    sb = pd.cut(fq["severity"], [0, 0.1, 0.2, 0.4, 0.6, 0.85, 1.0], include_lowest=True)
+    out["recall_by_severity"] = {str(k): float((g["pred_class"] == g["observable_class"]).mean())
+                                 for k, g in fq.groupby(sb, observed=True)}
     out["n_windows"] = int(len(p))
     return out
 

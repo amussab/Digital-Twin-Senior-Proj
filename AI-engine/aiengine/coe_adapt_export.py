@@ -13,12 +13,11 @@ from __future__ import annotations
 
 import json
 import pickle
-import shutil
 from datetime import datetime, timezone
 
 import numpy as np
 import onnx
-from onnx import TensorProto, helper, numpy_helper
+from onnx import helper, numpy_helper
 
 from . import coe_adapt as A
 from . import up2
@@ -130,7 +129,7 @@ def run() -> dict:
     onnx.save(model, str(MODELS_DIR / NEW_CLS))
     coe = load_coe()
     va = coe[coe["split"] == "val"]                       # parity only (no scoring): val runs
-    B, _ = A.blocks_for(va.groupby("unit_id").filter(lambda g: True))
+    B, _ = A.blocks_for(va)
     par = parity(MODELS_DIR / NEW_CLS, sel, B)
     con = json.loads((MODELS_DIR / BASE_CONTRACT).read_text())
     from .train import git_commit

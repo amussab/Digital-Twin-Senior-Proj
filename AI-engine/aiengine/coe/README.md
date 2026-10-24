@@ -46,6 +46,8 @@ python -m aiengine.coe.verify [--quick]                         # writes reports
   simulator's partner-bearing transmission it flags the healthy bearing too. Use `models/model_contract_v3b_coe.json`
   for COE-pipeline sources (classifier adapted on COE-pipeline windows; study and C# notes:
   `python -m aiengine.coe_adapt_eval`, `reports/coe_adapt_*.md`). [SIMULATION] only, not validated on hardware.
+  It needs one host-side step, the contract's `cross_bearing_gate` (both bearings of a window). The v3b stage/RUL head
+  is unchanged and is NOT usable on COE features yet (healthy bearings show stage >= 2); see the report caveats.
 
 ## Assumptions (COE doc ambiguous or silent) — confirm with COE
 
