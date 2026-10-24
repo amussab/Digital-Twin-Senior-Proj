@@ -10,12 +10,12 @@ specs; >=14 of 18 items MET with evidence; hardware-ready source boundary; UP2 e
 ## Steps
 - [x] 0. Worktree/branch `feature/up2-prototype` created; main docs pulled; rules/FACTS written
 - [x] 1. COE pipeline in code: `AI-engine/aiengine/coe/` (raw 4ch@30kS/s -> BPF -> envelope -> FFT -> 152B payload), SampleSource abstraction, tests, COE1/COE2/COE3/C6 measurements
-- [ ] 2. Synthetic run-to-failure + fault data generator through the COE pipeline (provenance-tagged)
-- [ ] 3. Models: reach ICS1 (MAPE<=15), ICS3/I3 (macro-F1>=85, stage err<=1, caught by stage 3) with XGBoost/AutoGluon/N-HiTS/TFT; ONNX export + golden parity
-- [ ] 4. Physics twin <-> AI residual (I2 <=5%, stage 1->3) on synthetic
+- [x] 2. Synthetic run-to-failure + fault data generator through the COE pipeline (provenance-tagged)
+- [x] 3. Models: reach ICS1 (MAPE<=15), ICS3/I3 (macro-F1>=85, stage err<=1, caught by stage 3) with XGBoost/AutoGluon/N-HiTS/TFT; ONNX export + golden parity
+- [ ] 4. Physics twin <-> AI residual (I2 <=5%, stage 1->3) on synthetic  [IS2 NOT MET: v3c attempt failed 245%; needs coach wording change, see evidence 7b]
 - [x] 5. Backend + dashboard wired to new models and pipeline source (IS1 end-to-end <500 ms measured incl. Wi-Fi hop sim); hardware source stub documented
 - [x] 6. UP2 evidence notebook + `evidence/UP2_Evidence.md` (old vs new met table, provenance, rank)
-- [ ] 7. evidence-reviewer pass; fix findings
+- [x] 7. evidence-reviewer pass; fix findings
 - [ ] 8. Commit + push `feature/up2-prototype`; demo script `scripts/run-up2-demo.ps1` verified end-to-end
 - [ ] 9. Final report to user
 
@@ -46,3 +46,4 @@ specs; >=14 of 18 items MET with evidence; hardware-ready source boundary; UP2 e
 - 2026-10-24 ~20:15 Riyadh (coord): rate limit again; user shutting laptop down. WIP committed. Evidence agent done (10/17 MET; C3 excluded; bar >=13). REMAINING: (a) IS2 v3c physics-informed: agent a1896dbbea4962c7e (opus) was mid-fit (reports/up2c_fit_*.log, cand_*.pkl); resume via SendMessage, else relaunch from the task text in this ledger: physics features (K est, K-drop, physics RUL w/ prior) from 4 payload displacement floats -> GBM RUL head, new fresh test3 registered before fit, literal IS2 residual + ablation, v3c ONNX+contract. (b) C# port of physics features + v3c contract (backend agent). (c) re-execute notebook; (d) step 7/8: push feature/up2-prototype, verify scripts/run-up2-demo.ps1; (e) step 9 final report. Hung process: up2_residual --set test2 (twin agent) can be killed. COE domain-gap follow-up last.
 - 2026-10-24 (ml-engineer, v3c physics-informed RUL; step 4 NOT ticked): [SYNTHETIC]+[SIMULATION]. Fresh synth_v3_test3 (100 runs) registered in splits.json BEFORE any v3c fit (3904a0c), scored once (b71f165: v3c, no-physics ablation, frozen v3b). Physics features (phys_k_drop, phys_k_est, phys_rul_h = twin trend RUL or population-life prior, phys_conf) from the 4 payload displacement floats via the FE twin (aiengine/up2c_physics.py); RUL head retrained with them (25 cols), selected on val2 only; v3 classifier + v3b z head unchanged. test3: S7 v3c 10.51 % / ablation 10.88 % / v3b 10.75 %; IS3 F1 0.9615, stage max 1, caught 80/80 (all three); IS2 literal max 245.6 % FAIL (p95 77.9 %, median 33.4 %, share<=5 % 9.0 %, coverage 100 % [96.7 % prior]); independent (ablation/v3b) max 243-245 %; ablation gain 3.4 % rel FAIL (target >=15 %). Files: models/v3c_rul.onnx, model_contract_v3c.json, golden_vectors_v3c.json; reports/up2c_spec_check_20261024T175404Z.{md,json}. Re-score: `python -m aiengine.up2c_eval`. Tests: `python -m pytest tests/up2c -q` (9 pass).
 - 2026-10-24 (evidence-author): notebook/doc updated with synth_v3_test3 confirmation of deployed v3b (S7 10.75 %, F1 0.9615, stage max 1, 80/80) and the v3c physics-informed IS2 attempt (literal max 245.6 %, ablation gain 3.4 % vs 15 %; IS2 stays NOT MET, v3c research-only, wording renegotiation box). Counts unchanged: 10/17 MET.
+- 2026-10-24 ~21:30 (coord): steps 2,3,7 verified (S7/IS3 pass on fresh test2+test3, review done, fixes applied). Pushed feature/up2-prototype to origin (needed http.postBuffer 500MB). Remaining: COE-domain adapt agent a2025877bebac956c running; then re-execute notebook, verify scripts/run-up2-demo.ps1 end to end, final report.
