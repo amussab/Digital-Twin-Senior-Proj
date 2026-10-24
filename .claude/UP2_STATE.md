@@ -31,3 +31,4 @@ specs; >=14 of 18 items MET with evidence; hardware-ready source boundary; UP2 e
   (99.88 % within +/-1, 18 windows on 2 bearings), IS3c 40/40 PASS, S8 p95 0.34 ms PASS; TFT+N-HiTS: S7 54.6 % FAIL, F1 0.928 PASS,
   stage max 4 FAIL, 40/40 PASS, TFT p95 10.8 ms PASS. Re-score: `cd AI-engine; .venv/Scripts/python.exe -m aiengine.up2_eval`.
   C# needs a small change for rul.method "direct_v3" (see ml-engineer report). Demo stream: models/up2_demo_payloads.bin.
+- 2026-10-24 (coord): v3 first pass: GBM S7 15.53% FAIL, IS3b stage max 2 FAIL; IS3a 0.961, IS3c 40/40, S8 0.34ms PASS. Launched 3 agents: ML v3b (fresh test2), backend (C# direct_v3 + IS1 e2e), twin (IS2 residual). COE tests+up2 tests 36 pass.
