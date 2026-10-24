@@ -1,0 +1,661 @@
+{
+  "contract_version": "3c",
+  "generated_utc": "2026-10-24T17:51:25.410229+00:00",
+  "generated_by": "AI-engine/aiengine/up2c.py export",
+  "provenance": {
+    "synthetic": true,
+    "run": "up2_v3c_gbm",
+    "git_commit": "b71f165",
+    "seed": 20261004,
+    "datasets": [
+      "synth_v3 train",
+      "synth_v3_train2",
+      "synth_v3_train3 (train)",
+      "synth_v3_val2 (val ONLY)"
+    ],
+    "selection": {
+      "physics": true,
+      "rows": "deg",
+      "NL": 48,
+      "warm": 25,
+      "target": "log_l2",
+      "transform": "log1p",
+      "columns": [
+        "hi",
+        "log_env_ratio",
+        "log_bp_ratio",
+        "kurtosis_max",
+        "crest_max",
+        "kurtosis_rise",
+        "axis_asymmetry",
+        "ftf_share",
+        "bsf_share",
+        "bpfo_share",
+        "bpfi_share",
+        "family_contrast",
+        "log_ftf_ratio",
+        "log_bsf_ratio",
+        "log_bpfo_ratio",
+        "log_bpfi_ratio",
+        "raw_ftf_share",
+        "raw_bsf_share",
+        "raw_bpfo_share",
+        "raw_bpfi_share",
+        "rpm_norm",
+        "phys_k_drop",
+        "phys_k_est",
+        "phys_rul_h",
+        "phys_conf"
+      ],
+      "fit": {
+        "target": "log_l2",
+        "seed": 20261004,
+        "best_iteration": 1279,
+        "fit_seconds": 454.3,
+        "n_estimators": 3000,
+        "num_leaves": 48,
+        "learning_rate": 0.04,
+        "min_child_samples": 60,
+        "physics": true,
+        "rows": "deg",
+        "n_train": 425956,
+        "n_features": 200
+      },
+      "postprocess": {
+        "rul_alpha": 0.5,
+        "rul_scale_early": 0.97,
+        "rul_scale_late": 0.97,
+        "stage_k": 1,
+        "stage_max_step": null
+      },
+      "z": {
+        "reused": "v3b z head (checkpoints/up2_v3b/heads.pkl), first 21 columns",
+        "z_cut": -0.25,
+        "z_shift": 0.0
+      },
+      "val": {
+        "S7": 11.556526460517697,
+        "true_onset": 14.273447377230426,
+        "pol": 5.876234008344134
+      }
+    },
+    "note": "[SYNTHETIC] v3 classifier + v3b z head unchanged; v3c physics-informed RUL head"
+  },
+  "model_unit": "one biaxial bearing: 16 raw features = X's 8 then Y's 8 (COE C7 order)",
+  "wire_payload": {
+    "size_bytes": 152,
+    "byte_order": "little-endian",
+    "fields": [
+      {
+        "offset": 0,
+        "type": "float32",
+        "name": "rpm"
+      },
+      {
+        "offset": 4,
+        "type": "float32[32]",
+        "name": "features"
+      },
+      {
+        "offset": 132,
+        "type": "float32[4]",
+        "name": [
+          "p1_amp_um",
+          "p1_phase_rad",
+          "p2_amp_um",
+          "p2_phase_rad"
+        ]
+      },
+      {
+        "offset": 148,
+        "type": "uint32",
+        "name": "t20_ms"
+      }
+    ],
+    "bearing_slices": {
+      "1": [
+        0,
+        16
+      ],
+      "2": [
+        16,
+        32
+      ]
+    },
+    "note": "COE doc: 152 bytes; FDR deck: 168 (unreconciled)."
+  },
+  "raw_bearing_feature_order": [
+    "x_bp_rms",
+    "x_bp_kurtosis",
+    "x_bp_crest",
+    "x_env_rms",
+    "x_ftf_mag",
+    "x_bsf_mag",
+    "x_bpfo_mag",
+    "x_bpfi_mag",
+    "y_bp_rms",
+    "y_bp_kurtosis",
+    "y_bp_crest",
+    "y_env_rms",
+    "y_ftf_mag",
+    "y_bsf_mag",
+    "y_bpfo_mag",
+    "y_bpfi_mag"
+  ],
+  "feature_engineering": {
+    "engineered_order": [
+      "hi",
+      "log_env_ratio",
+      "log_bp_ratio",
+      "kurtosis_max",
+      "crest_max",
+      "kurtosis_rise",
+      "axis_asymmetry",
+      "ftf_share",
+      "bsf_share",
+      "bpfo_share",
+      "bpfi_share",
+      "family_contrast",
+      "log_ftf_ratio",
+      "log_bsf_ratio",
+      "log_bpfo_ratio",
+      "log_bpfi_ratio",
+      "raw_ftf_share",
+      "raw_bsf_share",
+      "raw_bpfo_share",
+      "raw_bpfi_share",
+      "rpm_norm"
+    ],
+    "baseline": {
+      "windows": 24,
+      "statistic": "median",
+      "rel_floor": 1e-06,
+      "rig_policy": "commissioning capture (spec M5); else median of first 24 windows"
+    },
+    "eps": 1e-09,
+    "health_index": {
+      "r_ref": 20.0,
+      "curve_k": 1.0,
+      "weights": {
+        "env_rms": 0.45,
+        "bp_rms": 0.3,
+        "family_max": 0.25
+      },
+      "clip_max": 1.5
+    },
+    "rpm_norm": {
+      "center": 2675.0,
+      "scale": 925.0
+    },
+    "reference_impl": "aiengine/features.py::engineer_arrays (unchanged from contract v2)"
+  },
+  "onset": {
+    "sigmas": 3.0,
+    "consecutive": 12,
+    "sigma_floor": 0.01,
+    "baseline_windows": 24,
+    "run_in_skip_windows": 6,
+    "use": "v3: reported as onset_detected only; class, RUL and stage come from the heads"
+  },
+  "classes": {
+    "labels": [
+      "ball",
+      "cage",
+      "healthy",
+      "inner_race",
+      "outer_race"
+    ],
+    "index_is_output_channel": true,
+    "note": "alphabetical; logits = log probabilities, apply softmax (identity on probabilities). No decision gate (plain argmax)."
+  },
+  "models": {
+    "tft": {
+      "onnx": "v3b_cls.onnx",
+      "family": "gradient-boosted trees (xgb) in the TFT slot",
+      "encoder_length": 24,
+      "decoder_length": 1,
+      "columns": [
+        "hi",
+        "log_env_ratio",
+        "log_bp_ratio",
+        "kurtosis_max",
+        "crest_max",
+        "kurtosis_rise",
+        "axis_asymmetry",
+        "ftf_share",
+        "bsf_share",
+        "bpfo_share",
+        "bpfi_share",
+        "family_contrast",
+        "log_ftf_ratio",
+        "log_bsf_ratio",
+        "log_bpfo_ratio",
+        "log_bpfi_ratio",
+        "raw_ftf_share",
+        "raw_bsf_share",
+        "raw_bpfo_share",
+        "raw_bpfi_share",
+        "rpm_norm"
+      ],
+      "scalers": {
+        "hi": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_env_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bp_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "crest_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_rise": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "axis_asymmetry": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "family_contrast": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_ftf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bsf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfo_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfi_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "rpm_norm": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        }
+      },
+      "warmup_windows": 25,
+      "size_kb": 1423.6,
+      "onnx_inputs": [
+        "encoder_cont",
+        "decoder_cont"
+      ],
+      "outputs": [
+        "logits",
+        "variable_weights"
+      ],
+      "batch_dim": "dynamic",
+      "parity": {
+        "windows": 2972,
+        "prob_max_abs_diff": 3.8743019104003906e-07,
+        "argmax_mismatch": 0
+      }
+    },
+    "nhits": {
+      "onnx": "v3c_rul.onnx",
+      "family": "gradient-boosted trees in the N-HiTS slot: PHYSICS-INFORMED RUL LightGBM (log1p, 25 input columns = 21 engineered + 4 physics) + v3b z LightGBM (reads the 21 engineered columns via an in-graph Gather)",
+      "encoder_length": 48,
+      "prediction_length": 1,
+      "columns": [
+        "hi",
+        "log_env_ratio",
+        "log_bp_ratio",
+        "kurtosis_max",
+        "crest_max",
+        "kurtosis_rise",
+        "axis_asymmetry",
+        "ftf_share",
+        "bsf_share",
+        "bpfo_share",
+        "bpfi_share",
+        "family_contrast",
+        "log_ftf_ratio",
+        "log_bsf_ratio",
+        "log_bpfo_ratio",
+        "log_bpfi_ratio",
+        "raw_ftf_share",
+        "raw_bsf_share",
+        "raw_bpfo_share",
+        "raw_bpfi_share",
+        "rpm_norm",
+        "phys_k_drop",
+        "phys_k_est",
+        "phys_rul_h",
+        "phys_conf"
+      ],
+      "scalers": {
+        "hi": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_env_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bp_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "crest_max": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "kurtosis_rise": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "axis_asymmetry": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "family_contrast": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_ftf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bsf_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfo_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "log_bpfi_ratio": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_ftf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bsf_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfo_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "raw_bpfi_share": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "rpm_norm": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "phys_k_drop": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "phys_k_est": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "phys_rul_h": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        },
+        "phys_conf": {
+          "center": 0.0,
+          "scale": 1.0,
+          "kind": "identity"
+        }
+      },
+      "left_pad": "repeat first row",
+      "output": "rul_head [B,3] = [rul_windows, z, stage]",
+      "in_graph_features": {
+        "aggregates": [
+          "last",
+          "mean6",
+          "mean",
+          "mean_q1",
+          "slope",
+          "slope_h2",
+          "std",
+          "max"
+        ],
+        "hi_levels": [],
+        "reference_impl": "aiengine/up2_window.py"
+      },
+      "size_kb": 9517.2,
+      "onnx_inputs": [
+        "encoder_cont"
+      ],
+      "outputs": [
+        "rul_head"
+      ],
+      "batch_dim": "dynamic",
+      "parity": {
+        "windows": 2372,
+        "rul_windows_max_rel_diff": 0.004095182518847321,
+        "z_max_abs_diff": 0.00014287673026913694,
+        "stage_mismatch": 0
+      },
+      "row_layout": "row = [21 engineered columns in feature_engineering.engineered_order (as v3b), then the 4 physics_features.columns of THIS bearing for the same window]"
+    }
+  },
+  "rul": {
+    "method": "direct_v3",
+    "procedure": "r_raw = rul_head[0] (windows), s_raw = rul_head[2]; apply `postprocess` (required) -> health_stage, rul_windows; rul_hours = rul_windows * cadence_hours (median spacing of the last <=48 window times). z = rul_head[1]. RUL is meaningful when health_stage >= 2.",
+    "history_windows": 24,
+    "blend_w": 0.5,
+    "u_min": 0.05,
+    "class_thresholds": {},
+    "pooled_threshold": 1.0,
+    "max_rul_factor": 20.0,
+    "loglin_coef": [],
+    "interval_rel": 0.25,
+    "class_smoothing_windows": 5
+  },
+  "stage": "raw (computed inside v3b_rul.onnx): rul_head[2] = 1 if z < -0.25 else min(6, 2 + floor(5 clip(z + 0.0, 0, 1))); deployed: postprocess.stage",
+  "postprocess": {
+    "type": "v3b_stage_median_rul_logema",
+    "version": 1,
+    "applies_to": "contract v3b direct_v3 heads; per bearing, causal, one update per 'ok' window (after warm-up)",
+    "required": true,
+    "state_reset": "on engine reset / new bearing stream (same as the window buffers)",
+    "order": [
+      "stage",
+      "rul_filter",
+      "rul_scale"
+    ],
+    "stage": {
+      "type": "median_then_rate_limit",
+      "median_window": 1,
+      "max_step": null,
+      "input": "s_raw = round(rul_head[2]) (rul_head[2] is an exact integer-valued float)",
+      "procedure": "push s_raw into a FIFO of the last median_window raw stages; m = sorted(fifo)[(len(fifo)-1)//2] (lower median while the FIFO is not full); if first output: s = m; else if max_step is null: s = m; else s = s_prev + clamp(m - s_prev, -max_step, +max_step); s_prev = s; health_stage = s"
+    },
+    "rul_filter": {
+      "type": "log_ema_with_decrement",
+      "alpha": 0.5,
+      "decrement_windows": 1.0,
+      "input": "r_raw = max(rul_head[0], 0) (windows)",
+      "procedure": "if first output or alpha >= 1: r = r_raw; else prior = max(r_prev - 1, 0); r = exp(alpha*ln(1+r_raw) + (1-alpha)*ln(1+prior)) - 1; r_prev = r (UNscaled); compute in float64"
+    },
+    "rul_scale": {
+      "type": "stage_dependent",
+      "scale_if_stage_le_2": 0.97,
+      "scale_if_stage_ge_3": 0.97,
+      "procedure": "rul_windows = r * (scale_if_stage_le_2 if health_stage <= 2 else scale_if_stage_ge_3) using the post-processed health_stage of the same window; rul_hours = rul_windows * cadence_hours"
+    },
+    "outputs": {
+      "rul_hours": "post-processed (deployed)",
+      "health_stage": "post-processed (deployed)",
+      "rul_hours_raw": "rul_head[0] * cadence (diagnostic)",
+      "health_stage_raw": "rul_head[2] (diagnostic)"
+    },
+    "reference_impl": [
+      "aiengine/up2b.py::apply_pp (offline)",
+      "aiengine/engine.py::HybridEngine._postprocess (streaming)"
+    ],
+    "selected_on": "synth_v3_val2 ONLY"
+  },
+  "disclosures": {
+    "class_order": "classes.labels is ALPHABETICAL (ball, cage, healthy, inner_race, outer_race) = the output-channel order of logits; it is NOT config.FAULT_CLASSES' order and NOT the order used in report tables (healthy, outer_race, inner_race, ball, cage). Always map channels through classes.labels.",
+    "provenance": "[SYNTHETIC] every model in this contract was fitted on synth_v3 generator runs only (physics-informed generated data), never on team-rig data; public-data (XJTU-SY/IMS/MaFaulDa) results belong to contract v2 and are reported separately as [MEASURED on <dataset>].",
+    "test_sets": "synth_v3_test3 (100 fresh runs, splits.json) registered before any v3c fit and scored once for v3c, its no-physics ablation and v3b. v3b's test2 numbers are history.",
+    "classifier": "v3b reuses the v3 classifier unchanged (v3b_cls.onnx is a re-export of the same trees).",
+    "circularity": "[SYNTHETIC] the training displacements come from a stiffness trajectory derived from the same generator damage that drives the accelerometer features and the RUL label; the physics features' benefit is therefore an upper bound until rig data exists."
+  },
+  "physics_features": {
+    "columns": [
+      "phys_k_drop",
+      "phys_k_est",
+      "phys_rul_h",
+      "phys_conf"
+    ],
+    "n_commission": 20,
+    "max_rel_std": 0.15,
+    "rul_fit_points": 32,
+    "ema_lambda": 0.9583333333333334,
+    "ema_s_floor": 0.01,
+    "prior_floor_frac": 0.1,
+    "rul_clip_frac": 3.0,
+    "rpm_split": 2675.0,
+    "population_life_hours": {
+      "1750": 72.917,
+      "3600": 46.5
+    },
+    "failure_drop": 0.25,
+    "k_nominal": [
+      50000.0,
+      50000.0
+    ],
+    "input": "payload p1_amp_um, p1_phase_rad, p2_amp_um, p2_phase_rad (bytes 132..147) + rpm + t_h (hours since the stream started, same clock as the RUL cadence)",
+    "state": "per rig (both bearings): DigitalTwin.Twin FeBeamPhysicsTwin commissioning/unbalance/K0 + BearingTracker per bearing (gated K history, rul_fit_points) + per-bearing EMA (num, den)",
+    "procedure": "(one call per window, in order; identical to aiengine/twin/physics_rul.PhysicsTwin except where marked NEW):\n  1. meas = to_complex(a1, ph1, a2, ph2)  (um -> m)\n  2. commissioning (first N_COMM = 20 windows): buffer; at the 20th window calibrate the unbalance (twin\n     calibrate_unbalance: weighted LS at nominal K), identify every buffered window, ok = max(rel_std1, rel_std2)\n     <= MAX_REL_STD (else all), K0_b = median(K_b over ok); BearingTracker seeded with the last ok window (twin).\n     NEW: EMA state seeded with every ok commissioning window, in order (step 4 rule).\n     Outputs during commissioning: k_drop = 0, k_est = K_nominal/1000, rul = prior, conf = 0.\n  3. later windows: (K1, K2, s1, s2) = identify(...) (twin objective, unchanged); if max(s1, s2) <= MAX_REL_STD\n     add (t_h, K_b) to BearingTracker b (twin gating).\n  4. NEW, every window (no gate, weights instead): w = 1 / max(s_b, S_FLOOR)^2;\n     num_b = LAMBDA*num_b + w*K_b/K0_b;  den_b = LAMBDA*den_b + w;  r_ema_b = num_b/den_b.\n  5. trend RUL = BearingTracker b .rul() = twin fit_rul over the last RUL_FIT_POINTS gated points (exp trend of K,\n     significance gate, failure at 25 % drop) -> (rul, lo, hi) or None.  Per bearing (the twin's own output is\n     the min over bearings; the AI RUL is per bearing, so the per-bearing value is used).",
+    "outputs_per_bearing": {
+      "phys_k_drop": "1 - r_ema",
+      "phys_k_est": "K0 * r_ema / 1000 [kN/m]",
+      "phys_rul_h": "trend RUL (clipped) or prior [h]",
+      "phys_conf": "lo/hi of trend interval, 0 = prior"
+    },
+    "identification": "Identifier.Identify (twin objective, unchanged). Training data used aiengine/up2c_physics.py::batch_identify (same objective, exact condensed FE model); parity vs stock identify: K rel diff <= 5e-6.",
+    "reference_impl": [
+      "aiengine/up2c_physics.py::replay_features (offline)",
+      "aiengine/up2c_physics.py::PhysicsFeatures (streaming)",
+      "aiengine/up2c_engine.py::PhysicsHybridEngine"
+    ],
+    "provenance": "[SIMULATION] FE twin with ASSUMED geometry (aiengine/twin/params.py); training displacements [SYNTHETIC] from the twin with K(t) = K0 (1 - 0.25 damage) of the generator (aiengine/up2_residual.py, nominal sensor noise +/-5 % amplitude, +/-0.05 rad). Population life L_pop from TRAIN runs [SYNTHETIC]."
+  }
+}
