@@ -1,11 +1,11 @@
 <#
-.SYNOPSIS  Backend (v3 contract, replay OFF, UDP :5005) + COE simulator sending a fault scenario over UDP, so the dashboard
+.SYNOPSIS  Backend (v3b contract, replay OFF, UDP :5005) + COE simulator sending a fault scenario over UDP, so the dashboard
            shows live data produced by the COE pipeline (raw samples -> BPF -> envelope -> FFT -> 152 B payload).
            Hardware day: stop the simulator, power the node; it sends the same 152-byte datagrams to the same port. Nothing else changes.
 .EXAMPLE   ./scripts/run-up2-coe-demo.ps1
 #>
 param(
-  [string]$Contract = 'AI-engine/models/model_contract_v3.json',
+  [string]$Contract = 'AI-engine/models/model_contract_v3b.json',
   [double]$Rate = 2,
   [string]$Bind = '0.0.0.0',
   [int]$Port = 5080,

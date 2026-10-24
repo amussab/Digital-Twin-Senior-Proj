@@ -1,11 +1,11 @@
 <#
-.SYNOPSIS  UP2 demo: backend with the v3 model contract + replay source 'up2' (AI-engine/models/up2_demo_payloads.bin).
+.SYNOPSIS  UP2 demo: backend with the v3b model contract + replay source 'up2' (AI-engine/models/up2_demo_payloads.bin).
            Stream is [SYNTHETIC] synth_v3: healthy -> fault -> failure. Dashboard header shows "[SYNTHETIC / SIMULATED SOURCE]".
 .EXAMPLE   ./scripts/run-up2-demo.ps1
 .EXAMPLE   ./scripts/run-up2-demo.ps1 -Contract AI-engine/models/model_contract_v3b.json -RateHz 20
 #>
 param(
-  [string]$Contract = 'AI-engine/models/model_contract_v3.json',
+  [string]$Contract = 'AI-engine/models/model_contract_v3b.json',
   [double]$RateHz = 10,
   [string]$Bind = '0.0.0.0',
   [int]$Port = 5080,

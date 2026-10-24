@@ -48,6 +48,11 @@ else
                                                 ? "accent-green"
                                                 : "accent-orange")" />
 
+                <MetricCard Label="Health Stage"
+                            Value="@(Snapshot.HealthStage is int hs ? $"{hs} / 6" : "n/a")"
+                            Detail="1 = healthy, 6 = failure imminent"
+                            AccentClass="@(Snapshot.HealthStage >= 4 ? "accent-orange" : "accent-green")" />
+
                 <MetricCard Label="Shaft Speed"
                             Value="@($"{Snapshot.Rpm:F0} RPM")"
                             Detail="20-revolution window"
@@ -132,6 +137,11 @@ else
                 <div class="comparison-row">
                     <span>Detected condition</span>
                     <strong>@Snapshot.FaultClass</strong>
+                </div>
+
+                <div class="comparison-row">
+                    <span>Health stage</span>
+                    <strong>@(Snapshot.HealthStage is int st ? $"{st} / 6" : "n/a")</strong>
                 </div>
 
                 <div class="comparison-row">
