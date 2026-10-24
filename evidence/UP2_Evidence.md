@@ -11,10 +11,10 @@ Standalone summary for the coach. The numbers here are recomputed live by `AI-en
 **Data basis.** Synthetic and simulated data are a **coach-approved substitute for rig data** (logistics: the sensor parts may not arrive in time). Every number keeps its provenance tag (`[SYNTHETIC]`, `[SIMULATION]`, `[MEASURED host]`, `[CALCULATED]`, `[MEASURED on <public dataset>]`).
 Evidence rank reflects the form of the evidence: a working simulation demo run live at the presentation is Rank 9 on the course ladder; re-scoring stored predictions is Rank 6.
 
-**Count.** **10 of 17 items are counted MET (58.8 %), of which 7 are firm** (rank >= 6 and no assumed or calculated leg): C4, C5, S6, S7, S8, S9, IS3.
-The other 3 are **met at design level**: S4 and S5 (calculation plus a simulation that cannot fail, and a calculated STM32 leg; rank 3) and IS1 (live end-to-end simulation demo, Rank 9 as a simulation, but the Wi-Fi hop is injected and the STM32 leg is calculated).
-IS2 is NOT MET (and will be redone as a physics-informed design). C1, C2, C6, S1, S2, S3 are **NOT EVIDENCED HERE: evidence to be supplied by the owner** (ME-owned, plus COE's electrical C2); they are not counted.
-**13 are needed, so the bar is not reached yet**: 3 more items need owner artifacts (section 6). If IS1's simulated hop is not accepted the count is 9. Owners' evidence is added in one place (`up2_helpers.OVERRIDES`); counts are recomputed.
+**Count.** **11 of 17 items are counted MET (64.7 %), of which 7 are firm** (rank >= 6 and no assumed or calculated leg): C4, C5, S6, S7, S8, S9, IS3.
+The other 4 are **met at design level**: S4 and S5 (calculation plus a simulation that cannot fail, and a calculated STM32 leg; rank 3), IS1 (live end-to-end simulation demo, Rank 9 as a simulation, but the Wi-Fi hop is injected and the STM32 leg is calculated) and **IS2 under the reworded spec v2** (synthetic data and a simulated twin; see the caveat box in section 6c).
+C1, C2, C6, S1, S2, S3 are **NOT EVIDENCED HERE: evidence to be supplied by the owner** (ME-owned, plus COE's electrical C2); they are not counted.
+**13 are needed, so the bar is not reached yet**: 2 more items need owner artifacts (section 6). If IS1's simulated hop is not accepted and IS2's wording v2 is not confirmed by the team/xlsx, the count is 9. Owners' evidence is added in one place (`up2_helpers.OVERRIDES`); counts are recomputed from the registry.
 
 **Model change (approved).** The spec named N-HiTS (S7) and TFT (S8, IS3). The change to the better-performing deployed heads, gradient-boosted trees in the same ONNX slots, is approved. The original models are kept in the table for transparency:
 
@@ -43,7 +43,7 @@ Times seen: old test set twice (v3, v3b); `synth_v3_test2` once for v3b (then re
 | S8 inference < 200 ms | MET (11.1 ms) | MET (canonical: 0.35 ms p95, 1 thread, batch 1, this PC) | deployed slot is a gradient-boosted model, see section 5 |
 | S9 dashboard >= 10 Hz | MET (30 Hz) | MET (rank 6) | the ~30 Hz is the client count of a 50 ms re-broadcast timer; new data arrives at the 10 Hz replay rate (the spec minimum); browser render not measured |
 | IS1 < 500 ms | partial | MET at design level (live simulation demo, Rank 9; assumed legs disclosed) | p95 ~98 ms incl. a simulated 10-60 ms Wi-Fi hop and a calculated STM32 leg; budget breaks only if the real hop exceeds ~458 ms (table below) |
-| IS2 residual <= 5 % | NOT MET | **NOT MET** | physics-informed v3c attempt on fresh test3: literal max 245.6 % (p95 77.9, median 33.4, 9.0 % of windows <= 5 %); independent reading (deployed v3b) 244.6 %; ablation reading 3.4 % relative S7 gain vs the 15 % target; see section 5 |
+| IS2 physics-AI residual | NOT MET (literal v1: max <= 5 %) | **MET under reworded spec v2** (design level): v3b median 16.3 %, p95 49.2 % of L_ref (targets 18 % / 63 %) on fresh test4; the literal v1 still FAILS (v3b 233 %, v3c 216 %) | wording v2 from coach feedback, not yet in the official xlsx; **read the caveat box in section 6c** |
 | IS3 F1 / stage / caught | NOT MET (F1 0.581) | MET on synthetic (F1 0.959, stage max 1, 80/80 caught), deployed gradient-boosted heads; original TFT stage max 3 (worse) | **public data still fails** |
 
 Public-data numbers (XJTU-SY / IMS / MaFaulDa, PPR v2, `[MEASURED on public data]`) are kept in the notebook beside the synthetic ones, not replaced.
@@ -78,7 +78,7 @@ From the repo root (PowerShell), with the backend and dashboard published once:
 - Dashboard on the replay stream (healthy -> fault -> failure, `[SYNTHETIC]`): `./scripts/run-up2-demo.ps1` then open `http://localhost:5080/` (LAN address is printed).
 - COE simulator through the real pipeline and UDP into the backend: `./scripts/run-up2-coe-demo.ps1` (`scripts/coe_fault_scenario.py`).
 - Whole scorecard: `cd AI-engine/notebooks; ../.venv/Scripts/python.exe -m jupyter nbconvert --to notebook --execute UP2_Evidence.ipynb --inplace --ExecutePreprocessor.timeout=-1` (about 3 min), or open the notebook and Run All.
-- Individual checks: `cd AI-engine; .venv/Scripts/python.exe -m aiengine.up2_eval` (re-scores saved predictions, measures latency), `-m aiengine.coe.verify --quick`, `-m aiengine.up2_residual` (IS2), `-m pytest tests/coe tests/up2 tests/twin_up2 -q`; `dotnet test tests/DigitalTwin.Backend.Tests -c Release`.
+- Individual checks: `cd AI-engine; .venv/Scripts/python.exe -m aiengine.up2_eval` (re-scores saved predictions, measures latency), `-m aiengine.coe.verify --quick`, `-m aiengine.up2d_eval` (IS2 wording v2; re-scores saved test4 predictions), `-m pytest tests/coe tests/up2 tests/twin_up2 -q`; `dotnet test tests/DigitalTwin.Backend.Tests -c Release`.
 
 ## 5. Provenance and limitations (stated plainly)
 
@@ -99,9 +99,9 @@ From the repo root (PowerShell), with the backend and dashboard published once:
 - **Healthy bearings sit at stage 2.** Healthy-companion bearings are predicted at stage 2 in 99.8 % of windows although their true stage is 1; IS3b scores run-to-failure bearings only, so the metric does not show it.
 - **Latency** (canonical number: classifier ONNX p95 0.35 ms, 1 thread, batch 1, n = 300, measured by the notebook; other documents quote 0.04 / 0.054 / 0.3 ms from different hosts, thread counts and batch handling) is `[MEASURED host]` on this PC with synthetic inputs; the final server (laptop or Raspberry Pi 5) must be re-measured. IS1 uses a **simulated** 10-60 ms Wi-Fi hop and a
   **calculated** STM32 leg; browser render time is not included.
-- **IS2 v3c attempt (still FAIL).** The physics-informed v3c (physics prior fed to the RUL head) reaches S7 10.51 % against 10.88 % without physics (3.4 % relative gain; the Sept-3 ablation target is 15 %) and a literal residual max of 245.6 % (independent reading with the deployed v3b: 244.6 %). Coverage is 100 % only through a physics prior (96.7 % of windows); the stiffness drop is below 3 % in stages 1-3 in the simulator, 3600 rpm windows fail the identification gate, and AI and physics each carry about 10-30 % error, so a max <= 5 % bound cannot hold. **v3c is a research artifact, not the deployed model** (v3b is deployed; v3c is 9.5 MB and not ported to C#).
-  **Decision for team/coach: the IS2 wording needs renegotiation** (e.g. a p95/median consistency band, or the ablation criterion); it is not claimed met.
-- **IS2 (FAIL) and the open physics-role contradiction.** The spec reads the FE-identified physics RUL as an independent estimator compared with the AI RUL (reading A). The
+- **IS2 under the literal v1 wording (history; superseded by wording v2, section 6c).** The physics-informed v3c attempt (still FAIL under v1). The physics-informed v3c (physics prior fed to the RUL head) reaches S7 10.51 % against 10.88 % without physics (3.4 % relative gain; the Sept-3 ablation target is 15 %) and a literal residual max of 245.6 % (independent reading with the deployed v3b: 244.6 %). Coverage is 100 % only through a physics prior (96.7 % of windows); the stiffness drop is below 3 % in stages 1-3 in the simulator, 3600 rpm windows fail the identification gate, and AI and physics each carry about 10-30 % error, so a max <= 5 % bound cannot hold. **v3c is a research artifact, not the deployed model** (v3b is deployed; v3c is 9.5 MB and not ported to C#).
+  The renegotiation suggested here led to wording v2 (section 6c): under v1 IS2 stays FAIL.
+- **IS2 physics-role contradiction (history).** The spec reads the FE-identified physics RUL as an independent estimator compared with the AI RUL (reading A). The
   2026-09-03 report version treats physics as an AI input (reading B), under which there is no residual to subtract. Under reading A the best tuned filter still gives a max residual of
   143 % (p95 79 %, median 50 %, 1.4 % of windows within 5 %), physics coverage is 5.8 % of stage 1-3 windows, and even a perfect physics RUL leaves a 15 % median residual because of the AI's own
   error. The stiffness trajectory is derived from the same synthetic damage curve (circular). See `AI-engine/reports/IS2_design_note.md`; this needs a team decision, not a quiet redefinition.
@@ -118,6 +118,28 @@ From the repo root (PowerShell), with the backend and dashboard published once:
 | S1 IEPE accelerometers | ME | datasheet (100 mV/g, +-50 g, 2-10 kHz) + purchase record |
 | S2 FE stiffness identification <= 10 % | ME | run vs a known-stiffness reference; a repo simulation precursor does not meet the literal spec (1750 rpm noisy mean 6.4 %, p95 13.6 %, max 15.5 %; 3600 rpm mean 24 %) and is not counted |
 | S3 IP54 enclosure | ME | IP54 / 85 C / UV evidence (reviewer: duplicate of C6) |
+
+## 6c. IS2 under the reworded spec (wording v2) `[SYNTHETIC]` `[SIMULATION]`
+
+**Wording v2 (coach feedback, 2026-10-25).** For the faulted bearing of every run-to-failure run, over every window in true health stages 1-3 after the AI warm-up, the disagreement e = |RUL_physics - RUL_AI| / L_ref (FE-twin physics RUL vs the deployed AI RUL, as a fraction of the bearing's reference (rated) life L_ref at its duty speed) shall satisfy (a) the median over bearings of each bearing's median e <= 18 % of L_ref and (b) the 95th percentile over bearings of each bearing's 95th-percentile e <= 63 % of L_ref.
+The v1 text ("max relative error ... <= 5 %") is kept in `Project architecture/overview/Specifications.md` with a changelog and a paste-ready paragraph. **The official xlsx has not been updated; the team must edit it.**
+
+| IS2, fresh `synth_v3_test4` (100 runs, scored once; 15,863 windows, 80 bearings) | v2 (a) median | v2 (b) p95 | v2 verdict | v1 literal max (target 5 %) |
+|---|---|---|---|---|
+| v3b (deployed) | 16.3 % of L_ref (<= 18) | 49.2 % (<= 63) | **PASS** | 233 % FAIL |
+| v3c (research, consumes the physics RUL) | 18.3 % | 47.8 % | FAIL | 216 % FAIL |
+
+Thresholds 0.18 / 0.63 were frozen on validation sets only (`synth_v3_val4`, `synth_v3_val2`; rule: ceil to 0.01 of 1.1 x the maximum of the deployed value and the perfect-AI floor) and committed (355831c) before test4 was scored. The rule was refined once on validation (a first rule let the constant-0.5-L_ref control pass).
+Six deliberately wrong AI RULs (x1.5, x0.6, +0.3 L_ref, time-reversed, constant 0.5 L_ref, lognormal noise) all FAIL on test4. Rank: re-scoring the saved predictions is Rank 6; the notebook also runs the deployed ONNX engine live on 20 bearings of test4 (median 14.8 %, p95 51.8 %: PASS), Rank 9 for that subset.
+
+> **CAVEAT (tell the coach before quoting the pass).**
+> - Clause (a) mostly measures **agreement with the twin's rated-life prior**: about 97 % of stage 1-3 windows use the prior, because the stiffness drop is <= 5 % in stages 1-3, below the identification noise (~6 % at 1750 rpm, ~25 % at 3600 rpm). An **exact** AI (RUL_AI = truth) would itself score **18.1 %** on clause (a) and would fail it; the deployed AI passes because it is closer to the physics prior than the truth is, not because it is more accurate.
+> - Used as a flag for a bad AI estimate (|AI - truth| > 0.20 L_ref) the residual is weak: **AUROC 0.55**. Clause (b) and the wrong-AI controls are the parts with discriminating power.
+> - The data are circular and synthetic: the stiffness trajectory and the accelerometer features come from one damage variable.
+> - Wording v2 is **not yet confirmed in the official xlsx**.
+> - On the rig, L_ref becomes the ISO 281 rated life, and the prior and the thresholds must be re-fit on rig validation data.
+>
+> **Recommendation: the team tells the coach this limitation explicitly** (IS2 v2 checks that the AI stays inside the physically plausible envelope of the twin; accuracy is S7/IS3).
 
 ## 6b. COE-integration readiness: the domain gap and its adaptation `[SIMULATION]` `[SYNTHETIC]`
 

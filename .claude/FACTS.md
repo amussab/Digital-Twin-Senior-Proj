@@ -79,12 +79,13 @@ through and note what replaced it.
 - Models: v2 = XJTU-SY + IMS + MaFaulDa, export a78a828. C# golden parity passes.
   v2 was the second look at the XJTU/IMS test bearings (disclosed).
 
-## UP2 block (coordinator, 2026-10-24)
-- Branch `feature/up2-prototype` (worktree `Repo/DT-up2`), cut from feature/integration db25980.
-  origin/main (23dabfa) holds docs only (COE/ICS/ME design + CAD); code lives on feature/*.
-- 18 items: C1-C6, S1-S9, IS1-IS3 (xlsx IDs used by code/evidence). Need >75% = at least 14 met.
-- Status at start: MET C4, C5, S8, S9; PARTIAL IS1; NOT MET S7, IS2, IS3.
-- Plan: COE pipeline in code (simulated source, hardware-ready), synthetic run-to-failure data +
-  XGBoost/AutoGluon/N-HiTS/TFT, physics-AI residual on synthetic, backend wired, UP2 evidence file.
-- UP2: in-class with coach only, 25/26 Oct 2026. Resume ledger: `.claude/UP2_STATE.md`.
-- Public datasets are on disk (read-only): AIENGINE_DATA_DIR=C:\Users\lenovo\Documents\KFUPM\Term261\ICS414\Repo\Digital-Twin-Senior-Proj\AI-engine\data (raw/xjtu_sy, raw/ims, raw/mafaulda, cache/*.parquet). Corrects the earlier "data not on disk" note (2026-10-24).
+## UP2 final state (evidence-author, 2026-10-25) -- replaces the UP2 plan text; the PPR blocks above stay as history
+- Branch `feature/up2-prototype` (worktree `Repo/DT-up2`, cut from feature/integration db25980). Deliverable: `AI-engine/notebooks/UP2_Evidence.ipynb` (+ .html), `evidence/UP2_Evidence.md`, README.md results table.
+- Data basis: synthetic (`aiengine/synth_v3`) and simulated (COE rig simulator, FE twin) data are a coach-approved substitute for rig data (sensor logistics). Public-data results (S7 281.8 %, IS3 F1 0.581) stay as history and still fail.
+- **17 counted items** (C3 BOM excluded by the reviewer); bar = more than 75 % = **13**. Registry count: **11 MET (64.7 %)**: 7 firm (C4, C5, S6, S7, S8, S9, IS3) + 4 design level (S4, S5, IS1, IS2-under-v2). NOT EVIDENCED HERE (owners supply): C1, C2, C6, S1, S2, S3. Bar not reached (need 2 more); 9 if IS1's simulated Wi-Fi hop and the unconfirmed IS2 wording are rejected. ICS block C5 + S7 + S8 all MET.
+- Deployed model: v3b = gradient-boosted heads in the TFT / N-HiTS ONNX slots (change from N-HiTS/TFT approved). Verified numbers: S7 12.64 % (fresh test2), 10.75 % (test3), 13.17 % live subset; IS3 F1 0.959, stage max 1, 80/80; S8 classifier p95 0.35 ms (canonical, 1 thread, batch 1); original N-HiTS S7 46.9 %, TFT stage max 3. v3c = physics-informed research artifact (not deployed). v3b_coe = classifier adapted to COE-pipeline windows (COE-test macro-F1 0.584 -> 0.875, bearing-2 false-fault 82.1 % -> 0.6 %, missed-fault 22.8 %); readiness evidence only.
+- IS1: p95 ~98 ms incl. simulated 10-60 ms Wi-Fi hop and calculated 28.4 ms STM32 leg; breaks only if the real hop > ~458 ms. S9: new data 10 Hz replay (client count ~30 Hz is a 50 ms timer).
+- **IS2 reworded (wording v2, coach feedback 2026-10-25; official xlsx NOT yet updated, paste text in `Project architecture/overview/Specifications.md`)**: e = |RUL_physics - RUL_AI| / L_ref per window (faulted bearing of run-to-failure runs, true stages 1-3, after warm-up); (a) median over bearings of per-bearing median <= 18 % L_ref, (b) p95 over bearings of per-bearing p95 <= 63 % L_ref. Thresholds frozen on validation (val4, val2) before test4. Result (test4, scored once): v3b 16.3 % / 49.2 % PASS; v3c 18.3 % FAIL; six wrong-AI controls FAIL; literal v1 (max <= 5 %) FAILS (233 % / 216 %). Caveat: clause (a) mostly measures agreement with the twin's rated-life prior (~97 % of windows); exact AI scores 18.1 % on (a); residual-flag AUROC 0.55; circular synthetic data; on the rig L_ref = ISO 281 rated life and prior/thresholds must be re-fit. Team should tell the coach.
+- Docker profiles (docker-compose.yml): default `backend` (v3b + up2 replay, :5080, UDP 5005); `coe` (backend-coe + coe-sim, :5081); `ai` (ai-engine selftest / up2_eval); `test` (pytest + test-dotnet); `evidence` (executes the notebook headless -> artifacts/evidence/UP2_Evidence.html); `notebook` (Jupyter :8888). `tests/up2d` (IS2 v2) is not in the `test` profile yet.
+- Resume ledger: `.claude/UP2_STATE.md`. Rebuild the evidence: `cd AI-engine/notebooks; ../.venv/Scripts/python.exe -m jupyter nbconvert --to notebook --execute UP2_Evidence.ipynb --inplace --ExecutePreprocessor.timeout=-1` then `--to html` (about 6 min).
+- Public datasets are on disk (read-only, not in the repo): AIENGINE_DATA_DIR=C:\Users\lenovo\Documents\KFUPM\Term261\ICS414\Repo\Digital-Twin-Senior-Proj\AI-engine\data.

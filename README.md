@@ -48,7 +48,7 @@ data are kept in the evidence for transparency.
 ## UP2 results
 
 Sources: [`evidence/UP2_Evidence.md`](evidence/UP2_Evidence.md) (coach summary, recomputed by `AI-engine/notebooks/UP2_Evidence.ipynb`, HTML copy beside it)
-and `AI-engine/reports/up2_spec_check_20261024T114947Z.md`. Headline numbers are from the fresh test set `synth_v3_test2`
+`AI-engine/reports/up2_spec_check_20261024T114947Z.md` and `AI-engine/reports/up2d_is2_20261024T225605Z.md` (IS2 wording v2). Headline numbers are from the fresh test set `synth_v3_test2`
 (100 runs, registered before the v3b fit, scored once). The full table of the 17 counted items is the notebook's master table.
 
 | Item | Target | Value | Tag | Status |
@@ -64,10 +64,10 @@ and `AI-engine/reports/up2_spec_check_20261024T114947Z.md`. Headline numbers are
 | S6 fixed AI input | 1000-3600 rpm | 28 speeds, always 32 features / 152 bytes; below ~1465 rpm the envelope is truncated to the 4096-pt FFT (open COE question) | `[SIMULATION]` | MET (simulation) |
 | C4 no cloud / C5 LAN only | - | engine runs with network calls blocked; guard tests pass | `[MEASURED host]` | MET |
 | COE domain gap (readiness, adds no MET item) | - | v3b on COE windows macro-F1 0.584; v3b_coe 0.875 (bearing-2 false-fault 0.6 %, missed-fault 22.8 %); stage/RUL heads unreliable on COE features | `[SIMULATION]` | adapted classifier only |
-| IS2 physics-AI residual | see reworded spec | IS2: see evidence/UP2_Evidence.md | `[SIMULATION]` `[SYNTHETIC]` | **PENDING the reworded spec**; the literal max <= 5 % is NOT MET (v3c attempt: max 245.6 %, median 33.4 %) and must not be presented as met |
+| IS2 physics-AI RUL agreement (**reworded spec v2**, coach feedback 2026-10-25; the official xlsx is not updated yet) | median of bearing medians <= 18 % of L_ref, p95 of bearing p95s <= 63 % of L_ref | v3b median 16.3 %, p95 49.2 % on fresh test4 (scored once; thresholds frozen on validation first); v3c (research) median 18.3 % FAIL; six wrong-AI controls all FAIL; the literal v1 (max <= 5 %) still FAILS: v3b 233 %, v3c 216 % | `[SYNTHETIC]` `[SIMULATION]` | MET at design level under v2 only. **Caveat:** clause (a) mostly measures agreement with the twin's rated-life prior (~97 % of windows); an exact AI scores 18.1 % on (a); residual-as-flag AUROC 0.55; circular synthetic data; on the rig L_ref becomes the ISO 281 rated life and the prior and thresholds must be re-fit. Tell the coach. |
 | C1, C2, C6, S1, S2, S3 | - | evidence to be supplied by the ME/COE owners | - | not counted |
 
-Count in the evidence file: 10 of 17 counted items MET (7 firm, 3 at design level); the bar is more than 75 % (13), so it is not reached yet. C3 (BOM) was excluded by the reviewer.
+Count in the evidence file: 11 of 17 counted items MET (7 firm, 4 at design level: S4, S5, IS1, IS2 under wording v2); the bar is more than 75 % (13), so it is not reached yet (9 if IS1's simulated hop and the unconfirmed IS2 wording are not accepted). C3 (BOM) was excluded by the reviewer.
 Honest limits: the healthy-companion bearing sits at stage 2 in 99.8 % of windows; v3b misclassifies bearing 2 on COE-simulator data
 (hence v3b_coe); real Wi-Fi hop, STM32 timing and laptop-vs-Pi-5 latency are unmeasured.
 
@@ -83,7 +83,7 @@ docker compose --profile coe up -d backend-coe coe-sim     # COE pipeline simula
 docker compose --profile coe down
 docker compose --profile ai run --rm ai-engine             # selftest
 docker compose --profile ai run --rm ai-engine python -m aiengine.up2_eval   # re-score saved predictions + latency
-docker compose --profile test run --rm test                # pytest: tests/coe up2 up2c coe_adapt twin_up2
+docker compose --profile test run --rm test                # pytest: tests/coe up2 up2c coe_adapt twin_up2 (IS2 v2 tests, tests/up2d, run natively: python -m pytest tests/up2d)
 docker compose --profile test run --rm test-dotnet         # dotnet test: backend + twin
 docker compose --profile evidence run --rm evidence        # executes UP2_Evidence.ipynb headless -> ./artifacts/evidence/UP2_Evidence.html
 docker compose --profile notebook up notebook              # Jupyter on http://localhost:8888/ (127.0.0.1), opens UP2_Evidence.ipynb
@@ -160,7 +160,7 @@ Before: Docker Desktop running; `docker compose build` done while online; ports 
 2. `docker compose up -d backend` (or `run-up2-demo.ps1`): the dashboard shows healthy -> fault -> failure; the header says SYNTHETIC / SIMULATED SOURCE. The numbers behind it are in the notebook.
 3. `docker compose --profile coe up -d backend-coe coe-sim` (or `run-up2-coe-demo.ps1`): raw samples -> COE pipeline -> 152-byte payload -> UDP -> backend; bearing 1 faults, bearing 2 stays healthy. This is the exact boundary a real node replaces. Do not quote its RUL or stage (those heads are not valid on COE features).
 4. Open `UP2_Evidence.html` (offline fallback) or Run All in the notebook (about 3-4 min): master table of the counted items with ranks.
-5. Limits to say plainly: synthetic scores are not rig evidence; public-data S7/IS3 still fail; the IS1 hop and STM32 leg are assumed/calculated; the healthy bearing shows stage 2; v3c is research only; IS2 is not claimed met under its literal wording; ME/COE owner items are not counted.
+5. Limits to say plainly: synthetic scores are not rig evidence; public-data S7/IS3 still fail; the IS1 hop and STM32 leg are assumed/calculated; the healthy bearing shows stage 2; v3c is research only; IS2 is met only under the reworded spec v2, not under the literal v1 wording, and clause (a) mostly checks agreement with the twin's prior (state this to the coach); ME/COE owner items are not counted.
 
 ---
 

@@ -557,3 +557,43 @@ def coe_adapt_rescore() -> dict:
                 "sel_metrics": res.get("SELECTED: adapted + gate")}
     except Exception as e:  # noqa: BLE001
         return err("COE adapt re-score", e)
+
+
+# --------------------------------------------------------------------------- IS2 wording v2
+def is2_v2_rescore(name: str = "test4") -> dict:
+    """Re-score the SAVED synth_v3_test4 AI predictions with the logic of `python -m aiengine.up2d_eval` (evaluate(); no report written).
+    The physics RUL comes from the FE-twin attach_physics step recomputed here; the AI RUL is the stored v3b/v3c prediction."""
+    try:
+        from aiengine import up2d_eval as E
+        t0 = time.perf_counter()
+        r = E.evaluate(name)
+        r["seconds"] = round(time.perf_counter() - t0, 1)
+        r["status"] = "ok"
+        return r
+    except Exception as e:  # noqa: BLE001
+        return err("IS2 v2 re-score", e)
+
+
+def is2_live_subset(step: int = 4) -> dict:
+    """Runs the DEPLOYED v3b engine (ONNX) live on every `step`-th faulted run-to-failure bearing of test4 and scores IS2 v2 with the
+    frozen thresholds against the twin physics RUL. SUBSET (n bearings printed); [SYNTHETIC] + [SIMULATION]."""
+    try:
+        from aiengine import up2d_is2 as D
+        from aiengine.config import MODELS_DIR
+        from aiengine.engine import HybridEngine
+        t0 = time.perf_counter()
+        truth = D.load_set("test4")
+        _, pr = D.latest_preds("test4")
+        units = sorted(D.scored_windows(truth, pr["v3b"]).unit_id.unique())[::step]
+        eng = HybridEngine(MODELS_DIR, contract_file="model_contract_v3b.json")
+        rows = []
+        for u in units:
+            g = truth[truth.unit_id == u].sort_values("window_index")
+            for wi, o in zip(g.window_index.to_numpy(), eng.run_unit(g, 1)):
+                if o.get("status") == "ok":
+                    rows.append({"unit_id": u, "window_index": int(wi), "rul_pred_h": o["rul_hours"]})
+        m = D.scored_windows(truth, pd.DataFrame(rows))
+        res = D.is2_v2(m, D.FROZEN["T_MED"], D.FROZEN["T_P95"])
+        return {"status": "ok", "n_bearings": len(units), "seconds": round(time.perf_counter() - t0, 1), "v2": res}
+    except Exception as e:  # noqa: BLE001
+        return err("IS2 live subset", e)
