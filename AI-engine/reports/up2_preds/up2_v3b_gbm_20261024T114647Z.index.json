@@ -1,0 +1,95 @@
+{
+ "meta": {
+  "provenance": "[SYNTHETIC] synth_v3",
+  "seed": 20261004,
+  "git_commit": "d31e459",
+  "git_dirty": true,
+  "command": "python -m aiengine.up2_train predict",
+  "utc": "2026-10-24T11:47:15+00:00",
+  "tag": "20261024T114647Z",
+  "touch": "old test: 2nd look (scored once for v3); test2: FIRST and only scoring pass",
+  "selection": {
+   "cls": {
+    "reused": "checkpoints/up2_v3/cls.pkl (v3 classifier, unchanged)",
+    "T": 25
+   },
+   "rul": {
+    "target": "log_l2",
+    "n_seeds": 1,
+    "NL": 48,
+    "levels": false,
+    "transform": "log1p",
+    "objective": "regression",
+    "fits": [
+     {
+      "target": "log_l2",
+      "seed": 20261004,
+      "best_iteration": 1460,
+      "fit_seconds": 828.4,
+      "n_estimators": 3000,
+      "num_leaves": 48,
+      "learning_rate": 0.04,
+      "min_child_samples": 60
+     }
+    ]
+   },
+   "z": {
+    "NL": 48,
+    "z_cut": -0.25,
+    "z_shift": 0.0,
+    "fit": {
+     "best_iteration": 2194,
+     "fit_seconds": 1142.8,
+     "healthy_keep": 0.3,
+     "n_estimators": 3000,
+     "num_leaves": 31,
+     "learning_rate": 0.06,
+     "min_child_samples": 60
+    },
+    "chosen_from": [
+     "current"
+    ]
+   },
+   "postprocess": {
+    "rul_alpha": 0.5,
+    "rul_scale_early": 1.0,
+    "rul_scale_late": 0.97,
+    "stage_k": 1,
+    "stage_max_step": null
+   },
+   "val": {
+    "S7": 12.101320650815945,
+    "true_onset": 14.699555971849456,
+    "pol": 6.053144950389268,
+    "stage": {
+     "max": 1,
+     "n_ge2": 0,
+     "within1": 1.0,
+     "mae": 0.3798346815188083
+    }
+   }
+  }
+ },
+ "files": {
+  "test": {
+   "cls": "up2_v3b_gbm_test_20261024T114647Z.cls.csv.gz",
+   "rul": "up2_v3b_gbm_test_20261024T114647Z.rul.csv.gz"
+  },
+  "test2": {
+   "cls": "up2_v3b_gbm_test2_20261024T114647Z.cls.csv.gz",
+   "rul": "up2_v3b_gbm_test2_20261024T114647Z.rul.csv.gz"
+  },
+  "synth_v3_noise15": {
+   "cls": "up2_v3b_gbm_synth_v3_noise15_20261024T114647Z.cls.csv.gz",
+   "rul": "up2_v3b_gbm_synth_v3_noise15_20261024T114647Z.rul.csv.gz"
+  },
+  "synth_v3_rpm3000": {
+   "cls": "up2_v3b_gbm_synth_v3_rpm3000_20261024T114647Z.cls.csv.gz",
+   "rul": "up2_v3b_gbm_synth_v3_rpm3000_20261024T114647Z.rul.csv.gz"
+  },
+  "synth_v3_hard": {
+   "cls": "up2_v3b_gbm_synth_v3_hard_20261024T114647Z.cls.csv.gz",
+   "rul": "up2_v3b_gbm_synth_v3_hard_20261024T114647Z.rul.csv.gz"
+  }
+ }
+}
