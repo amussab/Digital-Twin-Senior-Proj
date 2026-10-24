@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "AI-engine"))
+from aiengine.coe.run import _restamp                  # noqa: E402
 from aiengine.coe.pipeline import CoePipeline          # noqa: E402
 from aiengine.coe.sources import SimulatedRigSource    # noqa: E402
 from aiengine.coe.udp_sender import UdpSender, parse_hostport, stream  # noqa: E402
@@ -27,6 +28,8 @@ def main(argv=None) -> int:
     ap.add_argument("--ramp-windows", type=int, default=160)
     ap.add_argument("--max-severity", type=float, default=1.0)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--hours-per-window", type=float, default=None,
+                    help="re-stamp t20_ms as one window per H hours (RUL time base, e.g. 0.1667); default real t20")
     a = ap.parse_args(argv)
     src = SimulatedRigSource(a.fault, 0.01, a.rpm, seed=a.seed)
     pipe = CoePipeline(src)
@@ -41,7 +44,8 @@ def main(argv=None) -> int:
             yield w
 
     try:
-        sent = stream(gen(), sender, a.rate, a.healthy_windows + a.ramp_windows + 40)
+        wins = gen() if a.hours_per_window is None else _restamp(gen(), a.hours_per_window)
+        sent = stream(wins, sender, a.rate, a.healthy_windows + a.ramp_windows + 40)
     except KeyboardInterrupt:
         sent = counter["n"]
     print(f"[SIMULATION] sent {sent} windows to {a.udp}")

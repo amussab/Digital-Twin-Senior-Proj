@@ -1,12 +1,13 @@
 <#
-.SYNOPSIS  Backend (v3b contract, replay OFF, UDP :5005) + COE simulator sending a fault scenario over UDP, so the dashboard
+.SYNOPSIS  Backend (3b-coe contract = v3b + COE-adapted classifier + cross-bearing gate; pass -Contract ...model_contract_v3b.json for plain v3b, replay OFF, UDP :5005) + COE simulator sending a fault scenario over UDP, so the dashboard
            shows live data produced by the COE pipeline (raw samples -> BPF -> envelope -> FFT -> 152 B payload).
            Hardware day: stop the simulator, power the node; it sends the same 152-byte datagrams to the same port. Nothing else changes.
 .EXAMPLE   ./scripts/run-up2-coe-demo.ps1
 #>
 param(
-  [string]$Contract = 'AI-engine/models/model_contract_v3b.json',
+  [string]$Contract = 'AI-engine/models/model_contract_v3b_coe.json',
   [double]$Rate = 2,
+  [double]$HoursPerWindow = 0.1667,   # RUL time base the heads were trained on (10-min snapshots); 0 = real contiguous t20
   [string]$Bind = '0.0.0.0',
   [int]$Port = 5080,
   [int]$UdpPort = 5005,
@@ -25,5 +26,5 @@ try {
   Start-Sleep -Seconds 6
   Write-Host "== dashboard: http://localhost:$Port/   COE simulator -> udp 127.0.0.1:$UdpPort at $Rate windows/s [SIMULATION] =="
   Set-Location (Join-Path $root 'AI-engine')
-  & $py (Join-Path $root 'scripts/coe_fault_scenario.py') --udp "127.0.0.1:$UdpPort" --rate $Rate
+  & $py (Join-Path $root 'scripts/coe_fault_scenario.py') --udp "127.0.0.1:$UdpPort" --rate $Rate $(if ($HoursPerWindow -gt 0) { '--hours-per-window'; $HoursPerWindow })
 } finally { if ($be -and -not $be.HasExited) { Stop-Process -Id $be.Id } }
