@@ -83,7 +83,7 @@ docker compose --profile coe up -d backend-coe coe-sim     # COE pipeline simula
 docker compose --profile coe down
 docker compose --profile ai run --rm ai-engine             # selftest
 docker compose --profile ai run --rm ai-engine python -m aiengine.up2_eval   # re-score saved predictions + latency
-docker compose --profile test run --rm test                # pytest: tests/coe up2 up2c coe_adapt twin_up2 (IS2 v2 tests, tests/up2d, run natively: python -m pytest tests/up2d)
+docker compose --profile test run --rm test                # pytest: tests/coe up2 up2c coe_adapt twin_up2 up2d (81 tests incl. IS2 wording v2)
 docker compose --profile test run --rm test-dotnet         # dotnet test: backend + twin
 docker compose --profile evidence run --rm evidence        # executes UP2_Evidence.ipynb headless -> ./artifacts/evidence/UP2_Evidence.html
 docker compose --profile notebook up notebook              # Jupyter on http://localhost:8888/ (127.0.0.1), opens UP2_Evidence.ipynb

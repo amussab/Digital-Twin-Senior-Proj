@@ -124,7 +124,7 @@ services:
     image: dt-ai-engine:integration
     volumes:
       - ./AI-engine/data:/work/AI-engine/data:ro
-    command: ["python", "-m", "pytest", "tests/coe", "tests/up2", "tests/up2c", "tests/coe_adapt", "tests/twin_up2", "-q", "-p", "no:cacheprovider"]
+    command: ["python", "-m", "pytest", "tests/coe", "tests/up2", "tests/up2c", "tests/coe_adapt", "tests/twin_up2", "tests/up2d", "-q", "-p", "no:cacheprovider"]
 
   test-dotnet:
     profiles: ["test"]
