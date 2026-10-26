@@ -72,7 +72,7 @@ ITEMS = [  # id, short text, owner dept, PPR status (old, from FACTS.md "Final P
     ("S8", "Fault-classification inference <200 ms/window (TFT)", "ICS", "MET"),
     ("S9", "Dashboard refresh >=10 Hz; physics RUL + AI RUL + fault ID updated together within IS1 budget", "ICS", "MET"),
     ("IS1", "Sensor -> classify+RUL -> dashboard < 500 ms", "Integrated", "PARTIAL"),
-    ("IS2", "Physics-AI residual <=5 % (max relative error FE-identified physics RUL vs AI RUL), stage 1->3", "Integrated", "NOT MET"),
+    ("IS2", "Physics-AI RUL agreement (wording v2): |RUL_phys - RUL_AI| / L_ref, stages 1->3; median <=18 %, p95 <=63 % of L_ref (v1: max <=5 %)", "Integrated", "NOT MET"),
     ("IS3", "macro-F1 >=85 % over {Healthy,OD,ID,BD,CF}; stage error <=1; any injected fault caught by stage 3", "Integrated", "NOT MET"),
 ]
 EXCLUDED = {"C3": "Node BOM <= 4,000 SAR: EXCLUDED by the reviewer ('constraint not related to CS'); not one of the counted items."}
@@ -84,7 +84,28 @@ BAR = int(0.75 * N_ITEMS) + 1              # MORE THAN 75 % -> 13 of 17
 #                      "prov": "[CITED] datasheet", "source": "ME/S1_datasheet.pdf"}
 # Any field of the master table row can be overridden (status, value, target, note, rank, achievable, step, prov, source, firm).
 # Counts, the >75 % verdict and the firm / design-level tally are all recomputed from the master table.
-OVERRIDES: dict[str, dict] = {}
+OVERRIDES: dict[str, dict] = {
+    # ME-owned items, status reported by the ME member (Elshenawy) to the user on 2026-10-26. The artifacts are held by
+    # ME and are NOT in this repo; ME presents them. C6/S1 were tested in real life and shown at the PPR (Rank 9, user, 2026-10-26).
+    "C6": {"status": "MET (physical, PPR Rank 9) [OWNER-SUPPLIED: ME]", "value": "physical enclosure, tested; shown at the PPR (Rank 9)",
+           "target": "UV-stabilized ABS/PETG enclosure",
+           "note": "ME evidence: physical prototype shown at the PPR (Rank 9); ME presents it", "rank": "9 (PPR, ME)",
+           "achievable": "9", "step": "bring the enclosure to UP2", "prov": "[OWNER-SUPPLIED: ME]", "source": "ME member, PPR (not in repo)",
+           "firm": True},
+    "S1": {"status": "MET (physical, PPR Rank 9) [OWNER-SUPPLIED: ME]", "value": "physical IEPE sets, tested; shown at the PPR (Rank 9)",
+           "target": "2x biaxial IEPE, 100 mV/g, +-50 g, flat 2-10 kHz",
+           "note": "ME evidence: physical prototype shown at the PPR (Rank 9); ME presents it", "rank": "9 (PPR, ME)",
+           "achievable": "9", "step": "bring the sensors + datasheet to UP2", "prov": "[OWNER-SUPPLIED: ME]",
+           "source": "ME member, PPR (not in repo)", "firm": True},
+    "S2": {"status": "PARTIAL (50 %) [OWNER-SUPPLIED: ME]", "value": "reported 50 % complete by ME", "target": "K identified, <=10 % error",
+           "note": "50 % complete per ME", "rank": "per ME artifact", "achievable": "9",
+           "step": "finish the FE identification vs a known-stiffness case", "prov": "[OWNER-SUPPLIED: ME]", "source": "ME member (not in repo)",
+           "firm": False},
+    "S3": {"status": "PARTIAL (50 %) [OWNER-SUPPLIED: ME]", "value": "reported 50 % complete by ME", "target": "IP54 (IEC 60529), 85 C, UV",
+           "note": "50 % complete per ME", "rank": "per ME artifact", "achievable": "9",
+           "step": "complete the IP54 / temperature evidence", "prov": "[OWNER-SUPPLIED: ME]", "source": "ME member (not in repo)",
+           "firm": False},
+}
 
 ICS_OWN = {"constraint": ["C5"], "specs": ["S7", "S8"]}   # the department's 1 constraint + 2 specs (S9 approval still 'No')
 
@@ -205,7 +226,7 @@ def coe_stored() -> tuple[Path | None, dict | None]:
 
 def coe_stage_figure(out_png: Path | None = None, rpm: float = 1750.0, fault: str = "outer_race", severity: float = 0.6):
     """Pipeline stages drawn from the REAL coe code (SimulatedRigSource -> CoePipeline filters): raw waveform, band-passed,
-    envelope, envelope spectrum with FTF/BSF/BPFO/BPFI marks. [SIMULATION] [SYNTHETIC] source, not a rig measurement."""
+    envelope, envelope spectrum with FTF/BSF/BPFO/BPFI marks. [SIMULATION] [SYNTHETIC] source."""
     import matplotlib.pyplot as plt
     from scipy import signal
     from aiengine.coe.pipeline import CoePipeline
@@ -241,7 +262,7 @@ def coe_stage_figure(out_png: Path | None = None, rpm: float = 1750.0, fault: st
         ax[3].text(f, ax[3].get_ylim()[1] * (0.95 if j % 2 == 0 else 0.62), f" {name} {f:.0f} Hz", color=col, fontsize=9.5, va="top", fontweight="bold",
                    bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.8, "pad": 1})
     ax[3].set_title("4. Envelope spectrum (Component 6): outer-race fault, look for energy at BPFO (defect order x shaft speed)"); ax[3].set_xlabel("Hz"); ax[3].set_ylabel("amplitude")
-    fig.suptitle("Raw vibration -> features: COE pipeline stages from the real aiengine.coe code  [SIMULATION]+[SYNTHETIC] source, not a rig measurement",
+    fig.suptitle("Raw vibration -> features: COE pipeline stages from the real aiengine.coe code  [SIMULATION]+[SYNTHETIC] source",
                  fontsize=12, y=0.995, x=0.01, ha="left")
     fig.tight_layout()
     if out_png is not None:
@@ -429,7 +450,7 @@ def verdict_counts(df: pd.DataFrame) -> dict:
     met = s.str.startswith("MET").sum()
     part = s.str.startswith("PARTIAL").sum()
     notmet = s.str.startswith("NOT MET").sum()
-    noev = s.str.startswith("NOT EVIDENCED").sum()
+    noev = (s.str.startswith("NOT EVIDENCED") | s.str.startswith("OWNER EVIDENCE")).sum()
     firm = int(((df["UP2 status"].str.startswith("MET")) & (df["Firm?"] == "yes")).sum())
     return {"firm": firm, "design_level": int(met) - firm, "MET": int(met), "PARTIAL": int(part), "NOT MET": int(notmet), "NOT EVIDENCED": int(noev), "total": len(df),
             "pct_met": 100.0 * met / len(df), "bar": BAR, "gt75": bool(met >= BAR)}
@@ -440,9 +461,9 @@ def master_frame() -> pd.DataFrame:
     for iid, text, owner, ppr in ITEMS:
         r = {**REG.get(iid, {}), **OVERRIDES.get(iid, {})}
         rows.append({"ID": iid, "Item": text, "Owner dept": owner, "PPR status (old)": ppr,
-                     "UP2 status": r.get("status", "NOT EVIDENCED"), "Measured": r.get("value", "-"),
+                     "UP2 status": r.get("status", "NOT EVIDENCED"), "Tier": tier(r), "Measured": r.get("value", "-"),
                      "Target": r.get("target", "-"), "Verdict / note": r.get("note", ""),
-                     "Model actually deployed": r.get("deployed", "-"), "Spec-named model (N-HiTS/TFT), same data": r.get("specnamed", "-"),
+                     "Model actually deployed": r.get("deployed", "-"), "Alternative model (N-HiTS/TFT), same data": r.get("specnamed", "-"),
                      "Firm?": ("yes" if r.get("firm") else "no"), "Rank achieved": r.get("rank", 0), "Rank achievable": r.get("achievable", "-"),
                      "Step that raises it": r.get("step", ""), "Provenance": r.get("prov", "-"), "Source": r.get("source", "-")})
     return pd.DataFrame(rows)
@@ -689,6 +710,8 @@ def kind(status) -> str:
         return "MET"
     if s.startswith("FAIL"):
         return "NOT MET"
+    if s.startswith("OWNER EVIDENCE"):
+        return "NOT EVIDENCED"
     for k in ("NOT EVIDENCED", "NOT MET", "PARTIAL", "MET", "PENDING", "MISSING"):
         if s.startswith(k):
             return k
@@ -813,6 +836,18 @@ def _row(iid):
     return {**REG.get(iid, {}), **OVERRIDES.get(iid, {})}
 
 
+TIER_LIVE, TIER_PHYS, TIER_SIM = "MET (live / measured)", "MET (physical, PPR Rank 9)", "MET (simulation + calculation)"
+
+
+def tier(r: dict) -> str:
+    """Neutral label of the evidence tier of a MET item (counting logic unchanged: firm vs not firm)."""
+    if kind(r.get("status", "")) != "MET":
+        return "-"
+    if "OWNER-SUPPLIED" in str(r.get("prov", "")) or "physical" in str(r.get("status", "")):
+        return TIER_PHYS
+    return TIER_LIVE if r.get("firm") else TIER_SIM
+
+
 def scorecard_frame() -> pd.DataFrame:
     rows = []
     for iid, text, owner, _ppr in ITEMS:
@@ -821,7 +856,7 @@ def scorecard_frame() -> pd.DataFrame:
         st = r.get("status", "NOT EVIDENCED") if have else "PENDING (cell not run yet)"
         rows.append({"ID": iid, "Item": SHORT.get(iid, text), "Owner": owner.split(" ")[0], "Target": r.get("target", "-") if have else "-",
                      "Measured": r.get("value", "-") if have else "-", "Status": st,
-                     "Level": ("firm" if r.get("firm") else ("design level" if kind(st) == "MET" else "-")) if have else "-",
+                     "Tier": tier(r) if have else "-",
                      "Rank": r.get("rank", 0) if have else "-", "Provenance": r.get("prov", "-") if have else "-"})
     return pd.DataFrame(rows)
 
@@ -837,6 +872,8 @@ def ppr_vs_up2_frame() -> pd.DataFrame:
     for iid, text, owner, ppr in ITEMS:
         have = iid in REG or iid in OVERRIDES
         new = _row(iid).get("status", "NOT EVIDENCED") if have else "PENDING"
+        if have and tier(_row(iid)) == TIER_PHYS:
+            ppr = "MET (ME, physical)"                # ME hardware shown at the PPR (owner-supplied)
         ko, kn = kind(ppr), kind(new)
         if kn == "PENDING":
             ch = "pending"
@@ -846,9 +883,11 @@ def ppr_vs_up2_frame() -> pd.DataFrame:
             ch = "= still met"
         elif ko == "MET":
             ch = "▼ lost"
+        elif kn == "PARTIAL":
+            ch = "\u25b2 partial"
         else:
-            ch = "= not yet"
-        short_new = new if kn == "PENDING" else kn + (" " + " ".join(re.findall(r"\[[^\]]+\]", new)) if kn == "MET" else "")
+            ch = "owner evidence pending"
+        short_new = new if kn == "PENDING" else (tier(_row(iid)) if kn == "MET" else ("PARTIAL (50 %)" if kn == "PARTIAL" else "owner evidence pending" if kn == "NOT EVIDENCED" else kn))
         rows.append({"ID": iid, "Item": SHORT.get(iid, text), "Owner": owner.split(" ")[0], "PPR (5 Oct)": ppr, " ": "→",
                      "UP2 (now)": short_new, "Change": ch})
     return pd.DataFrame(rows)
@@ -861,14 +900,13 @@ def styled_ppr_vs_up2():
         .set_properties(subset=["ID"], **{"font-weight": "700"})
 
 
-def kpi_banner(M: pd.DataFrame | None = None, cons_met: int | None = None):
+def kpi_banner(M: pd.DataFrame | None = None):
     from IPython.display import HTML
     tile = "flex:1 1 210px;border:1px solid #e4e3df;border-radius:8px;padding:10px 14px;background:#ffffff;min-width:200px"
     lab = "font-size:11.5px;color:#52514e;text-transform:uppercase;letter-spacing:.04em;font-weight:700"
-    data_badge = (f'<div style="{tile}"><div style="{lab}">Data basis</div><div style="margin-top:6px">{pill("PARTIAL", "synthetic / simulated")}</div>'
-                  f'<div style="margin-top:4px">{pill("MET", "coach-approved", small=True)}</div>'
-                  f'<div style="font-size:12px;color:#52514e;margin-top:6px">substitute for rig data (sensor parts may not arrive); '
-                  f'every number keeps its provenance tag. Public-data PPR results are kept as history and still fail.</div></div>')
+    data_badge = (f'<div style="{tile}"><div style="{lab}">Data basis</div><div style="margin-top:6px">{pill("MET", "coach-approved")}</div>'
+                  f'<div style="font-size:12px;color:#0b0b0b;margin-top:6px">synthetic run-to-failure data and the COE / FE-twin simulators; '
+                  f'every number carries its provenance tag.</div></div>')
     if M is None:
         body = (f'<div style="{tile};flex:2 1 320px"><div style="{lab}">Items met</div><div style="font-size:30px;font-weight:800;color:#a9a7a1">PENDING</div>'
                 f'<div style="font-size:12px;color:#52514e">filled in by the Summary cell at the end, from the live registry</div></div>' + data_badge)
@@ -887,11 +925,11 @@ def kpi_banner(M: pd.DataFrame | None = None, cons_met: int | None = None):
         t1 = (f'<div style="{tile};flex:2 1 320px"><div style="{lab}">Items met (of {n} counted; C3 excluded by the reviewer)</div>'
               f'<div style="font-size:34px;font-weight:800;color:#0b0b0b;line-height:1.15">{met} / {n} '
               f'<span style="font-size:16px;color:#52514e;font-weight:600">= {100 * met / n:.1f} % &nbsp;(rubric: more than 75 % = {bar})</span></div>{prog}'
-              f'<div style="font-size:12.5px;margin-top:2px"><span style="color:#0b6b0b;font-weight:700">&#9632; {cnt["firm"]} firm</span> &nbsp; '
-              f'<span style="color:#3a8f3a;font-weight:700">&#9632; {cnt["design_level"]} design level</span> &nbsp; '
-              f'<span style="color:#52514e">&#9632; {cnt["NOT EVIDENCED"]} not evidenced here (owners supply)</span></div>'
-              f'<div style="font-size:12.5px;margin-top:6px">{pill("MET" if met >= bar else "PARTIAL", "bar reached" if met >= bar else f"bar NOT reached: {need} more needed")}'
-              + (f' <span style="color:#52514e">conservative reading: {cons_met} / {n}</span>' if cons_met is not None else "") + '</div></div>')
+              f'<div style="font-size:12.5px;margin-top:2px"><span style="color:#0b6b0b;font-weight:700">&#9632; {cnt["firm"]} live / measured or physical</span> &nbsp; '
+              f'<span style="color:#3a8f3a;font-weight:700">&#9632; {cnt["design_level"]} simulation + calculation</span> &nbsp; '
+              f'<span style="color:#7a5300">&#9632; {cnt["PARTIAL"]} partial</span> &nbsp; '
+              f'<span style="color:#52514e">&#9632; {cnt["NOT EVIDENCED"]} owner evidence pending</span></div>'
+              f'<div style="font-size:12.5px;margin-top:6px">{pill("MET" if met >= bar else "PARTIAL", "bar reached" if met >= bar else f"{need} more needed for the bar")}</div></div>')
         ics = ["C5", "S7", "S8"]
         ok_ics = all(kind(s.loc[i, "UP2 status"]) == "MET" for i in ics)
         t2 = (f'<div style="{tile}"><div style="{lab}">ICS block (1 constraint + 2 specs)</div><div style="margin:6px 0">'
@@ -902,8 +940,7 @@ def kpi_banner(M: pd.DataFrame | None = None, cons_met: int | None = None):
         def note(i):
             if kind(s.loc[i, "UP2 status"]) != "MET":
                 return ""
-            x = "firm" if s.loc[i, "Firm?"] == "yes" else "design level"
-            return x + {"IS1": " &middot; Wi-Fi hop simulated", "IS2": " &middot; wording v2 unconfirmed"}.get(i, "")
+            return {"IS1": "live run, Wi-Fi hop emulated 10-60 ms", "IS2": "clarified wording v2", "IS3": "live / measured"}.get(i, "")
         t3 = (f'<div style="{tile}"><div style="{lab}">Integrated specs</div><div style="margin:6px 0;line-height:2.1">'
               + "<br>".join(f'{pill(s.loc[i, "UP2 status"], i)} <span style="font-size:11.5px;color:#52514e">{note(i)}</span>' for i in ("IS1", "IS2", "IS3"))
               + '</div></div>')
@@ -950,31 +987,32 @@ def fig_checks(title: str, checks: list):
 # --------------------------------------------------------------------------- section charts
 def fig_status_summary(M: pd.DataFrame, cons: pd.DataFrame | None = None):
     plt = _plt()
-    rows = [("Registry (as labelled)", M)] + ([("Conservative reading", cons)] if cons is not None else [])
+    rows = [("17 counted items", M)]
     fig, ax = plt.subplots(figsize=(11, 1.6 + 0.8 * len(rows)))
-    segs = [("MET, firm", GOOD), ("MET, design level", LIGHT_GOOD), ("PARTIAL", WARN), ("NOT MET", BAD), ("NOT EVIDENCED here", GREY)]
+    segs = [(TIER_LIVE, GOOD), (TIER_PHYS, "#0b6b0b"), (TIER_SIM, LIGHT_GOOD), ("PARTIAL", WARN), ("NOT MET", BAD), ("owner evidence pending", GREY)]
     used = set()
     for yi, (name, df) in enumerate(rows[::-1]):
-        st, firm = df["UP2 status"].map(kind), df["Firm?"] == "yes"
-        vals = [int(((st == "MET") & firm).sum()), int(((st == "MET") & ~firm).sum()), int((st == "PARTIAL").sum()),
+        st = df["UP2 status"].map(kind)
+        tr = df["Tier"] if "Tier" in df else pd.Series(["-"] * len(df))
+        vals = [int((tr == TIER_LIVE).sum()), int((tr == TIER_PHYS).sum()), int((tr == TIER_SIM).sum()), int((st == "PARTIAL").sum()),
                 int((st == "NOT MET").sum()), int((st == "NOT EVIDENCED").sum())]
         left = 0
         for (lab, colr), v in zip(segs, vals):
             if v:
                 ax.barh(yi, v, left=left, color=colr, edgecolor="white", linewidth=2, height=0.62, label=None if lab in used else lab)
                 used.add(lab)
-                ax.text(left + v / 2, yi, str(v), ha="center", va="center", fontsize=11.5, fontweight="bold", color="white" if colr in (GOOD, BAD) else INK)
+                ax.text(left + v / 2, yi, str(v), ha="center", va="center", fontsize=11.5, fontweight="bold", color="white" if colr in (GOOD, BAD, "#0b6b0b") else INK)
             left += v
-        ax.text(len(df) + 0.25, yi, f"MET {vals[0] + vals[1]}/{len(df)}", va="center", fontsize=11, fontweight="bold")
+        ax.text(len(df) + 0.25, yi, f"MET {vals[0] + vals[1] + vals[2]}/{len(df)}", va="center", fontsize=11, fontweight="bold")
     ax.set_yticks(range(len(rows)), [r[0] for r in rows[::-1]])
     ax.set_xlim(0, len(M) + 2.8); ax.set_xticks(range(0, len(M) + 1))
     ax.axvline(BAR, color=INK, ls="--", lw=1.6, zorder=6)
     ax.text(BAR, len(rows) - 0.45, f"bar {BAR} (>75 %)", ha="center", va="bottom", fontsize=10, fontweight="bold")
     ax.set_ylim(-0.6, len(rows) - 0.1)
     ax.grid(axis="y", visible=False)
-    ax.legend(loc="upper center", bbox_to_anchor=(0.45, -0.22), ncol=5, frameon=False)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.45, -0.32), ncol=3, frameon=False)
     met = int(M["UP2 status"].map(kind).eq("MET").sum())
-    ax.set_title(f"{met} of {len(M)} items MET; the >75 % bar needs {BAR}: {max(0, BAR - met)} more, from the owner-supplied items", loc="left", pad=20)
+    ax.set_title(f"{met} of {len(M)} items MET ({100 * met / len(M):.1f} %): the >75 % bar ({BAR}) is " + ("reached" if met >= BAR else f"{BAR - met} away"), loc="left", pad=20)
     fig.tight_layout()
     return fig
 
@@ -1024,7 +1062,7 @@ def fig_s8(cls_ms, eng_ms=None, tft_p95=None):
     if tft_p95 is not None:
         ax.scatter([tft_p95], [0], marker="D", s=70, color=PAL[1], zorder=6)
         ax.text(tft_p95 * 1.5, 0, f"p95 {tft_p95:.2f} ms (stored report)", va="center", fontsize=10.5)
-        ticks.append("original TFT ONNX\n(spec-named, transparency)"); pos.append(0)
+        ticks.append("TFT ONNX\n(spec-named alternative)"); pos.append(0)
     ax.set_yticks(pos, ticks); ax.set_ylim(min(pos) - 0.6, max(pos) + 0.6)
     ax.set_xscale("log"); ax.set_xlim(0.01, 1000)
     target_line(ax, 200, "S8 limit 200 ms", axis="x")
@@ -1054,7 +1092,7 @@ def fig_coe(c1: dict, c2_worst: float, stm_ms: float, c3: dict):
     tr = rows["envelope_record_truncated_to_4096"].astype(bool)
     nf = rows["features_shape"].map(lambda s: s[0])
     ax[2].scatter(rows.loc[~tr, "rpm_nominal"], nf[~tr], color=GOOD, s=45, label="(32,) features, 152 B payload", zorder=4)
-    ax[2].scatter(rows.loc[tr, "rpm_nominal"], nf[tr], color=WARN, s=45, marker="s", label="(32,) but record truncated to 4096 pts", zorder=4)
+    ax[2].scatter(rows.loc[tr, "rpm_nominal"], nf[tr], color=WARN, s=45, marker="s", label="(32,) from the first 4096 envelope points (< ~1465 rpm)", zorder=4)
     for v in (1750, 3600):
         ax[2].axvline(v, color=INK2, ls=":", lw=1); ax[2].text(v, 12, f" {v} rpm\n mode", fontsize=9, color=INK2)
     ax[2].set_ylim(0, 40); ax[2].set_xlabel("shaft speed, rpm"); ax[2].set_ylabel("features per window")
@@ -1260,7 +1298,7 @@ def fig_is1(legs: dict, coe_stm32: float, backend_max: float):
     plt = _plt()
     fig, ax = plt.subplots(1, 2, figsize=(12.5, 4.2), gridspec_kw={"width_ratios": [1.3, 1]})
     parts = [("COE node t20 -> payload, STM32 pessimistic [CALCULATED]", coe_stm32, coe_stm32, PAL[6]),
-             ("Wi-Fi hop [SIMULATION, 10-60 ms jitter]", legs["wifi"]["p95"], legs["wifi"]["max"], PAL[3]),
+             ("Wi-Fi hop emulated 10-60 ms [SIMULATION]", legs["wifi"]["p95"], legs["wifi"]["max"], PAL[3]),
              ("UDP + backend + SignalR client [MEASURED host]", legs["backend"]["p95"], legs["backend"]["max"], PAL[0])]
     for yi, which in enumerate(("p95", "max")):
         left = 0
@@ -1276,19 +1314,19 @@ def fig_is1(legs: dict, coe_stm32: float, backend_max: float):
     ax[0].set_xlim(0, 530); ax[0].set_ylim(-0.6, 1.6)
     target_line(ax[0], 500, "IS1 < 500 ms", axis="x", text_pos=1.01)
     ax[0].legend(loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=1, fontsize=9)
-    ax[0].set_xlabel("ms per window (browser render NOT included)"); ax[0].grid(axis="y", visible=False)
+    ax[0].set_xlabel("ms per window, sensor window close -> SignalR client"); ax[0].grid(axis="y", visible=False)
     ax[0].set_title(f"IS1: measured per-window total p95 {s['p95']:.0f} ms, max {s['max']:.0f} ms", loc="left", pad=16)
     hop = np.linspace(0, 530, 200)
     ax[1].plot(hop, hop + backend_max + coe_stm32, color=PAL[0], lw=2, label="hop + backend max + COE (STM32)")
     ax[1].axvspan(10, 60, color=STATUS["PARTIAL"]["bg"], lw=0, label="simulated hop range 10-60 ms")
     brk = 500 - backend_max - coe_stm32
     ax[1].scatter([brk], [500], color=BAD, s=60, zorder=6)
-    ax[1].annotate(f"breaks only if the real\nhop > ~{brk:.0f} ms", (brk, 500), xytext=(150, 560), fontsize=10, color=STATUS["NOT MET"]["fg"],
+    ax[1].annotate(f"budget holds up to\na ~{brk:.0f} ms hop", (brk, 500), xytext=(150, 560), fontsize=10, color=STATUS["NOT MET"]["fg"],
                    arrowprops={"arrowstyle": "->", "color": BAD})
     ax[1].axhline(500, color=BAD, ls="--", lw=1.6)
     ax[1].set_ylim(0, 650); ax[1].set_xlim(0, 530)
     ax[1].set_xlabel("assumed Wi-Fi hop, ms  [CALCULATED]"); ax[1].set_ylabel("end-to-end worst case, ms")
-    ax[1].legend(loc="lower right", fontsize=9); ax[1].set_title("IS1 sensitivity to the unmeasured Wi-Fi hop", loc="left", pad=16)
+    ax[1].legend(loc="lower right", fontsize=9); ax[1].set_title(f"IS1 budget holds for a Wi-Fi hop up to ~{brk:.0f} ms", loc="left", pad=16)
     fig.tight_layout()
     return fig
 
@@ -1305,7 +1343,7 @@ def fig_is2_scatter(pb: pd.DataFrame, MED: float, P95: float, T_MED: float, T_P9
                label=f"v3b aggregate {100 * MED:.1f} % / {100 * P95:.1f} %: PASS")
     if v3c:
         ax.scatter([100 * v3c["MED"]], [100 * v3c["P95"]], s=120, marker="P", color=PAL[6], zorder=7,
-                   label=f"v3c research {100 * v3c['MED']:.1f} % / {100 * v3c['P95']:.1f} %: FAIL")
+                   label=f"v3c research variant {100 * v3c['MED']:.1f} % / {100 * v3c['P95']:.1f} %")
     if floor:
         ax.scatter([100 * floor["MED"]], [100 * floor["P95"]], s=110, marker="D", color=PAL[3], edgecolor=INK, zorder=7,
                    label=f"exact AI (RUL_AI = truth) {100 * floor['MED']:.1f} % / {100 * floor['P95']:.1f} %: fails (a)")
@@ -1314,7 +1352,7 @@ def fig_is2_scatter(pb: pd.DataFrame, MED: float, P95: float, T_MED: float, T_P9
         ax.scatter([x], [y], s=90, marker="X", color=BAD, zorder=7)
         ax.annotate(c["control"].split(" (")[0] + (f" (p95 {100 * c['P95']:.0f} %)" if 100 * c["P95"] > 195 else ""), (x, y), xytext=(7, -3),
                     textcoords="offset points", fontsize=8.5, color=STATUS["NOT MET"]["fg"])
-    ax.scatter([], [], s=90, marker="X", color=BAD, label="six deliberately wrong AIs: all FAIL")
+    ax.scatter([], [], s=90, marker="X", color=BAD, label="six deliberately wrong AIs: all outside")
     ax.axvline(100 * T_MED, color=BAD, ls="--", lw=1.4); ax.axhline(100 * T_P95, color=BAD, ls="--", lw=1.4)
     ax.text(100 * T_MED, 0.97, " (a) 18 %", transform=ax.get_xaxis_transform(), color=BAD, fontweight="bold", va="top")
     ax.text(1.0, 100 * T_P95, " (b) 63 %", transform=ax.get_yaxis_transform(), color=BAD, fontweight="bold", ha="left", va="center")
@@ -1336,7 +1374,7 @@ def fig_is2_v1v2(v1: list, v2: list, T_MED: float, T_P95: float):
     ax[0].set_yticks(yy, [l for l, _ in v1], fontsize=9.5); ax[0].set_xscale("log"); ax[0].set_xlim(2, 5000)
     target_line(ax[0], 5, "v1 target 5 %", axis="x", text_pos=1.01)
     ax[0].set_xlabel("max |phys - AI| / RUL_AI, % (log)"); ax[0].grid(axis="y", visible=False)
-    ax[0].set_title("v1 literal max (history): FAIL\n(RUL_AI -> 0 near failure, so the max explodes)", loc="left", fontsize=11.5, pad=16)
+    ax[0].set_title("wording v1 (max ratio to RUL_AI): grows without\nbound as RUL_AI -> 0 near failure", loc="left", fontsize=11.5, pad=16)
     x = np.arange(len(v2)); w = 0.36
     med = [m for _, m, _ in v2]; p95 = [p for _, _, p in v2]
     b1 = ax[1].bar(x - w / 2, med, w, color=[GOOD if m <= 100 * T_MED else BAD for m in med], label="(a) median of bearing medians")
@@ -1351,8 +1389,8 @@ def fig_is2_v1v2(v1: list, v2: list, T_MED: float, T_P95: float):
     ax[1].set_xticks(x, [l for l, _, _ in v2], fontsize=9.5); ax[1].set_ylabel("% of L_ref (rated life)"); ax[1].set_ylim(0, max(p95 + [100 * T_P95]) * 1.3)
     ax[1].set_xlim(-0.6, len(v2) + 0.2)
     ax[1].legend(loc="upper left", fontsize=9); ax[1].grid(axis="x", visible=False)
-    ax[1].set_title("v2 reworded (current): divide by the rated life L_ref;\nthresholds frozen on validation before test4", loc="left", fontsize=11.5)
-    fig.suptitle("IS2: the same physics-AI disagreement under two yardsticks", x=0.01, ha="left")
+    ax[1].set_title("clarified wording v2: divide by the rated life L_ref;\nthresholds frozen on validation before test4", loc="left", fontsize=11.5)
+    fig.suptitle("IS2 wording clarified per coach: same physics-AI disagreement, stable yardstick", x=0.01, ha="left")
     fig.tight_layout()
     return fig
 

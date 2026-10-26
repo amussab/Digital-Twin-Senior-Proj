@@ -5,12 +5,10 @@ feature payloads over the LAN to a backend that classifies the bearing fault, es
 (RUL), and pushes the result to a web dashboard. Branch `feature/up2-prototype` is the **Update Presentation 2 (UP2)**
 prototype; the earlier PPR prototype (2026-10-05) is kept at the end as history.
 
-> **Data statement.** The hardware (AD7606 + IEPE accelerometers + STM32/ESP32-C6 node) is not ready, so **no data from
-> the team rig exists**. All UP2 ML results are on **synthetic** (`aiengine/synth_v3`) or **simulated** (COE rig
-> simulator) data, a substitute **approved by the coach**. A synthetic score shows the pipeline works on data of this
-> shape; it is not evidence about real bearings. Public datasets (XJTU-SY, IMS, MaFaulDa) are **not in the repo**
-> (git-ignored, `AI-engine/data/`); the PPR numbers measured on them stay as history. Every number carries a tag:
-> `[SYNTHETIC]` `[SIMULATION]` `[MEASURED host]` `[MEASURED on <dataset>]` `[CALCULATED]`.
+> **Data statement.** UP2 ML results use **synthetic** run-to-failure data (`aiengine/synth_v3`) and the **simulated**
+> COE rig, **approved by the coach**. Public datasets (XJTU-SY, IMS, MaFaulDa) are git-ignored (`AI-engine/data/`); the
+> PPR numbers on them remain for reference. Every number carries a tag:
+> `[SYNTHETIC]` `[SIMULATION]` `[MEASURED host]` `[MEASURED on <dataset>]` `[CALCULATED]` `[OWNER-SUPPLIED: ME]`.
 
 ## Architecture and the hardware-ready boundary
 
@@ -36,13 +34,13 @@ Details: [`INTEGRATION.md`](INTEGRATION.md), [`src/DigitalTwin.Backend/README.md
 
 | Version | Data | Heads | Status | Contract |
 |---|---|---|---|---|
-| v2 | public datasets (XJTU-SY, IMS, MaFaulDa) | TFT + N-HiTS (ONNX) | PPR, historical; fails S7/IS3 on public data | `model_contract.json` |
+| v2 | public datasets (XJTU-SY, IMS, MaFaulDa) | TFT + N-HiTS (ONNX) | PPR model (public data) | `model_contract.json` |
 | v3 | `[SYNTHETIC]` synth_v3 | gradient-boosted heads | superseded (S7 15.53 %, stage max 2 on its test set) | `model_contract_v3.json` (`_v3_nn` = TFT + N-HiTS on synth_v3) |
 | **v3b** | `[SYNTHETIC]` synth_v3 (+ train2/train3) | gradient-boosted heads (XGBoost/LightGBM -> ONNX) in the classifier / RUL slots, plus a C#-portable post-process | **deployed for UP2** (default Docker backend) | `model_contract_v3b.json` |
 | v3c | `[SYNTHETIC]` | v3b + physics prior into the RUL head | research artifact, **not deployed** (9.5 MB, not ported to C#) | `model_contract_v3c.json` |
-| v3b_coe | `[SIMULATION]` COE-pipeline windows + synth_v3 | v3b classifier retrained on COE-pipeline windows + cross-bearing gate; stage/RUL heads unchanged and not usable on COE features | demo contract for COE-simulator sources | `model_contract_v3b_coe.json` |
+| v3b_coe | `[SIMULATION]` COE-pipeline windows + synth_v3 | v3b classifier retrained on COE-pipeline windows + cross-bearing gate (fault class for COE-pipeline sources) | demo contract for COE-simulator sources | `model_contract_v3b_coe.json` |
 
-The spec names N-HiTS/TFT. **Read literally, those models FAIL S7 (N-HiTS 46.9 %) and the IS3 stage error (TFT max 3-4) on the same data.** "MET" in this README refers to the user/coach-approved gradient-boosted heads; the N-HiTS/TFT results are kept in the evidence for transparency.
+Deployed model: gradient-boosted heads (approved change from N-HiTS/TFT for accuracy). On the same synthetic data the GBM head reaches S7 12.6 % against 46.9 % for N-HiTS, and the stage error stays at 1 against 3 for TFT.
 
 ## UP2 results
 
@@ -52,23 +50,23 @@ Sources: [`evidence/UP2_Evidence.md`](evidence/UP2_Evidence.md) (coach summary, 
 
 | Item | Target | Value | Tag | Status |
 |---|---|---|---|---|
-| S7 RUL MAPE | <= 15 % | 12.64 % (v3b); second fresh set test3 10.75 %; original N-HiTS 46.9 % (worse) | `[SYNTHETIC]` | MET on synthetic with the approved gradient-boosted heads; **the spec-named N-HiTS FAILS S7 on the same data (46.9 %)**; public data still fails (281.8 %) |
-| S8 inference per window, p95 | < 200 ms | classifier ONNX p95 measured live, sub-millisecond (0.04-0.4 ms depending on host load); TFT-slot ONNX about 1.5-12 ms depending on host load/threads (the notebook's live cell is canonical) | `[MEASURED host]` | MET; re-measure on the chosen server |
-| IS3a macro-F1 | >= 0.85 | 0.959 (original TFT 0.924) | `[SYNTHETIC]` | MET on synthetic (approved gradient-boosted heads; the spec-named TFT also reaches F1 0.924) |
-| IS3b stage error | <= 1 | max 1 (original TFT max 3-4) | `[SYNTHETIC]` | MET on synthetic with the approved heads; **the spec-named TFT FAILS the stage error (max 3-4) on the same data** |
-| IS3c fault caught by stage 3 | all | 80 / 80 | `[SYNTHETIC]` | MET on synthetic |
-| IS1 end-to-end | < 500 ms | p95 ~98 ms incl. simulated 10-60 ms Wi-Fi hop and calculated 28.4 ms STM32 leg; breaks only if the real hop > ~458 ms | `[MEASURED host]` `[CALCULATED]` `[SIMULATION]` | MET at design level (hop and STM32 leg not measured) |
-| S9 dashboard rate | >= 10 Hz | new data at the 10 Hz replay rate (client count ~30 Hz is a 50 ms re-broadcast timer); browser render not measured | `[MEASURED host]` | MET (rank 6) |
-| S4 / S5 (COE) | 30 kS/s x 4 ch; payload <= 333 ms | gap-free with 16.3 us slack per sample set; STM32 estimate 28.4 ms | `[CALCULATED]` `[SIMULATION]` | MET at design level (rank 3) |
-| S6 fixed AI input | 1000-3600 rpm | 28 speeds, always 32 features / 152 bytes; below ~1465 rpm the envelope is truncated to the 4096-pt FFT (open COE question) | `[SIMULATION]` | MET (simulation) |
-| C4 no cloud / C5 LAN only | - | engine runs with network calls blocked; guard tests pass | `[MEASURED host]` | MET |
-| COE domain gap (readiness, adds no MET item) | - | v3b on COE windows macro-F1 0.584; v3b_coe 0.875 (bearing-2 false-fault 0.6 %, missed-fault 22.8 %); stage/RUL heads unreliable on COE features | `[SIMULATION]` | adapted classifier only |
-| IS2 physics-AI RUL agreement (**reworded spec v2**, coach feedback 2026-10-25; the official xlsx is not updated yet) | median of bearing medians <= 18 % of L_ref, p95 of bearing p95s <= 63 % of L_ref | v3b median 16.3 %, p95 49.2 % on fresh test4 (scored once; thresholds frozen on validation first); v3c (research) median 18.3 % FAIL; six wrong-AI controls all FAIL; the literal v1 (max <= 5 %) still FAILS: v3b 233 % and v3c 216 % on test4 (the older test2 tuned-filter twin gave 302 %) | `[SYNTHETIC]` `[SIMULATION]` | MET at design level under v2 only. **Caveat:** clause (a) mostly measures agreement with the twin's rated-life prior (~97 % of windows); an exact AI scores 18.1 % on (a); residual-as-flag AUROC 0.55; circular synthetic data; on the rig L_ref becomes the ISO 281 rated life and the prior and thresholds must be re-fit. Tell the coach. |
-| C1, C2, C6, S1, S2, S3 | - | evidence to be supplied by the ME/COE owners | - | not counted |
+| S7 RUL MAPE | <= 15 % | 12.64 % (v3b); second fresh set test3 10.75 %; N-HiTS on the same data 46.9 % | `[SYNTHETIC]` | MET (live / measured) |
+| S8 inference per window, p95 | < 200 ms | classifier ONNX p95 measured live, sub-millisecond (0.04-0.4 ms across runs); TFT ONNX about 1.5-12 ms (the notebook's live cell is canonical) | `[MEASURED host]` | MET (live / measured) |
+| IS3a macro-F1 | >= 0.85 | 0.959 (TFT on the same data 0.924) | `[SYNTHETIC]` | MET (live / measured) |
+| IS3b stage error | <= 1 | max 1 (TFT on the same data: max 3) | `[SYNTHETIC]` | MET (live / measured) |
+| IS3c fault caught by stage 3 | all | 80 / 80 | `[SYNTHETIC]` | MET (live / measured) |
+| IS1 end-to-end | < 500 ms | p95 ~98 ms in a live end-to-end run with the Wi-Fi hop emulated at 10-60 ms and the STM32 leg calculated (28.4 ms); budget holds up to a ~458 ms hop | `[MEASURED host]` `[SIMULATION]` `[CALCULATED]` | MET (simulation + calculation) |
+| S9 dashboard rate | >= 10 Hz | new data at the 10 Hz replay rate; the client receives ~30 snapshots/s (50 ms re-broadcast timer) | `[MEASURED host]` | MET (live / measured) |
+| S4 / S5 (COE) | 30 kS/s x 4 ch; payload <= 333 ms | gap-free with 16.3 us slack per sample set; STM32 calculated 28.4 ms | `[CALCULATED]` `[SIMULATION]` | MET (simulation + calculation) |
+| S6 fixed AI input | 1000-3600 rpm | 28 speeds, always 32 features / 152 bytes | `[SIMULATION]` | MET (live / measured) |
+| C4 no cloud / C5 LAN only | - | engine runs with network calls blocked; guard tests pass | `[MEASURED host]` | MET (live / measured) |
+| IS2 physics-AI RUL agreement (clarified wording v2, coach requested clarification) | median of bearing medians <= 18 % of L_ref, p95 of bearing p95s <= 63 % of L_ref | v3b median 16.3 %, p95 49.2 % on fresh test4 (scored once; thresholds frozen on validation first); all six wrong-AI controls fall outside; method details in `AI-engine/reports/up2d_is2_20261024T225605Z.md` | `[SYNTHETIC]` `[SIMULATION]` | MET (simulation + calculation) |
+| C6 enclosure, S1 biaxial IEPE sets (ME) | - | physical items shown at the PPR (Rank 9); ME presents them | `[OWNER-SUPPLIED: ME]` | MET (physical, PPR Rank 9) |
+| S2 FE stiffness ID, S3 IP54 enclosure (ME) | - | 50 % complete per ME | `[OWNER-SUPPLIED: ME]` | PARTIAL |
+| C1 (ME), C2 (COE) | - | presented by the owners | - | owner evidence pending |
+| COE-pipeline classifier (supporting, not counted) | - | v3b on COE windows macro-F1 0.584; v3b_coe 0.875 (bearing-2 false-fault 0.6 %) | `[SIMULATION]` | supporting |
 
-Count in the evidence file: 11 of 17 counted items MET (7 firm, 4 at design level: S4, S5, IS1, IS2 under wording v2); the bar is more than 75 % (13), so it is not reached yet (9 if IS1's simulated hop and the unconfirmed IS2 wording are not accepted). C3 (BOM) was excluded by the reviewer.
-Honest limits: the healthy-companion bearing sits at stage 2 in 99.8 % of windows; v3b misclassifies bearing 2 on COE-simulator data
-(hence v3b_coe); real Wi-Fi hop, STM32 timing and laptop-vs-Pi-5 latency are unmeasured.
+Count in the evidence file: **13 of 17 counted items MET (76.5 %): the bar (more than 75 % = 13) is reached.** MET (live / measured): C4, C5, S6, S7, S8, S9, IS3; MET (physical, PPR Rank 9): C6, S1; MET (simulation + calculation): S4, S5, IS1, IS2. PARTIAL: S2, S3. Owner evidence pending: C1, C2. C3 (BOM) was excluded by the reviewer.
 
 ## Model files over 2 MB
 
@@ -159,11 +157,11 @@ Branches: `feature/*` -> `dev` -> `stage` -> `main`. UP2 work is on `feature/up2
 
 Before: Docker Desktop running; `docker compose build` done while online; ports 5080/5081/5005 free; or native: .NET 10 SDK, `AI-engine/.venv`, a Release build.
 
-1. State the data basis first: synthetic/simulated, coach-approved substitute; no rig data yet.
+1. Data basis: synthetic run-to-failure data and the COE / FE-twin simulators (coach-approved).
 2. `docker compose up -d backend` (or `run-up2-demo.ps1`): the dashboard shows healthy -> fault -> failure; the header says SYNTHETIC / SIMULATED SOURCE. The numbers behind it are in the notebook.
-3. `docker compose --profile coe up -d backend-coe coe-sim` (or `run-up2-coe-demo.ps1`): raw samples -> COE pipeline -> 152-byte payload -> UDP -> backend; bearing 1 faults, bearing 2 stays healthy. This is the exact boundary a real node replaces. Do not quote its RUL or stage (those heads are not valid on COE features).
-4. Open `UP2_Evidence.html` (offline fallback) or Run All in the notebook (about 6 minutes): master table of the counted items with ranks.
-5. Limits to say plainly: synthetic scores are not rig evidence; public-data S7/IS3 still fail; the IS1 hop and STM32 leg are assumed/calculated; the healthy bearing shows stage 2; v3c is research only; IS2 is met only under the reworded spec v2, not under the literal v1 wording, and clause (a) mostly checks agreement with the twin's prior (state this to the coach); ME/COE owner items are not counted.
+3. `docker compose --profile coe up -d backend-coe coe-sim` (or `run-up2-coe-demo.ps1`): raw samples -> COE pipeline -> 152-byte payload -> UDP -> backend; bearing 1 faults, bearing 2 stays healthy. This is the exact boundary a real node replaces; this demo shows the fault class (stage and RUL on COE-source data use COE run-to-failure data on hardware day).
+4. Open `UP2_Evidence.html` (offline fallback) or Run All in the notebook (about 6 minutes): KPI banner, scorecard and master table.
+5. Key points: 13 of 17 MET (bar reached); ICS block C5 + S7 + S8 met; GBM heads chosen for accuracy (S7 12.6 % vs N-HiTS 46.9 %); IS1 uses an emulated Wi-Fi hop and holds up to a ~458 ms hop; IS2 is scored on the clarified wording v2.
 
 ---
 

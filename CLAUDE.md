@@ -154,7 +154,7 @@ ledger and `evidence/UP2_Evidence.md` for the coach-facing summary. Short versio
    needs the same edit by the team. Never present the old literal "max <=5 %" as met.
 2. **Spec naming N-HiTS/TFT vs deployed GBM heads** — approved by the user/coach for performance;
    keep the comparison visible.
-3. **Other departments' evidence** (C1, C2, C6, S1, S2, S3) — to be supplied by owners; add to
+3. **Other departments' evidence** — ME reported C6 + S1 met and S2 + S3 50 % (2026-10-26, in `OVERRIDES`); C1 (ME) and C2 (COE) still to be supplied; add to
    `up2_helpers.OVERRIDES`. BOM (C3) is excluded by the reviewer; item count is 17, bar >=13.
 4. **COE stage/RUL head on real COE features** needs refitting on rig commissioning + run-to-failure data;
    `tau` of the cross-bearing gate likewise. Real Wi-Fi hop, STM32 timing and laptop-vs-Pi-5 latency
