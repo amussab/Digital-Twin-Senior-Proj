@@ -143,7 +143,7 @@ Six deliberately wrong AI RULs (x1.5, x0.6, +0.3 L_ref, time-reversed, constant 
 
 ## 6b. COE-integration readiness: the domain gap and its adaptation `[SIMULATION]` `[SYNTHETIC]`
 
-The deployed v3b classifier was trained on payload-level synthetic features, not on what the COE pipeline outputs. Raw samples from the COE rig simulator were therefore run through the real causal `CoePipeline` (dataset `synth_coe`, 420 runs, split by run; the 106-run COE-test was scored once; `reports/coe_adapt_20261024T213622Z.md`, re-scored live in the notebook, section 8b).
+The deployed v3b classifier was trained on payload-level synthetic features, not on what the COE pipeline outputs. Raw samples from the COE rig simulator were therefore run through the real causal `CoePipeline` (dataset `synth_coe`, 420 runs, split by run; the 106-run COE-test was scored once; `reports/coe_adapt_20261024T213622Z.md`, re-scored live in the notebook, "Additional items", part A).
 
 | COE-test, per bearing-window | macro-F1 | bearing-2 false-fault | bearing-1 false-fault | missed-fault | cage F1 |
 |---|---|---|---|---|---|
