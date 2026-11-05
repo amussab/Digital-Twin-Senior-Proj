@@ -226,7 +226,12 @@ project data. Reasoning detail in `ICS/`. Genuine Expert Consultation material f
   cross-section SVG.
 - **Enclosure**: resolved — 220×170×110mm PETG/ABS 3D-print, thermal analysis done (detail in
   `ME/`).
-- **Filter topology/Keyphasor conditioning circuit**: still open (detail in `COE/`).
+- **Filter topology**: resolved (updated 5 Nov 2026) — built and tested 2nd-order unity-gain
+  Sallen-Key low-pass, f0 11.25 kHz calculated (measured −3 dB at 10 kHz including the AD7606's
+  own input filter), one TL074 for all four channels on ±15 V from an isolated A2415S-1WR3. This
+  replaces the earlier 4th-order MFB design. Detail in `COE/LPF-design-details.md`.
+- **Keyphasor conditioning circuit**: moved to optional future work, not committed. The firmware
+  uses fixed 1750/3600 RPM profiles instead of a measured speed (detail in `COE/`).
 
 ### 6.4 Stakeholders — framing rule (unchanged, still applies)
 
@@ -372,11 +377,16 @@ itemized list, tax ID/QR code (KFUPM tax ID: 300000865600003).
    verified against transcripts); laptop-vs-Pi5 confirmation (genuinely open, §6.3); MS Planner
    actually in place; Track Changes turned on; TOC/List of Figures/Tables field refresh.
 6. Still-open engineering items directly from the FDR's own "Evidence status" lines: real rig
-   frequency sweep and real fault-seeded database (ME); prototype timing/integration tests (COE);
-   filter topology/cutoff and the Keyphasor conditioning circuit (COE); actual model fine-tuning on
-   real data, not just architecture selection (ICS). A separate mismatch worth resolving alongside
-   these: COE's own working docs describe a 152-byte/30kS-s payload while the FDR deck says
-   168-byte/50kS-s — reconcile before any downstream document treats either number as final.
+   frequency sweep and real fault-seeded database (ME); prototype timing/integration tests (COE:
+   STM32 → ESP32-C6 UART link, Wi-Fi delivery to the host, a long LIVE run); actual model
+   fine-tuning on real data, not just architecture selection (ICS). The COE filter is now built
+   (§6.3) and the Keyphasor circuit is optional future work.
+   **Payload size (updated 5 Nov 2026):** the built COE firmware samples at 29,998.5 S/s per
+   channel and sends a **160-byte** packet (COE1 marker, schema, window ID, RPM, profile, valid
+   mask, unit, 32 features, CRC-32; detail in `COE/`). This replaces both older numbers: the
+   152-byte layout (earlier COE docs, still used by the AI-engine simulator and decoder) and the
+   FDR deck's 168-byte/50 kS/s. The host-side decoder must be updated to 160 bytes before real
+   COE packets can be received.
 
 ---
 
