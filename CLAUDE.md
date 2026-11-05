@@ -1,8 +1,9 @@
 # Digital-Twin-Senior-Proj — repo instructions
 
-Git repo (remote `github.com/amussab/Digital-Twin-Senior-Proj`; **current work branch
-`feature/up2-prototype`** for Update Presentation 2, cut from `feature/integration`; never push to
-`main`/`feature/dashboard`) for Team M001's senior design build: a
+Git repo (remote `github.com/amussab/Digital-Twin-Senior-Proj`; **`main` is the reference
+branch** — since 2026-11-05 it holds all of `feature/up2-prototype`; new work goes on a feature
+branch that is merged into `main`, see `.claude/rules/git-workflow.md`; never push to
+`feature/dashboard`) for Team M001's senior design build: a
 real-time edge digital twin for bearing fault diagnosis and RUL prediction in OH-2 centrifugal
 pumps. This is the **engineering repo** — architecture docs and working code. The course
 paperwork (syllabus, rubrics, report drafts, deadlines) lives one level up in
@@ -64,7 +65,7 @@ Digital-Twin-Senior-Proj/
 │   └── ME/                    physical system + FE digital twin (placeholder, not yet written)
 ├── AI-test/                   # HISTORICAL earlier synthetic-only testbench (superseded by AI-engine)
 ├── AI-engine/                 # hybrid AI engine — see AI-engine/DESIGN.md
-│   ├── aiengine/coe/          # UP2: COE edge pipeline as code (sources, 30 kS/s DSP, 152-byte payload, UDP sender, verify)
+│   ├── aiengine/coe/          # UP2: COE edge pipeline SIMULATOR (sources, 30 kS/s DSP, old 152-byte payload, UDP sender, verify)
 │   ├── aiengine/synth_v3/     # UP2: SYNTHETIC run-to-failure + seeded-fault generator (coach-approved substitute for rig data)
 │   ├── aiengine/up2*.py       # UP2 train/eval/export (v3, v3b deployed GBM heads), up2c* (physics-informed v3c, research),
 │   │                          #   up2d* (reworded IS2), coe_adapt*/coe_dataset (COE-domain classifier + cross-bearing gate)
@@ -102,7 +103,9 @@ ledger and `evidence/UP2_Evidence.md` for the coach-facing summary. Short versio
   git-ignored; they live in the sibling checkout `Repo/Digital-Twin-Senior-Proj/AI-engine/data` —
   set `AIENGINE_DATA_DIR` to it. PPR (v2) public-data results are history and stay in the evidence.
 - **Hardware boundary:** `SampleSource` -> COE pipeline -> 152-byte payload -> UDP 5005 -> backend.
-  Hardware day = replace the sender only (`aiengine/coe/README.md`).
+  Hardware day = replace the sender only (`aiengine/coe/README.md`). **Update 2026-11-05:** the real
+  COE node now exists and sends a 160-byte packet (see the payload convention below), so the
+  host-side decoder must change to 160 bytes before it can receive real packets.
 - **Run:** use `AI-engine/.venv/Scripts/python.exe` (or Docker, see README). `python -m aiengine.up2_eval`
   re-scores saved predictions + measures latency; `python -m pytest AI-engine/tests`;
   `dotnet test tests/DigitalTwin.Backend.Tests -c Release` (Release: a stale Debug testhost may hold dlls).
@@ -127,10 +130,13 @@ ledger and `evidence/UP2_Evidence.md` for the coach-facing summary. Short versio
   not the config's declared order. This was a live, invisible-in-the-loss bug once already (see
   `data.class_order()` and its callers). Any new code that maps a model output index to a class
   name must call `data.class_order()` on the trained dataset, not read the config constant.
-- **The COE payload is 152 bytes** (`AI-test/payload.py`), per COE's own working doc — the FDR
-  deck's "168 bytes" claim is an unreconciled discrepancy, not a typo to silently pick a side on.
-  `payload.decode()` asserts exactly 152 and raises on anything else. Don't relax that assertion to
-  make a script pass; surface the mismatch instead.
+- **The built COE firmware sends a 160-byte packet** (updated 2026-11-05, source:
+  `Project architecture/COE/`): COE1 marker, schema 1, window ID, RPM, profile, valid mask, unit,
+  32 features f32, CRC-32. This replaces both older numbers: the 152-byte layout from COE's earlier
+  working doc (`AI-test/payload.py`, the AI-engine simulator and decoder) and the FDR deck's 168
+  bytes. `payload.decode()` still asserts exactly 152. Don't relax that assertion to make a script
+  pass: change the decoder to the 160-byte layout on purpose, following the COE docs, and update
+  its tests in the same change.
 - **Splits are always by run, never by window** (`data.split_runs`) — a bearing's history is
   autocorrelated, so a window-level split reports accuracy the deployed system won't reproduce.
   Any new evaluation code must reuse `data.split_runs`/`data.subset`, not re-split ad hoc.

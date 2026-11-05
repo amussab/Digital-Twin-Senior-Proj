@@ -15,13 +15,21 @@ through and note what replaced it.
   ≥10 Hz, C5 LAN-only dashboard. Integrated: IS1 <500 ms end-to-end, IS2 physics-AI residual ≤5%,
   IS3 macro-F1 ≥85% / stage error ≤1 / caught by stage 3.
 
-## Rig / signal chain (COE docs on main, updated 2026-09-17)
+## Rig / signal chain (COE docs on main, updated 2026-09-17; COE build update 2026-11-05)
 - 2 radial bearings × biaxial (X,Y) IEPE accelerometers = 4 channels. No Z axis.
-- AD7606 at 30 kS/s, oversampling disabled. External 4th-order MFB LPF at ~10 kHz.
-  Band-pass 2–8 kHz. Envelope at 5 kS/s (decimation ×6). 4096-pt FFT.
+- ~~AD7606 at 30 kS/s, oversampling disabled. External 4th-order MFB LPF at ~10 kHz.~~
+  Replaced 2026-11-05 by the built hardware: AD7606 at 29,998.5 S/s per channel, oversampling
+  off, ±5 V. External 2nd-order unity-gain Sallen-Key LPF, f0 11.25 kHz calculated (measured
+  −3 dB at 10 kHz with the AD7606), one TL074 for 4 channels. Sensors TE 805-0050, 100 mV/g,
+  through an SRD-1104 conditioner. STM32H755 + ESP32-C6 node; LIVE acquisition works on the
+  bench (2026-11-02), the STM32 → ESP32 link and Wi-Fi delivery are not yet verified.
+- Band-pass 2–8 kHz. Envelope at 5 kS/s (decimation ×6). 4096-pt FFT.
 - Window = 20 shaft revolutions (1200/RPM s). Steady modes 1750 and 3600 rpm.
-- Payload 152 bytes: rpm f32 + 32 features f32 + 4 displacement f32 + t20_ms u32 (FDR deck says
-  168, unreconciled).
+- ~~Payload 152 bytes: rpm f32 + 32 features f32 + 4 displacement f32 + t20_ms u32 (FDR deck says
+  168, unreconciled).~~ Replaced 2026-11-05: the built firmware sends **160 bytes** (COE1 marker,
+  schema 1, window ID, RPM, profile, valid mask, unit, 32 features f32, CRC-32). No displacement
+  fields (proximity/Keyphasor are optional future work). The AI-engine simulator and decoder still
+  use 152 and must be updated.
 - Feature order per channel: bp_rms, kurtosis, crest, env_rms, FTF, BSF, BPFO, BPFI band
   magnitudes. Channels: B1-X, B1-Y, B2-X, B2-Y (indices 0-7, 8-15, 16-23, 24-31).
 - Rig bearing orders: FTF 0.38, BSF 1.98, BPFO 3.05, BPFI 4.95 (8 elements, d/D ≈ 0.2375).
@@ -49,7 +57,10 @@ through and note what replaced it.
 
 ## Git
 - Remote: github.com/amussab/Digital-Twin-Senior-Proj.
-- Branches: main (stable) ← stage ← dev (integration) ← feature/*.
+- ~~Branches: main (stable) ← stage ← dev (integration) ← feature/*.~~ Replaced 2026-11-05 (team
+  decision, Ewidah): `main` is the reference branch. It was synced with `feature/up2-prototype` on
+  2026-11-05. New work goes on a feature branch that is merged into `main`. `dev` and `stage` hold
+  nothing that is not already in `main`.
 - feature/dashboard belongs to Mussab. **Never commit to, rebase or force-push it.** Read it
   only, or merge it INTO our own integration branch.
 - AI work: feature/ai-engine (cut from feature/ai-test + origin/main, 2026-10-04).

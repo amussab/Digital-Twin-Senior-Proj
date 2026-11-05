@@ -1,8 +1,10 @@
 # Rule: git workflow
 
-- Flow: `feature/<area>` → `dev` → `stage` → `main`. Cut feature branches from the current
-  integration point (`origin/main` + the AI work). Never commit directly to main/stage/dev from
-  an agent. The user/team merges.
+- Flow (updated 2026-11-05, team decision): `main` is the reference branch and always holds the
+  latest finished work. Cut a `feature/<area>` branch from `origin/main`, push it, then merge it
+  into `main` (pull request or plain merge) when the user asks. `dev` and `stage` are no longer
+  used. Agents do not commit straight onto `main`: they commit on a feature branch, and update
+  `main` only by merging that branch when the user says so.
 - Branch ownership: `feature/dashboard` = Mussab (UI). Read only. Do not commit, rebase or
   force-push it. Integration happens by merging it INTO `feature/integration`, never the other
   way.
