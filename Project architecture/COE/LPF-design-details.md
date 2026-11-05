@@ -1,377 +1,169 @@
-# Fourth-Order 10 kHz Unity-Gain MFB Low-Pass Filter
+# Second-Order Unity-Gain Sallen-Key Low-Pass Filter
 
 ## Design objective
 
-This document records the design of the analog anti-aliasing filter placed between one SRD-1104 output channel and one AD7606 analog input. The complete implementation repeats the same filter for four accelerometer channels.
+This document records the analog anti-aliasing filter placed between one SRD-1104 output channel and one AD7606 analog input. The same filter is built four times, one per accelerometer channel, using the four op-amps of a single TL074.
 
-| Parameter | Requirement |
+| Parameter | Value |
 |---|---:|
 | Filter response | Butterworth low-pass |
-| Filter order | Fourth order |
-| Cutoff frequency, $f_c$ | 10 kHz |
-| Passband gain | Unity, $1\ \mathrm{V/V}$ |
+| Filter order | Second order |
+| Natural (−3 dB) frequency, $f_0$ | 11.25 kHz (calculated) |
+| Quality factor, $Q$ | 0.707 |
+| Passband gain | Unity, $+1\ \mathrm{V/V}$ (non-inverting) |
+| Topology | Unity-gain Sallen-Key, op-amp as a voltage follower |
+| Op-amp | TL074 (one IC, four channels) |
+| Op-amp supply | $+15\ \mathrm{V}$, AGND, $-15\ \mathrm{V}$ from an A2415S-1WR3 isolated module |
 | Input and output | Bipolar, single-ended |
-| Op-amp supply | $+15\ \mathrm{V}$, AGND, $-15\ \mathrm{V}$ |
-| Implementation | Two cascaded second-order MFB stages |
 
-## Complete circuit
+**Design change.** The first design was a fourth-order MFB filter (two cascaded inverting stages per channel, two TL074 ICs). The built and tested filter is the second-order Sallen-Key below: one stage per channel, so one TL074 serves all four channels on one breadboard. The earlier design remains in the repository history.
 
-![Fourth-order 10 kHz unity-gain MFB low-pass filter](./LPF-design-details-circuit.png)
+## Circuit
 
-The low-$Q$ section is connected first, followed by the high-$Q$ section. Each section has a gain of $-1$, so the two inversions restore the original polarity and give an overall passband gain of $+1$.
+![Second-order unity-gain Sallen-Key low-pass filter, one channel](./LPF-design-details-circuit.png)
 
-## 1. Calculate the cutoff angular frequency
+- $R_1$ connects the input to node A.
+- $R_2$ connects node A to the non-inverting input (node B).
+- $C_1$ connects node A to the op-amp output (the feedback capacitor).
+- $C_2$ connects node B to AGND.
+- The output is tied directly to the inverting input, so the op-amp is a voltage follower with a gain of exactly +1.
 
-The selected cutoff frequency is:
+Breadboard layout of all four channels, the TL074 and the ±15 V module:
 
-$$
-f_c=10{,}000\ \mathrm{Hz}
-$$
+![Breadboard layout: four channels, one TL074 and the A2415S-1WR3 module](./LPF-breadboard-layout.jpg)
 
-Therefore:
+## 1. Transfer function
 
-$$
-\omega_c=2\pi f_c
-$$
+For the unity-gain Sallen-Key low-pass stage:
 
 $$
-\boxed{\omega_c=2\pi(10{,}000)=62{,}831.85\ \mathrm{rad/s}}
+H(s)=\frac{1}{s^2R_1R_2C_1C_2+s\,C_2(R_1+R_2)+1}
 $$
 
-## 2. Divide the fourth-order Butterworth response into two stages
-
-The normalized fourth-order Butterworth denominator is:
+Comparing it with the standard second-order form $\dfrac{\omega_0^2}{s^2+\frac{\omega_0}{Q}s+\omega_0^2}$ gives:
 
 $$
-s^4+2.6131s^3+3.4142s^2+2.6131s+1
+\omega_0=\frac{1}{\sqrt{R_1R_2C_1C_2}}
+\qquad
+Q=\frac{\sqrt{R_1R_2C_1C_2}}{C_2(R_1+R_2)}
 $$
 
-It factors into two second-order sections:
+The DC gain is $H(0)=+1$ for any component values, because the follower sets the gain.
 
-$$
-(s^2+1.84776s+1)(s^2+0.76537s+1)
-$$
+## 2. Equal-resistor design
 
-The standard second-order denominator is:
-
-$$
-s^2+\frac{\omega_0}{Q}s+\omega_0^2
-$$
-
-Consequently, the two required quality factors are:
-
-$$
-Q_1=\frac{1}{1.84776}=\boxed{0.5412}
-$$
-
-$$
-Q_2=\frac{1}{0.76537}=\boxed{1.3066}
-$$
-
-Both stages are designed with a natural frequency of approximately 10 kHz.
-
-| Stage | Natural frequency, $f_0$ | Required $Q$ | Position |
-|---|---:|---:|---|
-| Stage 1 | 10 kHz | 0.5412 | First, low-$Q$ section |
-| Stage 2 | 10 kHz | 1.3066 | Second, high-$Q$ section |
-
-The low-$Q$ stage is placed first to reduce internal signal peaking and the possibility of op-amp saturation.
-
-## 3. MFB stage transfer function
-
-For each multiple-feedback stage:
-
-- $R_3$ is the input resistor.
-- $R_1$ connects the output to the summing node.
-- $R_2$ connects the summing node to the inverting input.
-- $C_1$ connects the summing node to AGND.
-- $C_2$ connects the output to the inverting input.
-- The non-inverting op-amp input is connected to AGND.
-
-The transfer function is:
-
-$$
-H(s)=
--\frac{\dfrac{1}{R_2R_3C_1C_2}}
-{s^2+s\left[\frac{1}{C_1}\left(\frac{1}{R_1}+\frac{1}{R_2}+\frac{1}{R_3}\right)\right]+\dfrac{1}{R_1R_2C_1C_2}}
-$$
-
-The DC gain is:
-
-$$
-K=-\frac{R_1}{R_3}
-$$
-
-To obtain unity-magnitude gain, select:
-
-$$
-R_1=R_3
-$$
-
-The design is simplified further by making all three resistors in each section equal:
-
-$$
-\boxed{R_1=R_2=R_3=R}
-$$
-
-This gives:
-
-$$
-\boxed{K=-1}
-$$
-
-For two cascaded sections:
-
-$$
-K_{\mathrm{total}}=(-1)(-1)=\boxed{+1}
-$$
-
-## 4. Equal-resistor component equations
-
-When $R_1=R_2=R_3=R$:
+Choosing $R_1=R_2=R$ simplifies the equations to:
 
 $$
 \omega_0=\frac{1}{R\sqrt{C_1C_2}}
+\qquad
+Q=\frac{1}{2}\sqrt{\frac{C_1}{C_2}}
 $$
 
-and:
+A Butterworth (maximally flat) response needs $Q=1/\sqrt{2}=0.707$, therefore:
 
 $$
-Q=\frac{1}{3}\sqrt{\frac{C_1}{C_2}}
+\sqrt{\frac{C_1}{C_2}}=\sqrt{2}
+\quad\Rightarrow\quad
+\boxed{C_1=2\,C_2}
 $$
 
-Solving these equations for the two capacitors gives:
+This ratio is built from identical parts: $C_2=1\ \mathrm{nF}$ and $C_1=1\ \mathrm{nF}+1\ \mathrm{nF}$ in parallel $=2\ \mathrm{nF}$.
 
-$$
-\boxed{C_1=\frac{3Q}{R\omega_0}}
-$$
-
-$$
-\boxed{C_2=\frac{1}{3QR\omega_0}}
-$$
-
-These equations are applied independently to the low-$Q$ and high-$Q$ sections.
-
----
-
-## 5. Stage 1: low-$Q$ section
-
-### Stage 1 requirements
-
-$$
-Q_1=0.5412
-$$
-
-$$
-\omega_0=62{,}831.85\ \mathrm{rad/s}
-$$
-
-A moderate resistor value is chosen to avoid heavily loading the SRD-1104 output:
-
-$$
-\boxed{R_{1A}=R_{2A}=R_{3A}=20\ \mathrm{k\Omega}}
-$$
-
-### Calculate the ideal capacitor values
-
-$$
-C_{1A}=\frac{3(0.5412)}{(20{,}000)(62{,}831.85)}
-$$
-
-$$
-\boxed{C_{1A,\mathrm{ideal}}=1.292\ \mathrm{nF}}
-$$
-
-$$
-C_{2A}=\frac{1}{3(0.5412)(20{,}000)(62{,}831.85)}
-$$
-
-$$
-\boxed{C_{2A,\mathrm{ideal}}=490.1\ \mathrm{pF}}
-$$
-
-The selected practical values are:
-
-$$
-\boxed{C_{1A}=1.247\ \mathrm{nF}}
-$$
-
-$$
-\boxed{C_{2A}=500\ \mathrm{pF}}
-$$
-
-### Verify Stage 1
-
-$$
-f_{0A}=\frac{1}{2\pi(20{,}000)\sqrt{(1.247\ \mathrm{nF})(500\ \mathrm{pF})}}
-$$
-
-$$
-\boxed{f_{0A}=10.078\ \mathrm{kHz}}
-$$
-
-$$
-Q_A=\frac{1}{3}\sqrt{\frac{1.247\ \mathrm{nF}}{500\ \mathrm{pF}}}
-$$
-
-$$
-\boxed{Q_A=0.5264}
-$$
-
-$$
-K_A=-\frac{R_{1A}}{R_{3A}}=-\frac{20\ \mathrm{k\Omega}}{20\ \mathrm{k\Omega}}=\boxed{-1}
-$$
-
----
-
-## 6. Stage 2: high-$Q$ section
-
-### Stage 2 requirements
-
-$$
-Q_2=1.3066
-$$
-
-$$
-\omega_0=62{,}831.85\ \mathrm{rad/s}
-$$
-
-The selected resistor value is:
-
-$$
-\boxed{R_{1B}=R_{2B}=R_{3B}=13.3\ \mathrm{k\Omega}}
-$$
-
-### Calculate the ideal capacitor values
-
-$$
-C_{1B}=\frac{3(1.3066)}{(13{,}300)(62{,}831.85)}
-$$
-
-$$
-\boxed{C_{1B,\mathrm{ideal}}=4.691\ \mathrm{nF}}
-$$
+## 3. Component values and natural frequency
 
-$$
-C_{2B}=\frac{1}{3(1.3066)(13{,}300)(62{,}831.85)}
-$$
-
-$$
-\boxed{C_{2B,\mathrm{ideal}}=305.3\ \mathrm{pF}}
-$$
-
-The selected practical values are:
+With $R=10\ \mathrm{k\Omega}$, $C_1=2\ \mathrm{nF}$ and $C_2=1\ \mathrm{nF}$:
 
 $$
-\boxed{C_{1B}=4.7\ \mathrm{nF}}
+\sqrt{C_1C_2}=\sqrt{(2\times10^{-9})(1\times10^{-9})}=1.414\ \mathrm{nF}
 $$
 
 $$
-\boxed{C_{2B}=300\ \mathrm{pF}}
+f_0=\frac{1}{2\pi(10{,}000)(1.414\times10^{-9})}
+=\boxed{11.25\ \mathrm{kHz}}
 $$
 
-### Verify Stage 2
-
 $$
-f_{0B}=\frac{1}{2\pi(13{,}300)\sqrt{(4.7\ \mathrm{nF})(300\ \mathrm{pF})}}
+Q=\frac{1}{2}\sqrt{\frac{2\ \mathrm{nF}}{1\ \mathrm{nF}}}=\boxed{0.707}
 $$
 
-$$
-\boxed{f_{0B}=10.078\ \mathrm{kHz}}
-$$
+For a Butterworth second-order filter the −3 dB frequency equals $f_0$, and the gain is $|H(f)|=1/\sqrt{1+(f/f_0)^4}$.
 
-$$
-Q_B=\frac{1}{3}\sqrt{\frac{4.7\ \mathrm{nF}}{300\ \mathrm{pF}}}
-$$
+| Component (per channel) | Value | Built from |
+|---|---:|---|
+| $R_1$ | 10 kΩ | one 10 kΩ |
+| $R_2$ | 10 kΩ | one 10 kΩ |
+| $C_1$ | 2 nF | two 1 nF ("102") in parallel |
+| $C_2$ | 1 nF | one 1 nF ("102") |
+| Op-amp | ¼ TL074 | follower |
 
-$$
-\boxed{Q_B=1.3194}
-$$
+## 4. Calculated and measured response
 
-$$
-K_B=-\frac{R_{1B}}{R_{3B}}=-\frac{13.3\ \mathrm{k\Omega}}{13.3\ \mathrm{k\Omega}}=\boxed{-1}
-$$
+| Frequency | Calculated filter gain | Measured, filter + AD7606 |
+|---:|---:|---:|
+| 100 Hz | 0.00 dB | 0.00 dB |
+| 1 kHz | 0.00 dB | −0.02 dB |
+| 2 kHz | 0.00 dB | – |
+| 5 kHz | −0.17 dB | −0.44 dB |
+| 8 kHz | −0.99 dB | −1.59 dB |
+| 10 kHz | −2.10 dB | **−3.02 dB** |
+| 11.25 kHz | −3.01 dB | – |
+| 12 kHz | – | −4.95 dB |
+| 14 kHz | −5.31 dB | −7.19 dB |
+| 20 kHz | −10.4 dB | not yet measured |
+| 25 kHz | −14.0 dB | not yet measured |
 
-## 7. Complete filter verification
+![Calculated filter response and measured points](./LPF-frequency-response.png)
 
-The two stage gains multiply:
+The measurement (26 October 2026) used a 1 V peak-to-peak sine from a FNIRSI 2C53T generator into filter input 1, with filter output 1 connected to all four ADC inputs and the STM32 recording the raw samples. The measured points include the AD7606's own built-in analog input filter, which is why they sit slightly below the calculated filter curve. Fitting "second-order filter × first-order 15 kHz roll-off" to the seven points gives a built filter of $f_0=11.6\ \mathrm{kHz}$ and $Q=0.75$, within 0.01 dB of every point, so the built filter matches its design within normal component tolerance. All four ADC inputs agreed within about 1 mV, and no distortion or oscillation was seen.
 
-$$
-K_{\mathrm{total}}=K_AK_B=(-1)(-1)=\boxed{+1}
-$$
+Inside the 2–8 kHz band used by the DSP, the complete analog path loses at most 1.6 dB (gain 0.83 at 8 kHz). This fixed shape can be corrected later by calibration if absolute levels near 8 kHz matter.
 
-Using the selected practical component values, the calculated complete filter has:
+## 5. Anti-aliasing performance
 
-$$
-\boxed{f_{-3\mathrm{dB}}\approx9.986\ \mathrm{kHz}}
-$$
+The ADC samples at 29,998.5 S/s, so the Nyquist frequency is about 15 kHz. An input at frequency $f$ above Nyquist appears at $|f-30\ \mathrm{kHz}|$. Inputs between 22 and 28 kHz therefore fold into the 2–8 kHz analysis band.
 
-This is approximately $0.14\%$ below the 10 kHz target.
-
-| Frequency | Calculated filter gain |
-|---:|---:|
-| 1 kHz | -0.008 dB |
-| 5 kHz | -0.144 dB |
-| 9 kHz | -1.63 dB |
-| 10 kHz | -3.03 dB |
-| 15 kHz | -14.16 dB |
-| 20 kHz | -23.96 dB |
-| 25 kHz | -31.67 dB |
-
-## 8. Final component values per channel
-
-| Component | Stage 1: low $Q$ | Stage 2: high $Q$ |
-|---|---:|---:|
-| $R_1$ | 20 kΩ | 13.3 kΩ |
-| $R_2$ | 20 kΩ | 13.3 kΩ |
-| $R_3$ | 20 kΩ | 13.3 kΩ |
-| $C_1$ | 1.247 nF | 4.7 nF |
-| $C_2$ | 500 pF | 300 pF |
-| Stage gain | -1 | -1 |
-| Calculated $f_0$ | 10.078 kHz | 10.078 kHz |
-| Calculated $Q$ | 0.5264 | 1.3194 |
-
-## 9. Four-channel implementation
-
-- TL074 number 1 implements Stage 1 for channels 1-4.
-- TL074 number 2 implements Stage 2 for channels 1-4.
-- Each TL074 uses pin 4 for $+15\ \mathrm{V}$ and pin 11 for $-15\ \mathrm{V}$.
-- Place one 100 nF ceramic capacitor from each supply rail to AGND at each TL074.
-- Add a 10 µF bulk capacitor from each supply rail to AGND at the filter-board power entry.
-- Keep the low-$Q$ section before the high-$Q$ section in every channel.
-
-## 10. Component-combination notes
-
-The non-standard practical values can be assembled from the available component assortments:
+| Input | Appears at | Calculated filter attenuation |
+|---:|---:|---:|
+| 22 kHz | 8 kHz | 11.9 dB |
+| 25 kHz | 5 kHz | 14.0 dB |
+| 28 kHz | 2 kHz | 16.0 dB |
+| 34 kHz (805 sensor resonance) | 4 kHz | 19.3 dB |
 
-$$
-1.247\ \mathrm{nF}=1\ \mathrm{nF}+200\ \mathrm{pF}+47\ \mathrm{pF}
-$$
+The AD7606's internal filter adds some attenuation on top of these values. A second-order filter gives modest protection: it is adequate while little vibration energy exists above 20 kHz, but strong high-frequency content, such as an excited sensor resonance, could leak into the band. The 20–28 kHz response has not been measured yet. If aliasing appears in tests, a second stage (fourth order) or a lower cutoff can be added without changing the firmware.
 
-$$
-500\ \mathrm{pF}=300\ \mathrm{pF}+200\ \mathrm{pF}
-$$
+## 6. Four-channel implementation
 
-The capacitors in these expressions are connected in parallel.
+| Filter channel | TL074 pins (+ in, − in, out) | AD7606 input | Pipeline channel |
+|---|---|---|---|
+| 1 | 3, 2, 1 | AIN2 | B1X |
+| 2 | 5, 6, 7 | AIN4 | B1Y |
+| 3 | 10, 9, 8 | AIN6 | B2X |
+| 4 | 12, 13, 14 | AIN8 | B2Y |
 
-$$
-13.3\ \mathrm{k\Omega}=10\ \mathrm{k\Omega}+3.3\ \mathrm{k\Omega}
-$$
+- TL074 pin 4 = +15 V and pin 11 = −15 V.
+- One 100 nF capacitor from +15 V to AGND and one from −15 V to AGND, next to the IC.
+- Two 10 µF bulk capacitors at the rails (+15 V to AGND, AGND to −15 V).
+- One 1 µF capacitor across the A2415S-1WR3 input (24 V to its input ground).
+- A2415S-1WR3 pins: 1 = +Vin (24 V), 2 = −Vin (24 V return), 4 = −Vo (−15 V rail), 5 = 0 V (AGND rails), 6 = +Vo (+15 V rail).
 
-The resistors are connected in series.
+**Grounding rule.** The A2415S-1WR3 is isolated: its 0 V output is not connected to its input side. Its 0 V (the AGND rails) must be connected to the circuit ground shared by the SRD-1104 and the AD7606. On 2 November 2026 this link was missing: the filter outputs drifted by volts, and two channels moved as mirror images. One jumper from the AGND rail to the 24 V return fixed it. Afterwards the quiet noise was 0.3 mV RMS on every channel.
 
-For the final implementation, C0G/NP0 capacitors are preferred. If general-purpose assortment capacitors are used, measure and match the values among the four channels as closely as possible.
+Parts for all four channels: 8 × 10 kΩ, 12 × 1 nF, 2 × 100 nF, 2 × 10 µF, 1 × 1 µF, 1 × TL074, 1 × A2415S-1WR3.
 
-## 11. Validation before hardware freeze
+## 7. Validation status
 
-1. Simulate the complete two-stage circuit using a TL074 model.
-2. Confirm the passband gain, -3 dB frequency and attenuation above 10 kHz.
-3. Build and test one channel first.
-4. Apply a swept sine wave using a function generator.
-5. Measure the response after Stage 1 and after Stage 2.
-6. Repeat the circuit for the remaining three channels only after the first channel passes testing.
+| Check | Status |
+|---|---|
+| Passband gain 1.000 at 100 Hz | Measured |
+| −3 dB point (with the AD7606 filter) at 10 kHz | Measured |
+| Four channels identical | Measured, within about 1 mV |
+| Stable, no oscillation or distortion | Measured, sine fits with a few mV error |
+| Quiet noise with sensors connected | 0.3 mV RMS per channel (2 November 2026) |
+| Attenuation at 20–28 kHz | Not yet measured |
+
+C0G/NP0 capacitors are preferred for a final soldered version. With general-purpose 1 nF parts, matching them between channels keeps the four responses equal.
 
 ## Reference
 
-- Texas Instruments, [Design Methodology for MFB Filters](https://www.ti.com/lit/an/sboa231/sboa231.pdf).
-
+- Texas Instruments, [*Analysis of the Sallen-Key Architecture*, SLOA024](https://www.ti.com/lit/an/sloa024b/sloa024b.pdf).

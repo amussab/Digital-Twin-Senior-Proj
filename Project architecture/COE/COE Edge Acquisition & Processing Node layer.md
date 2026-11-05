@@ -1,36 +1,34 @@
 # Real-Time Edge AI Bearing Monitoring System
 ## COE Edge Acquisition and Processing Node
 
+*Status as of 5 November 2026: built and measured on the bench with real accelerometers.*
+
 ### 1. Purpose and Scope
 
-The system monitors a Bently Nevada RK4 rotor kit in two steady operating modes: **1750 RPM** and **3600 RPM**. Each accepted 20-revolution window is collected only after the selected speed has settled. The system has three layers:
+The system monitors a Bently Nevada RK4 rotor kit in two steady operating modes: **1750 RPM** and **3600 RPM**. The system has three layers:
 
-1. **Mechanical layer:** The rotor kit, bearings, accelerometers, proximity probes, and Keyphasor generate the measurements.
-2. **COE edge layer:** The AD7606 and STM32 collect the measurements, process each 20-revolution window, and send a fixed payload through the ESP32-C6.
-3. **ICS layer:** A local host runs the AI model, FE digital twin, and 2D dashboard.
+1. **Mechanical layer:** the rotor kit, its bearings and the accelerometers generate the measurements.
+2. **COE edge layer:** the AD7606 and STM32 acquire four vibration channels, process every 20-revolution window into 32 AI features, and send a fixed 160-byte packet through the ESP32-C6.
+3. **ICS layer:** a local host runs the AI model, the FE digital twin and the 2D dashboard.
 
-The COE layer receives:
-
-- Four accelerometer channels for bearing-fault features.
-- Two radial proximity channels for shaft displacement, one at each measurement plane.
-- One Keyphasor pulse per revolution for RPM, window boundaries, and phase reference.
-
-The digital twin is the FE beam model. An interactive 3D model is not part of this design.
+The COE layer receives **four accelerometer channels** for bearing-fault features. Proximity probes, the Keyphasor and shaft-displacement outputs are optional future work (Section 9); they are not part of the built system.
 
 ---
 
 ### 2. Specification Mapping
 
-The numbering follows the submitted specification sheet.
+S1–S3 and C1–C2 are this layer's own labels. In the team's final table (see `overview/Project Overview.md`): S1 = COE1, S2 = COE2, S3 = COE3, C1 = C4 (local processing) and C2 = C2 (SELV IEPE excitation). In the team specification sheet, S1–S3 are Specifications 4–6.
 
-| Requirement | How the Design Addresses It | Current Evidence |
+| Requirement | How the design meets it | Measured evidence |
 | :--- | :--- | :--- |
-| **Specification 4** — Sample at least 25 kSamples/s per channel. | The AD7606 operates with oversampling disabled and produces all eight channel words at 30 kSample-sets/s; six channels carry active signals and two are reserved. | Datasheet timing calculated; bench test pending. |
-| **Specification 5** — After a 20-revolution window is collected, make the payload ready within 333 ms, excluding the first window. | Timing starts at the final Keyphasor edge of the window and ends when the STM32 has completed the 152-byte payload in memory. | Test definition complete; STM32 timing measurement pending. |
-| **Specification 6** — Produce an AI-ready representation with fixed size and ordering at both supported operating modes. | Every valid 1750 or 3600 RPM window produces the same 32 AI features, four displacement values, RPM, and timestamp in a fixed 152-byte payload. | Interface defined; integration test pending. |
-| **Constraint 4** — Perform acquisition and processing locally without cloud computation. | The STM32 performs acquisition and DSP, the ESP32-C6 transports the payload, and the AI and FE twin run on a local host. | Architecture defined; offline integration test pending. |
+| **S1** Sample at least 25,000 S/s per channel, 4 channels | AD7606, oversampling off, converts all 8 inputs at once; the STM32 reads 4 of them | **29,998.5 S/s per channel**, measured every second from BUSY timestamps; **0 lost samples** in runs of 45, 133 and 44 s and in live runs with sensors |
+| **S2** Features ready within 333 ms after a window ends | Streaming DSP while data arrives; only the FFT and final features run at the window end | Recorded data: **91.0 ms** (1750 RPM), **47.9 ms** (3600 RPM). Live with sensors: 156/156 windows, typically 10–11 ms, **worst 16.1 ms** |
+| **S3** Fixed AI representation at both speeds | Same 32 features in the same order every window, in a fixed 160-byte packet | Recorded data: 32 features at both speeds, every stage matched the Python reference. Live: 32 values per window; a 5 kHz sine gives kurtosis 1.50 (theory 1.5) and crest factor 1.42 (√2) |
+| **C1** Acquisition and processing local, no cloud | All DSP on the STM32 Cortex-M7; the ESP32-C6 only forwards finished packets on the local network | Live runs computed and printed all features with no network connected |
+| **C2** SELV (≤ 50 V DC) IEPE excitation, 24 V / about 4 mA | SRD-1104 conditioner on the 24 V bus | 24 V at the conditioner; IEPE 0 excitation **4.275 mA**; largest span in the node about 39 V; powered sensors sit at 10.9 V bias (datasheet 8–12 V) |
+| Team **C6** ≤ 1 % window loss over a 1-hour run (shared with ME) | Error counters; a window with any lost sample is dropped and counted | 0 lost windows in every run so far (longest 133 s); the 1-hour run is not done yet |
 
-The document uses **calculated**, **defined**, or **test pending** until the hardware has been measured. It does not claim that an untested requirement is fully met.
+Note on S3 (COE3): the team table states 1000–3600 RPM. The firmware supports the two settled modes, 1750 and 3600 RPM; other speeds would need a new window length (or the Keyphasor, Section 9).
 
 ---
 
@@ -38,341 +36,265 @@ The document uses **calculated**, **defined**, or **test pending** until the har
 
 ```mermaid
 flowchart TD
-    ACC["4 IEPE accelerometers"] --> IEPE["SRD-1104 conditioner"]
-    IEPE --> LPF["4-channel fourth-order 10 kHz MFB LPF"]
-    LPF --> ADC["AD7606 channels 1-4"]
-
-    PROBES["2 RK4 radial proximity probes"] --> PROX["Included RK4 Proximitor units"]
-    PROX --> PROXIN["Voltage-compatible input protection"]
-    PROXIN --> ADC2["AD7606 channels 5-6"]
-
-    KEY["RK4 Keyphasor"] --> KEYIN["Voltage-compatible conditioning"]
-    KEYIN --> TIMER["STM32 timer input"]
-    ADC --> STM["STM32H755"]
-    ADC2 --> STM
-    TIMER --> STM
-    STM --> ESP["ESP32-C6"]
-    ESP --> HOST["Local AI + FE twin host"]
+    ACC["4 TE 805-0050 IEPE accelerometers"] --> IEPE["SMACQ SRD-1104 conditioner"]
+    IEPE --> LPF["4-channel 2nd-order Sallen-Key LPF, about 11 kHz"]
+    LPF --> ADC["AD7606 inputs AIN2, AIN4, AIN6, AIN8"]
+    ADC -->|"serial SPI + DMA"| STM["STM32H755 Cortex-M7"]
+    STM -->|"UART, 160-byte packet"| ESP["ESP32-C6"]
+    ESP -->|"local Wi-Fi, HTTP"| HOST["Local AI + FE twin host"]
+    PSU["24 V supply"] --> IEPE
+    PSU --> BUCK["24 V to 5 V converter"] --> ADC
+    PSU --> ISO["A2415S-1WR3, ±15 V"] --> LPF
 ```
 
-#### 3.1 Sensor Conditioning
+#### 3.1 Sensors and Conditioning
 
-The four IEPE accelerometers connect through the SRD-1104 for sensor power and conditioning, then pass through the custom four-channel fourth-order MFB low-pass filter before reaching AD7606 channels V1–V4. The external filter has an approximately 10 kHz cutoff and is the primary analog anti-aliasing stage for the accelerometer channels. The AD7606's built-in second-order analog input filter remains supplemental; digital oversampling is disabled.
+The accelerometers are **TE Connectivity Model 805-0050**: 2-wire IEPE, nominal **100 mV/g** (±10 %), ±50 g range, flat within ±1 dB from 1 Hz to 8 kHz, resonance 34 kHz. Pin 1 is the signal (+OUT), pin 2 is ground (the case), pin 3 is unused.
 
-The two radial proximity probes use the Proximitor units included with the RK4 kit. They do not connect through the SRD-1104. Before connecting them to the AD7606, their output range, grounding, and connector mapping must be checked on the physical kit. Additional Proximitor units should not be purchased unless the kit inventory shows that they are missing.
+The SRD-1104 powers each sensor with about 4 mA of constant current from the 24 V supply and passes the vibration signal to its rear outputs. Each output then passes through one channel of the custom low-pass filter before reaching the ADC.
 
-The Keyphasor connects to an STM32 timer-capture input through a simple voltage-compatible conditioning circuit. It does not use an AD7606 analog channel.
+The low-pass filter is a **second-order unity-gain Sallen-Key Butterworth** stage per channel ($R_1=R_2=10\ \mathrm{k\Omega}$, $C_1=2\ \mathrm{nF}$, $C_2=1\ \mathrm{nF}$, calculated $f_0=11.25$ kHz). All four channels share one TL074, powered at ±15 V from an isolated A2415S-1WR3 module. The AD7606's own analog input filter adds to it; its digital oversampling is off. Measured response of filter plus ADC: −0.4 dB at 5 kHz, −1.6 dB at 8 kHz, **−3.0 dB at 10 kHz**, −7.2 dB at 14 kHz. Design details: [LPF Design Details](LPF-design-details.md).
 
 #### 3.2 ADC Channel Assignment
 
-| AD7606 Channel | Signal | Purpose |
-| :---: | :--- | :--- |
-| V1 | Accelerometer — Plane 1 X | AI vibration features |
-| V2 | Accelerometer — Plane 1 Y | AI vibration features |
-| V3 | Accelerometer — Plane 2 X | AI vibration features |
-| V4 | Accelerometer — Plane 2 Y | AI vibration features |
-| V5 | Proximity — Plane 1 radial direction | FE shaft displacement |
-| V6 | Proximity — Plane 2 radial direction | FE shaft displacement |
-| V7 | Unused/reserved | Fixed ADC transfer format |
-| V8 | Unused/reserved | Fixed ADC transfer format |
+| Accelerometer (conditioner input) | AD7606 input | Pipeline channel |
+| :--- | :---: | :--- |
+| IEPE 0 | AIN2 | B1X, bearing 1, X |
+| IEPE 1 | AIN4 | B1Y, bearing 1, Y |
+| IEPE 2 | AIN6 | B2X, bearing 2, X |
+| IEPE 3 | AIN8 | B2Y, bearing 2, Y |
 
-The physical RK4 connectors must be inspected before wiring to confirm this planned assignment.
+AIN1, AIN3, AIN5 and AIN7 are converted but not used. On the bench (November 2026), three sensors are connected; the fourth has no cable yet, so conditioner output 2 also feeds filter 3, and B2X temporarily carries a copy of the IEPE 1 sensor. The map was confirmed by tapping one sensor at a time: each tap moved only its own channel.
 
-#### 3.3 Sampling and Anti-Alias Filter
+#### 3.3 Power and Grounding
 
-The selected sampling rate is **30 kSample-sets/s**, with `OS[2:0] = 000` disabling AD7606 digital oversampling. The STM32 generates one `CONVST` event every 33.333 microseconds. Each event produces one simultaneous 16-bit result for every channel, so the STM32 receives 30 kSample-sets/s directly.
+| Rail | Source | Feeds | Measured |
+| :--- | :--- | :--- | :--- |
+| 24 V | Bench supply | SRD-1104, 5 V converter, A2415S-1WR3 | 24 V |
+| 5 V | 24→5 V converter, wired directly to the ADC | AD7606 | 5.1 V (the AD7606 needs 4.75–5.25 V; through the breadboard it fell to 4.6 V) |
+| ±15 V | A2415S-1WR3 isolated module | TL074 | +15.1 V / −15.1 V |
 
-The custom fourth-order MFB low-pass filter is installed between the SRD-1104 and AD7606 channels V1–V4. Its approximately 10 kHz cutoff is below the 15 kHz Nyquist frequency produced by the 30 kSample/s rate. The AD7606's built-in second-order analog input filter remains active as supplemental filtering, but its optional digital oversampling filter is not used.
+The STM32 and ESP32-C6 run from their own USB cables. All grounds (conditioner, filter, ADC, STM32, ESP32, converter returns and the A2415S-1WR3 0 V) form **one 0 V network**. Because the A2415S-1WR3 is isolated, its 0 V must be wired to that network explicitly. When that link was missing, the filter outputs drifted by volts. The largest voltage span in the node is about 39 V (+24 V to −15 V).
 
-Commissioning must measure the complete SRD-1104 → external LPF → AD7606 response, confirm that the required 2–8 kHz bearing-resonance band is preserved, and verify the attenuation above the intended passband. The detailed component calculations and circuit are maintained in [LPF Design Details](LPF-design-details-circuit.md).
+#### 3.4 Sampling
+
+| Item | Value |
+| :--- | :--- |
+| Conversion start | STM32 TIM4: 200 MHz ÷ 6667 = **29,998.5 S/s**, CONVST A and B together |
+| ADC settings | Oversampling off (`OS[2:0] = 000`), ±5 V range, serial mode |
+| Read trigger | BUSY falling edge → highest-priority interrupt → SPI1 + DMA read of all 8 results |
+| SPI clock | 6.25 MHz; 128 bits take 20.5 µs |
+| Timing per sample | 33.3 µs period = about 4.15 µs conversion + 20.5 µs read, about 8 µs spare |
+| Buffer | Ring of 16 blocks × 256 sample sets × 8 inputs (64 KiB), about 136 ms of cover |
+| Error counters | Missed conversions, read overlaps, ring overruns, DMA/SPI errors and stalls, reported every second |
+
+The SPI clock was set to 6.25 MHz, below the first 10 MHz plan, because ringing on the long clock wire caused one-bit shifts. With the slowest pin edge rate and 6.25 MHz no doubled values occurred. A start-up self-test checks the ADC (BUSY timing, shorted or floating lines, serial mode) before every acquisition start.
 
 ---
 
-### 4. Acquisition, Windowing, and Memory
+### 4. Windowing and Memory
 
-#### 4.1 Sampling Timing
+#### 4.1 Twenty-Revolution Window
 
-At 30 kSamples/s:
+A window covers **20 shaft revolutions at the nominal speed**. Without a shaft reference, its length is fixed by the configured RPM:
 
-> Sample period = 1 divided by 30,000 = **33.333 microseconds**
+> Window samples per channel = 30,000 × 60 × 20 ÷ RPM
 
-One simultaneous sample set contains eight 16-bit values:
+| Shaft speed | Window duration | Samples per channel | Envelope samples (÷ 6) |
+| :---: | :---: | :---: | :---: |
+| 1750 RPM | 685.7 ms | 20,571 | 3,429 |
+| 3600 RPM | 333.3 ms | 10,000 | 1,667 |
 
-> 8 channels x 16 bits = **128 bits**
+Windows follow each other without gaps. Filter and decimation states carry across blocks and windows. Any acquisition error (a missed conversion, read overlap, ring overrun, or DMA or SPI error) drops the affected data and restarts the stream, so no window contains missing samples.
 
-With an initial 10 MHz serial clock setting, transferring those 128 bits takes approximately:
+The 333 ms requirement is a **processing** requirement. Its timer starts at the last sample of a window.
 
-> 128 bits divided by 10,000,000 bits/s = **12.8 microseconds**
+#### 4.2 Memory Approach
 
-With oversampling disabled, the AD7606 conversion time is at most 4.2 microseconds. A `BUSY` falling-edge event indicates that the new result is available and starts the 10 MHz SPI/DMA read. The 128-bit read takes approximately 12.8 microseconds, so conversion plus transfer requires at most approximately 17.0 microseconds. This leaves approximately 16.3 microseconds before the next `CONVST` event at the selected 30 kHz sampling rate.
+Raw windows are never stored. The DSP processes each 256-sample block (8.53 ms of data) as it arrives and keeps only:
 
-The completed result must be read before the following `BUSY` falling edge updates the output register. Successive results are 33.333 microseconds apart, while the SPI transfer takes 12.8 microseconds, leaving approximately 20.5 microseconds for interrupt/DMA-start latency and margin after each `BUSY` falling edge. The transfer must not occur exactly on a `BUSY` falling edge.
+| Data | Size |
+| :--- | :--- |
+| ADC sample ring (DMA target) | 64 KiB |
+| Envelope records, 4 channels × up to 3,429 Float32 | about 55 KB |
+| FFT workspace | about 63 KB |
+| Running statistics and filter states | small |
 
-#### 4.2 Twenty-Revolution Window
-
-A window starts at one Keyphasor edge and ends after 20 complete revolutions. Therefore, 21 Keyphasor edges define one window: one starting edge and 20 ending boundaries.
-
-> Window duration in seconds = (20 x 60) divided by RPM
-
-| Shaft Speed | Window Duration | Approximate samples per channel at 30 kSamples/s |
-| :---: | :---: | :---: |
-| 1750 RPM | 685.7 ms | 20,571 |
-| 3600 RPM | 333.3 ms | 10,000 |
-
-Average RPM is calculated from the measured complete-window duration:
-
-> Average RPM = 1,200 divided by measured window duration in seconds
-
-The value 1,200 equals 20 revolutions x 60 seconds/minute. Windows that include startup, shutdown, or a transition between the two modes are excluded from the baseline output.
-
-The 333 ms requirement is a **processing** requirement. Its timer starts only after the 20-revolution window has finished.
-
-#### 4.3 Memory Approach
-
-At 1750 RPM, storing all eight ADC words for one complete raw window would require approximately:
-
-> 20,571 sample sets x 8 channel words x 2 bytes = **329,136 bytes**
-
-This large raw buffer is unnecessary because the streaming operations can be completed as DMA blocks arrive. Only the reduced envelope records, running statistics, and the current revolution of proximity data need to be retained.
-
-The baseline design uses **256 simultaneous sample sets per DMA block**. One sample set contains the eight channel values captured at the same instant.
-
-| Meaning of the Selected Size | Value |
-| :--- | :---: |
-| Sample sets in one block | 256 |
-| Channel values in one block | 256 x 8 = 2,048 |
-| Memory used by one block | 256 x 8 x 2 bytes = 4,096 bytes |
-| Memory used by two alternating blocks | 8,192 bytes |
-| Time to fill one block at 30 kSamples/s | 256 divided by 30,000 = 8.533 ms |
-
-DMA fills one 4,096-byte block while the processor handles the other block. To avoid a growing backlog, the processor must sustain the streaming work for one block every 8.533 ms. That work covers all active channels together; the budget is not divided by six or eight. It includes calibration, accelerometer filtering and envelope processing, updating the running statistics, and retaining the proximity samples needed for the current revolution.
-
-The complete 20-revolution pipeline does **not** have to finish within 8.533 ms. The FFT, order mapping, final feature extraction, displacement finalization, and construction of the 152-byte payload are completed at the end of the window and are covered by the separate 333 ms processing requirement.
-
-The two DMA blocks use only 8 KB of RAM, so complete raw windows are not stored. During implementation, the measured block-processing time and DMA-overrun counter will be checked. The 256-sample-set size will be changed only if testing shows that it is necessary.
-
-The detailed block-by-block timeline, firmware mental model, and complete worked example are provided in [COE Processing Pipeline Component Details](COE_Processing_Pipeline_Component_Details%282%29.md). They are not repeated here.
+The LIVE firmware uses about 121 KB of the 512 KB AXI SRAM and 78 KB of the 128 KB DTCM. DMA buffers are in AXI SRAM because DMA cannot reach DTCM.
 
 ---
 
 ### 5. Processing Pipeline
 
-The processing sequence below contains the operations needed for the AI features and FE displacement input. The logical stage order, component interfaces, feature order, and payload are defined. The nine logical components, their block/window behaviour, and their simple firmware grouping are explained in [COE Processing Pipeline Component Details](COE_Processing_Pipeline_Component_Details%282%29.md). This section keeps only the architecture-level summary.
-
 ```mermaid
 flowchart TD
-    ACQ["1. Acquire blocks and form a 20-revolution window"] --> CAL["2. Calibrate the channels"]
-    CAL --> BP["3. Accelerometer band-pass"]
-    BP --> ENV["4. Rectify to extract envelope"]
-    ENV --> LP["5. Low-pass, decimate, and build the reduced window"]
-    LP --> FFT["6. Envelope FFT and order mapping"]
-    FFT --> FEAT["7. Extract 32 AI features"]
-    CAL --> DISP["8. Accumulate two 1x displacement phasors"]
-    FEAT --> PAY["9. Build 152-byte payload"]
-    DISP --> PAY
+    ACQ["1. Acquire 256-sample blocks"] --> CAL["2. Scale counts to g"]
+    CAL --> BP["3. Band-pass 2-8 kHz"]
+    BP --> TF["4. Running RMS, kurtosis, crest factor"]
+    BP --> ENV["5. Rectify, low-pass, decimate to 5 kS/s"]
+    ENV --> FFT["6. Envelope spectrum, 4096-point FFT"]
+    FFT --> FEAT["7. Envelope RMS and 4 bearing-order bands"]
+    TF --> PKT["8. Build 160-byte packet"]
+    FEAT --> PKT
 ```
 
-#### 5.1 Accelerometer Branch
+#### 5.1 Steps
 
-1. The calibrated accelerometer signal is band-pass filtered using an initial 2–8 kHz bearing-sensitive resonance band.
-2. Full-wave rectification folds the negative halves of the resonance waveform upward. The rectified result still contains fast ripple; it is not yet the smooth envelope.
-3. A low-pass filter removes that fast ripple and recovers the slower amplitude envelope before decimation from 30 kSamples/s to the selected 5 kSamples/s envelope rate. Filtering must occur before decimation to prevent aliasing at the reduced rate.
-4. After the 20-revolution window ends, the actual time-sampled envelope record is mean-removed, Hann-windowed, and zero-padded to 4096 values.
-5. A 4096-point FFT produces the envelope frequency spectrum. Each frequency bin is mapped to shaft order using `order = frequency / (measured RPM / 60)`.
-6. Eight features are extracted from each of the four accelerometer channels, producing 32 features.
+| Step | Definition |
+| :--- | :--- |
+| Scale | ADC counts × (10 V ÷ 65,536) ÷ (0.100 V/g) → g; one sensitivity per channel in `live_config.h` |
+| Band-pass | Butterworth order 8 (four biquads), 2–8 kHz, causal, at 30 kS/s |
+| Time features | RMS (no mean removal), Pearson kurtosis (Gaussian = 3), crest factor; one-pass moments in double precision |
+| Envelope | Absolute value → Butterworth order 7 low-pass (flat within 0.1 dB to 350 Hz, ≥ 60 dB attenuation from 1250 Hz) → keep 1 sample in 6 (5 kS/s) |
+| Spectrum | Whole-window envelope: remove mean, Hann window of the actual length, zero-pad to 4096, real FFT; 1.22 Hz bins; one-sided PSD |
+| Frequency features | Envelope RMS (including its mean), plus the RMS of the PSD inside ±0.10 order around each bearing order: √(ΣPSD × 5000/4096) |
 
-Steps 1–3 operate as DMA blocks arrive. Steps 4–6 use the completed reduced 20-revolution window. Because every accepted record covers exactly 20 revolutions, its physical order resolution is 1/20 = 0.05 order. Zero-padding gives a convenient fixed FFT size and a denser displayed grid; it does not improve the physical resolution.
+The order of a bin is `frequency ÷ (RPM ÷ 60)`. A 20-revolution record gives a physical resolution of 1/20 = 0.05 order; zero-padding only makes the grid denser.
 
-Angular resampling is not part of the baseline design because each accepted window is collected at one settled speed. Supporting both 1750 and 3600 RPM does not by itself require resampling: the measured RPM maps hertz to order separately for every window. If later Keyphasor measurements show meaningful speed variation inside a window and the spectra show smeared rotation-related peaks or unstable band features, computed order tracking must be added between the envelope and FFT stages.
+The 2–8 kHz band is a starting value for the installed assembly. It can be changed later if measured vibration, for example a kurtogram, shows a more impulsive band.
 
-The 2–8 kHz resonance band is a starting value for the installed assembly, not a universal value for every 6200 bearing. It can be changed later without changing the pipeline structure if measured vibration or a kurtogram identifies a stronger impact-sensitive band.
+#### 5.2 Eight Features per Channel
 
-#### 5.2 Eight Features per Accelerometer Channel
+| Local index | Feature | Unit | Purpose |
+| :---: | :--- | :--- | :--- |
+| 0 | Band-pass RMS | g | Overall vibration level |
+| 1 | Band-pass kurtosis | – | Impulsiveness |
+| 2 | Band-pass crest factor | – | Peaks relative to RMS |
+| 3 | Envelope RMS | g | Overall impact modulation |
+| 4 | FTF band RMS | g | Cage evidence |
+| 5 | BSF band RMS | g | Rolling-element evidence |
+| 6 | BPFO band RMS | g | Outer-race evidence |
+| 7 | BPFI band RMS | g | Inner-race evidence |
 
-| Local Index | Feature | Purpose |
-| :---: | :--- | :--- |
-| 0 | Band-pass acceleration RMS | Overall vibration level |
-| 1 | Band-pass acceleration kurtosis | Vibration impulsiveness |
-| 2 | Band-pass acceleration crest factor | Strong impacts relative to RMS |
-| 3 | Smooth-envelope RMS | Overall bearing-impact modulation |
-| 4 | FTF-family magnitude | Cage-related evidence |
-| 5 | BSF-family magnitude | Rolling-element-related evidence |
-| 6 | BPFO-family magnitude | Outer-race-related evidence |
-| 7 | BPFI-family magnitude | Inner-race-related evidence |
+Features are ordered by channel: B1X 0–7, B1Y 8–15, B2X 16–23, B2Y 24–31.
 
-The payload orders the features by accelerometer channel:
+Bearing profile 1 (project, **provisional**) uses the orders supplied by the mechanical team. Profile 2 (CWRU drive end: 0.39828, 2.35675, 3.5848, 5.4152) is available for testing with public data.
 
-- Features 0–7: accelerometer 1.
-- Features 8–15: accelerometer 2.
-- Features 16–23: accelerometer 3.
-- Features 24–31: accelerometer 4.
-
-The baseline uses the bearing orders supplied by the mechanical team:
-
-| Family | Configured order | At 1750 RPM | At 3600 RPM |
+| Family | Order | At 1750 RPM | At 3600 RPM |
 | :--- | :---: | :---: | :---: |
 | FTF | 0.38 | 11.1 Hz | 22.8 Hz |
 | BSF | 1.98 | 57.8 Hz | 118.8 Hz |
 | BPFO | 3.05 | 89.0 Hz | 183.0 Hz |
 | BPFI | 4.95 | 144.4 Hz | 297.0 Hz |
 
-For every window, the target frequency is calculated as `configured order x measured RPM / 60`. The prototype initially combines FFT magnitudes within ±0.10 order of each fundamental. Harmonics or sidebands are added only if measured data shows that they improve classification.
-
-#### 5.3 Proximity-Displacement Branch
-
-The two calibrated proximity signals are processed separately. After each revolution ends, the STM32 uses the Keyphasor boundaries to update a running 1x calculation. After all 20 revolutions, it finalizes the amplitude and phase from:
-
-- Plane 1 radial probe.
-- Plane 2 radial probe.
-
-Each channel produces two Float32 values:
-
-- Peak amplitude in micrometres.
-- Phase in radians relative to the Keyphasor.
-
-This produces four displacement values. The raw proximity waveforms are not transmitted. The local FE host uses the two amplitude/phase pairs as its measured shaft-displacement input. With one probe per plane, the system does not measure a complete X/Y orbit or two independent radial directions at either plane.
+A channel that is constant or zero gets zero features and a cleared validity bit, which is not a "healthy" label.
 
 ---
 
-### 6. Simple Fixed Payload and Communication
+### 6. Packet and Communication
 
-For every valid 20-revolution window, the STM32 creates one fixed **152-byte payload**.
+For every window, the STM32 builds one **160-byte packet** (schema 1, little-endian):
 
-| Byte Offset | Type | Field | Consumer |
-| :---: | :--- | :--- | :--- |
-| 0–3 | Float32 | Average RPM over the window | AI, FE twin, and dashboard |
-| 4–131 | Float32[32] | Ordered accelerometer features | AI model |
-| 132–135 | Float32 | Plane 1 radial, 1x peak amplitude in micrometres | FE twin |
-| 136–139 | Float32 | Plane 1 radial, 1x phase in radians | FE twin |
-| 140–143 | Float32 | Plane 2 radial, 1x peak amplitude in micrometres | FE twin |
-| 144–147 | Float32 | Plane 2 radial, 1x phase in radians | FE twin |
-| 148–151 | UInt32 | Window-end time in milliseconds since startup | Logging and sequencing |
+| Bytes | Type | Field |
+| :---: | :--- | :--- |
+| 0–3 | ASCII | Marker `COE1` |
+| 4–5 | UInt16 | Schema version, 1 |
+| 6–7 | UInt16 | Feature count, 32 |
+| 8–11 | UInt32 | Window ID, counts from 1 after each stream start |
+| 12–15 | UInt32 | Nominal RPM, 1750 or 3600 |
+| 16–19 | UInt32 | Bearing profile ID |
+| 20–23 | UInt32 | Channel-valid mask, bit 0 = B1X … bit 3 = B2Y |
+| 24–27 | UInt32 | Unit ID, 1 = g |
+| 28–155 | Float32[32] | Features in the order of Section 5.2 |
+| 156–159 | UInt32 | CRC-32 (zlib) of bytes 0–155 |
 
-Payload size:
-
-> 4 bytes RPM + 128 bytes features + 16 bytes displacement + 4 bytes timestamp = **152 bytes**
-
-Only the following rules are required:
-
-- The field order in the table is fixed in the STM32 and host decoder.
-- Float32 and UInt32 values are sent in little-endian order.
-- If acquisition or processing of a window fails, the STM32 skips that window instead of sending false values.
-- Feature definitions and order are documented in Section 5; they do not need to be transmitted in every payload.
-
-The data path is intentionally simple:
+The marker, metadata and CRC let the receiver find packet boundaries and reject corrupted or mismatched packets. Packets are sent only when every channel has a calibration (volts per g), because every packet declares g.
 
 ```mermaid
 flowchart LR
-    STM["STM32: build 152 bytes"] -->|UART| ESP["ESP32-C6: forward bytes"]
-    ESP -->|Local Wi-Fi| HOST["AI + FE twin host"]
+    STM["STM32: 160-byte packet"] -->|"USART2, 115200 8N1, DMA"| ESP["ESP32-C6: check CRC and schema"]
+    ESP -->|"local Wi-Fi, HTTP POST JSON"| HOST["AI + FE twin host"]
 ```
 
-The ESP32-C6 does not recalculate the features or displacement. It forwards the same payload. A small UART start marker may be added before the payload if needed to find message boundaries, but it is not part of the 152-byte application payload. More elaborate transport and diagnostic fields are outside the scope of this prototype.
+- **STM32 → ESP32:** USART2 TX (PD5) → ESP GPIO18, 115200 8N1, sent by DMA; one packet takes 13.9 ms on the wire, well inside a 333 ms or 686 ms window. ESP GPIO19 → PD6 returns a delivery acknowledgment used by the timing test.
+- **ESP32-C6:** validates the CRC, schema and values, queues up to 16 vectors, and sends each as HTTP POST JSON to the host, with up to three attempts and an idempotency key. It does not recalculate anything.
+- **Host:** decodes the same fixed layout and uses the 32 features as one input row.
 
 ---
 
 ### 7. Processing Locations
 
-#### 7.1 STM32H755
+| Device | Work |
+| :--- | :--- |
+| STM32H755 Cortex-M7 (400 MHz) | ADC control and DMA, start-up self-test, error counters, all DSP, the 32 features, packet construction |
+| STM32H755 Cortex-M4 | Not used (starts and idles) |
+| ESP32-C6 | UART reception, validation, Wi-Fi/HTTP forwarding |
+| Local host | AI fault classification and RUL, FE beam model, 2D dashboard; no cloud connection |
 
-The STM32 performs:
-
-- AD7606 sampling and DMA input.
-- Keyphasor timing and 20-revolution windowing.
-- Calibration and the accelerometer DSP pipeline.
-- Synchronous 1x displacement extraction.
-- Construction of the 152-byte payload.
-
-For the prototype, the Cortex-M7 performs the complete STM32 acquisition and processing workload. The Cortex-M4 is not required. It will be used only if measured timing later shows a clear need.
-
-#### 7.2 ESP32-C6
-
-The ESP32-C6 receives the 152-byte payload over UART and forwards it over the local Wi-Fi network. It performs no vibration or FE calculations.
-
-#### 7.3 Local Host
-
-The local host runs:
-
-- The AI fault-classification and RUL model.
-- The FE beam model that estimates bearing stiffness from the displacement measurements.
-- The 2D dashboard for RPM, bearing condition, AI RUL, physics RUL, residual, and stiffness.
-
-No cloud connection is required.
+Measured DSP load during live acquisition is about 16 % of the Cortex-M7.
 
 ---
 
-### 8. COE Layer Specification Verification
+### 8. Verification
 
-The following tests are sufficient to demonstrate whether the prototype meets the submitted COE requirements.
+| Requirement | Test | Result |
+| :--- | :--- | :--- |
+| **S1** | Count BUSY edges against the cycle counter every second, with error counters | 29,998.50 S/s, 0 missed/lost samples in every run (45, 133, 44 s, and 107 s with sensors) |
+| **S2** | Time from a window's last sample to finished features | Recorded data 91.0 / 47.9 ms; live 16.1 ms worst over 156 windows; limit 333 ms |
+| **S3** | Compare every DSP stage with the Python reference on recorded data; check the live output | All recorded-data checks passed (time features, band-pass, envelope, FFT over all 2049 bins, frequency features, streaming pipeline, packet decoder); live: 32 features per window, valid mask 0xf |
+| **C1** | Run the full chain with no network | Features computed and printed on the STM32 alone |
+| **C2** | 24 V and IEPE current in series with a 3.3 kΩ load | 24 V; 4.275 mA on IEPE 0 |
 
-| Requirement | Verification Test | Pass Condition | Present Status |
-| :--- | :--- | :--- | :--- |
-| **Specification 4** | With oversampling disabled, record the sample count and elapsed time for every channel, verify each 10 MHz SPI/DMA read completes before the following `BUSY` falling edge, and check for DMA overruns. | Every active channel produces 30 kSamples/s, one block of streaming work completes every 8.533 ms on average, and no samples are lost. | Datasheet timing calculated; hardware test pending. |
-| **Specification 5** | Measure from the final Keyphasor edge of a window until the 152-byte payload is complete in STM32 memory. Test repeated windows at 1750 and 3600 RPM. | Every tested window after the excluded first window is ready within 333 ms. | Test method defined; firmware timing pending. |
-| **Specification 6** | Generate and decode payloads at the two supported modes, 1750 and 3600 RPM. | Every valid window contains exactly 152 bytes with the same field and feature ordering. | Interface defined; integration test pending. |
-| **Constraint 4** | Disconnect external internet access while keeping the STM32, ESP32-C6, and host on the local network. | Acquisition, transmission, AI inference, FE processing, and dashboard display continue locally. | Architecture defined; offline test pending. |
+Additional measurements:
 
-The evidence to keep for the final report is:
-
-1. Sample-rate and DMA-overrun logs.
-2. A table of measured processing times.
-3. Several decoded 152-byte payloads from both RPM modes.
-4. A record of the system operating without internet access.
-
-Until a test is performed, its status remains **calculated** or **pending**, not **fully met**.
+- **Analog response:** −3.0 dB at 10 kHz (filter + ADC), all four inputs equal within about 1 mV.
+- **Noise floor with sensors:** 0.3 mV RMS per channel (about 3 mg); in LIVE, band-pass RMS about 1.2 mg with kurtosis about 3 when still.
+- **Sensor response:** taps on each sensor raised only its own channel (0.4–1.6 g band-pass RMS); moving the breadboard gave 20–120 mg on all channels.
+- **Delivery:** recorded-data packets were delivered STM32 → ESP32 → host in October 2026. Live-sensor delivery to the ESP32 is not verified yet: in the 2 November run the STM32 sent all packets, but no bytes reached the ESP32 (wiring to be checked).
 
 ---
 
-### 9. Remaining Decisions
+### 9. Open Items and Optional Future Work
 
-No additional answer from the mechanical team is required before implementing the baseline pipeline. The following installed-system checks remain part of implementation and commissioning:
+Open items for the built system:
 
-1. Enter the measured sensitivity and offset for each installed accelerometer and proximity channel.
-2. Set `OS[2:0] = 000`, verify the complete external-LPF-plus-AD7606 analog response over 2–8 kHz, and confirm the electrical compatibility of the six active inputs.
-3. Verify reliable Keyphasor edge capture at both 1750 and 3600 RPM.
-4. Start with the selected 2–8 kHz resonance band and 5 kSamples/s envelope rate. Refine the resonance band or envelope low-pass cutoff only if measured data identifies a better setting.
-5. Monitor the Keyphasor revolution periods. Add angular resampling only if meaningful within-window speed variation produces spectral smearing or unstable order-band features.
-6. Verify reliable 30 kSample-sets/s acquisition with oversampling disabled, 10 MHz SPI/DMA reads triggered after `BUSY` falls, and one processed 256-sample-set block every 8.533 ms without overruns.
-7. Implement the UART and local Wi-Fi transfer and confirm that the host decodes the 152-byte payload.
+1. Verify live packet reception at the ESP32 and HTTP delivery to the host, then run LIVE for 10 minutes or more with delivery.
+2. Fit a cable for the fourth sensor and remove the temporary B2X copy.
+3. Mount the sensors rigidly on the bearing housings (adhesive or stud, per the 805 datasheet) instead of the breadboard.
+4. Check calibration against a known vibration, or use per-serial calibration sheets; the nominal 0.100 V/g is used now.
+5. Measure the 20–28 kHz analog response (aliasing into 2–8 kHz).
+6. Measure the IEPE 1–3 excitation currents and do one power test with everything on.
+7. Confirm the rig speed and the real bearing's orders before AI training (profile 1 is provisional).
 
-These checks tune or verify the installed system; they do not leave the architecture undefined.
+Optional future work (not committed):
+
+- **Keyphasor:** a timer-capture input for measured RPM, revolution-accurate windows and a phase reference. Today windows use the nominal RPM.
+- **Proximity probes:** two RK4 radial probes on AD7606 inputs through the RK4 Proximitor units, with input protection, and a synchronous 1x amplitude/phase per probe for the FE twin. This would add four Float32 values to the packet.
+- **Angular resampling:** only needed if speed varies enough inside a window to smear the order peaks; it requires the Keyphasor.
+- **Fourth-order filter:** a second Sallen-Key stage if aliasing appears in tests.
 
 ---
 
 ## Bill of Materials
 
-| Component | Role | Source / Status |
+| Component | Role | Source / status |
 |---|---|---|
-| STM32 NUCLEO-H755ZI-Q | Acquisition, timing, and DSP controller | [Amazon](https://www.amazon.sa/-/en/XFCZMG-NUCLEO-H755ZI-Q-Nucleo-144-Development-STM32H755ZI/dp/B0CKVZ2X7Z) |
-| A49T AD7606 eight-channel ADC module | Simultaneously samples six conditioned analog signals; two ADC channels remain reserved | [AliExpress](https://www.aliexpress.com/item/1005012637207490.html) — verify the received module, input-range configuration, and serial timing |
-| SMACQ SRD-1104 | Powers and conditions four IEPE accelerometers | [AliExpress](https://ar.aliexpress.com/item/1005007510744310.html) |
-| Four-channel fourth-order MFB low-pass filter | Provides an approximately 10 kHz analog anti-alias filter between the SRD-1104 and AD7606 | Custom circuit using two TL074 ICs and the resistor/capacitor kits listed below |
-| AD7606 on-chip filtering | Provides supplemental second-order analog filtering after the external LPF | Built into the selected ADC; digital oversampling is disabled in the baseline design |
-| TL074CN DIP-14 quad op-amps | Implements eight second-order MFB stages: two stages for each of four accelerometer channels | [AliExpress](https://ar.aliexpress.com/item/1005006131796020.html) — two ICs required; one 10-piece package selected |
-| DIP-14 IC sockets | Allows the two TL074 ICs to be installed and replaced without desoldering | [AliExpress](https://ar.aliexpress.com/item/1005006130784050.html) — two sockets required; one package selected |
-| 1% metal-film resistor assortment | Supplies the 20 kΩ, 10 kΩ, and 3.3 kΩ resistors required by the LPF | [AliExpress](https://ar.aliexpress.com/item/1005008289034002.html) |
-| Ceramic capacitor assortment | Supplies the 1 nF, 200 pF, 47 pF, 300 pF, 4.7 nF, and 100 nF capacitors required by the LPF | [AliExpress](https://ar.aliexpress.com/item/1005009570762979.html) |
-| Electrolytic capacitor assortment | Supplies bulk decoupling capacitors for the LPF power rails | [AliExpress](https://ar.aliexpress.com/item/1005008123014567.html) |
-| 24 V → 5 V DC-DC buck converter | Generates the regulated 5 V bus for the AD7606, STM32, and ESP32-C6 | [AliExpress](https://ar.aliexpress.com/item/1005008965910286.html) — 3 A/15 W converter retained |
-| A2415S-1WR3 isolated DC-DC converter | Converts the 24 V supply into approximately +15 V, COM, and −15 V for the two TL074 ICs | [AliExpress](https://ar.aliexpress.com/item/1005006169352485.html) — one module selected; verify both output rails before installing the TL074s |
-| Universal double-sided perfboard | Holds the final soldered LPF and its power/interface connections | [AliExpress](https://ar.aliexpress.com/item/1005003647800709.html) |
-| 2-pin and 3-pin PCB terminal blocks | Provides removable signal, power, ground, and ±15 V connections on the LPF board | [AliExpress](https://ar.aliexpress.com/item/1005007055503766.html) |
-| UL1007 22-AWG multicolor hookup wire | Connects power, ground, and signals within the acquisition node | [AliExpress](https://ar.aliexpress.com/item/1005005450270866.html) |
-| SRD-1104 rear terminal connection | Connects the four SRD-1104 signal outputs to the four LPF inputs | Uses the 10-pin, 3.81 mm terminal supplied with the SRD-1104; BNC pigtails are not required |
-| ESP32-C6 development board | UART-to-local-Wi-Fi communication bridge | [AliExpress](https://www.aliexpress.com/item/1005012742424741.html) |
-| Analog signal cabling | Connects the SRD-1104 outputs to the LPF and the LPF outputs to the AD7606 | **Pending** — cable type and length will be selected after receiving the components and measuring the final installation distances |
-| Four IEPE accelerometers | Measures vibration at the selected machine locations | **Pending** — accelerometer models have not yet been selected |
-| Coaxial cables, sensor to conditioner | Connects each accelerometer to an SRD-1104 BNC input | **Pending** — sensor-end connector depends on the selected accelerometer; commonly 10-32 to BNC |
-| Proximitor-to-ADC connection/protection | Connects the two RK4 buffered displacement outputs safely to the AD7606 | **Pending** — requires measuring the actual Proximitor output-voltage range |
-| Keyphasor input conditioning | Protects the STM32 input and produces a valid timer-capture signal | **Pending** — requires measuring the actual RK4 Keyphasor output-voltage level |
-| 24 V source interface hardware | Physically connects the acquisition node to the local control system’s 24 V supply | **Pending** — connector type must be confirmed with the mechanical engineer |
+| STM32 NUCLEO-H755ZI-Q | Acquisition, timing and DSP | [Amazon](https://www.amazon.sa/-/en/XFCZMG-NUCLEO-H755ZI-Q-Nucleo-144-Development-STM32H755ZI/dp/B0CKVZ2X7Z) — in use |
+| AD7606 eight-channel ADC module | Simultaneous sampling; 4 of 8 inputs used | [AliExpress](https://www.aliexpress.com/item/1005012637207490.html) — in use, serial mode, ±5 V |
+| TE Connectivity 805-0050 accelerometers (×4) | Vibration measurement, 100 mV/g IEPE | In use (three connected; fourth needs a cable) |
+| SMACQ SRD-1104 | IEPE power and conditioning, 4 channels | [AliExpress](https://ar.aliexpress.com/item/1005007510744310.html) — in use |
+| BNC-to-jumper cables | Sensor to SRD-1104 inputs | In use; sensors are on a breadboard because the jumper ends do not hold the sensor pins |
+| TL074CN quad op-amp (×1) and DIP-14 socket | Four Sallen-Key filter stages | [AliExpress](https://ar.aliexpress.com/item/1005006131796020.html), [sockets](https://ar.aliexpress.com/item/1005006130784050.html) |
+| 10 kΩ 1 % metal-film resistors (×8) | Filter resistors | [AliExpress](https://ar.aliexpress.com/item/1005008289034002.html) |
+| 1 nF ceramic capacitors (×12), 100 nF (×2), 1 µF (×1) | Filter capacitors, decoupling, module input | [AliExpress](https://ar.aliexpress.com/item/1005009570762979.html) |
+| 10 µF electrolytic capacitors (×2) | Bulk decoupling of the ±15 V rails | [AliExpress](https://ar.aliexpress.com/item/1005008123014567.html) |
+| A2415S-1WR3 isolated DC-DC converter | 24 V → ±15 V for the TL074 | [AliExpress](https://ar.aliexpress.com/item/1005006169352485.html) — in use; its 0 V must be tied to the circuit ground |
+| 24 V → 5 V DC-DC converter | 5 V for the AD7606 | [AliExpress](https://ar.aliexpress.com/item/1005008965910286.html) — in use, wired directly to the ADC |
+| Breadboard and jumper wires | Prototype filter and sensor mounting | In use |
+| Universal double-sided perfboard, terminal blocks, UL1007 22-AWG wire | Final soldered filter board | [Perfboard](https://ar.aliexpress.com/item/1005003647800709.html), [terminals](https://ar.aliexpress.com/item/1005007055503766.html), [wire](https://ar.aliexpress.com/item/1005005450270866.html) — the soldered version is not built yet |
+| ESP32-C6 development board | UART to local Wi-Fi bridge | [AliExpress](https://www.aliexpress.com/item/1005012742424741.html) — in use |
+| 24 V supply | Powers the node | Bench supply (the first one failed internally on 2 November 2026 and was replaced) |
+| Proximitor-to-ADC protection, Keyphasor conditioning | Only for the optional future work | Not purchased |
+
 ---
 
 ## References
 
-1. [COE Processing Pipeline Component Details](COE_Processing_Pipeline_Component_Details%282%29.md) — explanation of all nine logical processing components, the streaming method, firmware mental model, and worked example.
-2. Bently Nevada, *RK4 Rotor Kit Datasheet*, document 141592, Rev. K.
-3. SMACQ, *SRD-1104 User Manual*.
-4. Analog Devices, *AD7606/AD7606-6/AD7606-4 Data Sheet*.
-5. STMicroelectronics, *STM32H755ZI Product Documentation*.
-6. R. B. Randall and J. Antoni, “Rolling element bearing diagnostics—A tutorial,” *Mechanical Systems and Signal Processing*, vol. 25, no. 2, pp. 485–520, 2011. [DOI: 10.1016/j.ymssp.2010.07.017](https://doi.org/10.1016/j.ymssp.2010.07.017).
+1. [COE Processing Pipeline Component Details](COE_Processing_Pipeline_Component_Details.md): each processing component, the streaming method and a worked example.
+2. [LPF Design Details](LPF-design-details.md): the anti-aliasing filter design and measurements.
+3. Bently Nevada, *RK4 Rotor Kit Datasheet*, document 141592, Rev. K.
+4. TE Connectivity, *Model 805 Accelerometer*, Rev. D, 07/2018.
+5. SMACQ, *SRD-1104 User Manual*.
+6. Analog Devices, *AD7606/AD7606-6/AD7606-4 Data Sheet*.
+7. STMicroelectronics, *STM32H755ZI Product Documentation*.
+8. R. B. Randall and J. Antoni, "Rolling element bearing diagnostics—A tutorial," *Mechanical Systems and Signal Processing*, vol. 25, no. 2, pp. 485–520, 2011. [DOI: 10.1016/j.ymssp.2010.07.017](https://doi.org/10.1016/j.ymssp.2010.07.017).
