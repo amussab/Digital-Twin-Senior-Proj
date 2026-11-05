@@ -1,0 +1,64 @@
+SEAL gasket_io: 3.0 mm cord in 2.3 mm groove -> 0.7 mm squeeze (23%)
+SEAL gasket_lid: 3.0 mm cord in 2.3 mm groove -> 0.7 mm squeeze (23%)
+OK  board_NUCLEO_H755ZI vs box: 0.0 mm3
+OK  board_AD7606 vs box: 0.0 mm3
+OK  board_LPF_PERFBOARD vs box: 0.0 mm3
+OK  board_SRD1104 vs box: 0.0 mm3
+OK  board_BUCK_24V_5V vs box: 0.0 mm3
+OK  board_ESP32C6 vs box: 0.0 mm3
+OK  gland_oring_ACC1 vs box/io_shield: 0.0 mm3
+OK  gland_ACC1 vs box/io_shield: 0.0 mm3
+OK  gland_cable_ACC1 vs box/io_shield: 0.0 mm3
+OK  gland_oring_ACC2 vs box/io_shield: 0.0 mm3
+OK  gland_ACC2 vs box/io_shield: 0.0 mm3
+OK  gland_cable_ACC2 vs box/io_shield: 0.0 mm3
+OK  gland_oring_ACC3 vs box/io_shield: 0.0 mm3
+OK  gland_ACC3 vs box/io_shield: 0.0 mm3
+OK  gland_cable_ACC3 vs box/io_shield: 0.0 mm3
+OK  gland_oring_ACC4 vs box/io_shield: 0.0 mm3
+OK  gland_ACC4 vs box/io_shield: 0.0 mm3
+OK  gland_cable_ACC4 vs box/io_shield: 0.0 mm3
+OK  gland_oring_PWR24V vs box/io_shield: 0.0 mm3
+OK  gland_PWR24V vs box/io_shield: 0.0 mm3
+OK  gland_cable_PWR24V vs box/io_shield: 0.0 mm3
+OK  gland_oring_PROX1 vs box/io_shield: 0.0 mm3
+OK  gland_PROX1 vs box/io_shield: 0.0 mm3
+OK  gland_cable_PROX1 vs box/io_shield: 0.0 mm3
+OK  gland_oring_PROX2 vs box/io_shield: 0.0 mm3
+OK  gland_PROX2 vs box/io_shield: 0.0 mm3
+OK  gland_cable_PROX2 vs box/io_shield: 0.0 mm3
+OK  gland_oring_KPH vs box/io_shield: 0.0 mm3
+OK  gland_KPH vs box/io_shield: 0.0 mm3
+OK  gland_cable_KPH vs box/io_shield: 0.0 mm3
+OK  gland_oring_SPARE vs box/io_shield: 0.0 mm3
+OK  gland_plug_SPARE vs box/io_shield: 0.0 mm3
+OK  gland_oring_VENT vs box/io_shield: 0.0 mm3
+OK  vent_VENT vs box/io_shield: 0.0 mm3
+OK  av_mount_1 vs box: 0.0 mm3
+OK  av_mount_2 vs box: 0.0 mm3
+OK  av_mount_3 vs box: 0.0 mm3
+OK  av_mount_4 vs box: 0.0 mm3
+OK  terminal_blocks vs box: 0.0 mm3
+OK  carrier_NUCLEO_H755ZI vs box: 0.0 mm3
+OK  carrier_AD7606 vs box: 0.0 mm3
+OK  carrier_LPF_PERFBOARD vs box: 0.0 mm3
+OK  carrier_SRD1104 vs box: 0.0 mm3
+OK  carrier_BUCK_24V_5V vs box: 0.0 mm3
+OK  carrier_ESP32C6 vs box: 0.0 mm3
+OK  NUCLEO_H755ZI pins 10 mm below PCB vs support 12 mm
+OK  AD7606 pins 3 mm below PCB vs support 8 mm
+OK  LPF_PERFBOARD pins 3 mm below PCB vs support 8 mm
+OK  ESP32C6 pins 8 mm below PCB vs support 10 mm
+OK  lid vs box: 0.0 mm3
+OK  io_shield vs box: 0.0 mm3
+OK  sun_shield vs box: 0.0 mm3
+FITS box: 276.0 x 266.0 x 94.0, 927 cm3
+FITS lid: 276.0 x 266.0 x 11.0, 387 cm3
+FITS io_shield: 160.0 x 84.0 x 5.0, 57 cm3
+FITS sun_shield: 290.0 x 280.0 x 18.0, 261 cm3
+FITS carrier_NUCLEO_H755ZI: 139.4 x 70.0 x 19.3, 44 cm3
+FITS carrier_AD7606: 56.0 x 50.0 x 15.3, 14 cm3
+FITS carrier_LPF_PERFBOARD: 76.0 x 93.0 x 15.3, 31 cm3
+FITS carrier_SRD1104: 126.0 x 96.0 x 17.3, 60 cm3
+FITS carrier_BUCK_24V_5V: 54.0 x 44.0 x 17.3, 14 cm3
+FITS carrier_ESP32C6: 57.8 x 44.0 x 21.3, 18 cm3
