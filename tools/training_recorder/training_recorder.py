@@ -28,6 +28,8 @@ import re
 import socket
 import threading
 import time
+import urllib.error
+import urllib.request
 from collections import OrderedDict
 from http.server import ThreadingHTTPServer
 
@@ -59,6 +61,7 @@ CSV_COLUMNS = ['run_id', 'label', 'note', 'received_at', 'rpm', 'window_id', 'se
                'device_id', 'valid_channels'] + FEATURE_COLUMNS
 
 BEACON_PORT = 8001
+NODE_SETUP_IP = '192.168.4.1'  # the node on its own Wi-Fi "COE-NODE"
 BEACON_PERIOD_S = 2.0
 RUN_ID = re.compile(r'run_\d{8}_\d{6}(_\d{1,3})?')
 
@@ -267,6 +270,7 @@ class RecorderHandler(host_receiver.FeatureHandler):
         if self.path.startswith('/api/'):
             self.api_post()
             return
+        self.server.node_ip = self.client_address[0]  # where to send Wi-Fi settings
         with self.server.feature_lock:  # one ESP packet at a time, as in host_receiver
             super().do_POST()
 
@@ -286,6 +290,9 @@ class RecorderHandler(host_receiver.FeatureHandler):
             elif self.path == '/api/stop':
                 recorder.stop()
                 self.reply(200, {'ok': True})
+            elif self.path == '/api/node_wifi':
+                self.reply(200, {'ok': True, 'message': send_node_wifi(
+                    str(body.get('ssid', '')), str(body.get('password', '')), self.server.node_ip)})
             elif self.path == '/api/delete':
                 recorder.delete(str(body.get('run_id', '')))
                 self.reply(200, {'ok': True})
@@ -297,6 +304,8 @@ class RecorderHandler(host_receiver.FeatureHandler):
             self.reply(404, {'ok': False, 'error': str(error.args[0])})
         except (ValueError, TypeError) as error:
             self.reply(400, {'ok': False, 'error': str(error)})
+        except ConnectionError as error:
+            self.reply(502, {'ok': False, 'error': str(error)})
         except OSError as error:
             self.reply(500, {'ok': False, 'error': f'Disk error: {error}'})
 
@@ -334,10 +343,37 @@ class RecorderHandler(host_receiver.FeatureHandler):
             super().log_message(format, *args)
 
 
+def send_node_wifi(ssid, password, node_ip):
+    """Give the node a hotspot to join; it saves it and restarts onto it."""
+    ssid = ssid.strip()
+    if not 1 <= len(ssid.encode()) <= 32 or '\n' in ssid:
+        raise ValueError('Hotspot name: 1 to 32 characters')
+    if (password and not 8 <= len(password.encode()) <= 63) or '\n' in password:
+        raise ValueError('Password: empty (open hotspot) or 8 to 63 characters')
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    targets = [ip for ip in (node_ip, NODE_SETUP_IP) if ip]
+    for ip in dict.fromkeys(targets):
+        body = (ssid + '\n' + password).encode()
+        request = urllib.request.Request(f'http://{ip}/wifi', body, {'Content-Type': 'text/plain'})
+        try:
+            with opener.open(request, timeout=4) as response:
+                if response.status == 200:
+                    print(f'Node Wi-Fi set to "{ssid}" via {ip}', flush=True)
+                    return (f'Sent. The node restarts and joins "{ssid}" in about 15 s. '
+                            f'Connect this laptop to "{ssid}" too.')
+        except urllib.error.HTTPError as error:
+            raise ValueError(error.read().decode(errors='replace') or f'Node replied {error.code}')
+        except OSError:
+            continue
+    raise ConnectionError('Node not reachable. Connect this laptop to the Wi-Fi "COE-NODE" '
+                          '(no password), then press Send again.')
+
+
 class RecorderServer(ThreadingHTTPServer):
     # On Windows SO_REUSEADDR would let a second server silently share port 8000.
     allow_reuse_address = os.name != 'nt'
     daemon_threads = True
+    node_ip = None
 
 
 def local_ipv4s():
@@ -433,6 +469,7 @@ h2 { margin:0 0 14px; font-size:17px; font-weight:600; color:var(--muted); }
 .msg { margin-top:12px; color:var(--stop); font-weight:600; min-height:1.4em; }
 .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
 .head h2 { margin:0; }
+button.btn { border:0; cursor:pointer; font-size:15px; }
 .btn { display:inline-block; padding:10px 18px; border-radius:10px; background:#1f5fa8; color:#fff; font-weight:600; text-decoration:none; }
 .btn.off { background:#9aa6b2; pointer-events:none; }
 .summary { display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; }
@@ -459,6 +496,19 @@ td a { color:#1f5fa8; font-weight:600; }
   <div id="feed" class="feed">Connecting...</div>
 </header>
 <main>
+  <section class="card">
+    <h2>Connect to the node</h2>
+    <div class="hint" style="margin:0 0 10px">Connect this laptop to the Wi-Fi <b>COE-NODE</b> (no password).
+      Data then arrives here by itself.<br>Want internet on this laptop at the same time? Enter your
+      phone hotspot (2.4 GHz) below and press Send; then connect this laptop to that hotspot too.</div>
+    <div class="rec-row">
+      <div class="note"><label for="ssid">Hotspot name</label><input id="ssid" maxlength="32"></div>
+      <div class="note"><label for="pass">Hotspot password</label><input id="pass" type="password" maxlength="63"></div>
+      <button id="sendwifi" class="btn">Send to node</button>
+    </div>
+    <div id="wifimsg" class="msg"></div>
+  </section>
+
   <section class="card">
     <h2>1. Choose the bearing condition</h2>
     <div id="modes" class="modes"></div>
@@ -521,6 +571,13 @@ for (const [key, name] of LABELS) {
   $('modes').appendChild(b);
 }
 
+$('sendwifi').onclick = async () => {
+  $('sendwifi').disabled = true; $('wifimsg').textContent = 'Sending...';
+  try { $('wifimsg').textContent = (await post('/api/node_wifi', {ssid:$('ssid').value, password:$('pass').value})).message; }
+  catch (e) { $('wifimsg').textContent = e.message; }
+  $('sendwifi').disabled = false;
+};
+
 $('toggle').onclick = async () => {
   if (!state || busy) return;
   busy = true; $('toggle').disabled = true; $('msg').textContent = '';
@@ -565,7 +622,7 @@ function render() {
 
   const lp = state.last_packet, feed = $('feed'), last = $('last');
   if (!lp) {
-    feed.className = 'feed bad'; feed.textContent = 'No data received yet: is the ESP32/STM32 running?';
+    feed.className = 'feed bad'; feed.textContent = 'No data yet: connect this laptop to the Wi-Fi COE-NODE, and check the node is powered';
     last.className = 'bad'; last.textContent = 'none yet';
   } else if (lp.age_s > 5) {
     feed.className = 'feed bad'; feed.textContent = 'No data arriving (last ' + dur(lp.age_s) + ' ago)';
