@@ -23,7 +23,10 @@ Conditions: **Healthy, Inner race, Outer race, Ball, Cage**.
 
 While the laptop is on COE-NODE it has no internet. That is normal.
 
-If no data arrives, run this once in an **administrator** terminal, then restart the script:
+**COE-NODE does not appear?** Check that the ESP board's LED is on. If it is off, its 5 V
+or GND jumper wire is loose: push it in firmly or replace it, then wait 15 s.
+
+**COE-NODE is there but no data arrives?** Run this once in an **administrator** terminal, then restart the script:
 ```
 netsh advfirewall firewall add rule name="COE recorder TCP 8000" dir=in action=allow protocol=TCP localport=8000 profile=any
 ```
