@@ -23,8 +23,15 @@ Conditions: **Healthy, Inner race, Outer race, Ball, Cage**.
 
 While the laptop is on COE-NODE it has no internet. That is normal.
 
-**COE-NODE does not appear?** Check that the ESP board's LED is on. If it is off, its 5 V
-or GND jumper wire is loose: push it in firmly or replace it, then wait 15 s.
+**The ESP board's LED** (it takes about 3–10 s after power-on):
+- red, briefly: the ESP is starting.
+- blue: COE-NODE is up.
+- green: data is arriving from the STM32.
+
+**COE-NODE does not appear?**
+- LED **off**: the ESP's 5 V or GND jumper wire is loose. Push it in firmly or replace it.
+- LED **keeps flashing red**: the 5 V supply dips. Tell COE.
+- LED **stays blue**, never green: press the STM32's black **RESET** button.
 
 **COE-NODE is there but no data arrives?** Run this once in an **administrator** terminal, then restart the script:
 ```
