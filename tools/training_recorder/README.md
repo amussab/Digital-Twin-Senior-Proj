@@ -21,10 +21,7 @@ Conditions: **Healthy, Inner race, Outer race, Ball, Cage**.
 5. Choose the condition, add a note if useful, and press **Start**. Press **Stop** when the run is done.
 6. Download the CSV for one run or for all runs.
 
-**To keep internet on the laptop while recording:** use your phone hotspot (2.4 GHz)
-instead of COE-NODE. With the laptop still on COE-NODE, type the hotspot name and password in the
-"Connect to the node" box and press **Send to node**. The node restarts and joins
-that hotspot. Then connect the laptop to the same hotspot. The node remembers it.
+While the laptop is on COE-NODE it has no internet. That is normal.
 
 If no data arrives, run this once in an **administrator** terminal, then restart the script:
 ```
