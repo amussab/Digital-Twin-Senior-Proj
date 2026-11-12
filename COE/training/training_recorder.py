@@ -42,6 +42,11 @@ _spec = importlib.util.spec_from_file_location('host_receiver', _receiver)
 host_receiver = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(host_receiver)
 
+# node_rpm.py sets the node's shaft speed over the ST-LINK USB cable.
+_spec2 = importlib.util.spec_from_file_location('node_rpm', HERE / 'node_rpm.py')
+node_rpm = importlib.util.module_from_spec(_spec2)
+_spec2.loader.exec_module(node_rpm)
+
 LABELS = [
     ('healthy', 'Healthy'),
     ('inner_race', 'Inner race fault'),
@@ -81,6 +86,8 @@ class Recorder:
         self.runs = {}            # run_id -> meta dict plus 'windows' and 'rpms'
         self.active = None        # run_id being recorded, or None
         self.last_packet = None   # (time.monotonic(), message) of the last new valid window
+        self.rpm_busy = False     # a speed change is waiting for the node's reply
+        self.rpm_reply = ''       # last reply line from the node
         self.beacon_ips = []      # laptop IPv4 addresses the beacon currently announces
         self._load()
 
@@ -143,6 +150,8 @@ class Recorder:
         with self.lock:
             if self.active:
                 raise RuntimeError('Already recording. Stop first.')
+            if self.rpm_busy:
+                raise RuntimeError('Shaft speed change in progress. Wait for the node to answer.')
             base = 'run_' + datetime.now().strftime('%Y%m%d_%H%M%S')
             run_id, number = base, 1
             while run_id in self.runs or self._meta_path(run_id).exists():
@@ -157,6 +166,29 @@ class Recorder:
             self.active = run_id
             print(f'Recording started: {run_id} label={label}', flush=True)
             return run_id
+
+    def set_rpm(self, rpm):
+        """Send RPM <n> (or RPM? when rpm is None) to the node and return its reply line."""
+        with self.lock:
+            if self.rpm_busy:
+                raise RuntimeError('A speed command is already in progress')
+            if self.active and rpm is not None:
+                raise RuntimeError('Stop recording before changing the shaft speed')
+            self.rpm_busy = True
+        try:
+            port = node_rpm.find_port()
+            if not port:
+                raise RuntimeError('ST-LINK COM port not found: plug the STM32 USB cable into this laptop')
+            try:
+                reply = node_rpm.send(port, rpm)
+            except OSError as error:
+                raise RuntimeError(f'Cannot use {port}: {error}')
+            if reply is None:
+                raise RuntimeError(f'No reply from the node on {port}')
+            return reply
+        finally:
+            with self.lock:
+                self.rpm_busy = False
 
     def stop(self):
         with self.lock:
@@ -219,7 +251,7 @@ class Recorder:
                         'device_id': message.get('device_id')}
             active = next((run for run in runs if run['recording']), None)
             return {'recording': active, 'last_packet': last, 'runs': runs, 'summary': summary,
-                    'beacon_ips': list(self.beacon_ips)}
+                    'beacon_ips': list(self.beacon_ips), 'rpm_busy': self.rpm_busy}
 
     def csv_bytes(self, run_ids):
         with self.lock:
@@ -283,6 +315,15 @@ class RecorderHandler(host_receiver.FeatureHandler):
             if self.path == '/api/start':
                 run_id = recorder.start(body.get('label'), body.get('note', ''))
                 self.reply(200, {'ok': True, 'run_id': run_id})
+            elif self.path == '/api/rpm':
+                value = body.get('rpm')
+                if value is not None and (not isinstance(value, int) or isinstance(value, bool)
+                                          or not 60 <= value <= 3600):
+                    raise ValueError('RPM must be a whole number from 60 to 3600')
+                reply = recorder.set_rpm(value)
+                ok = node_rpm.is_ok(reply, value)
+                recorder.rpm_reply = reply
+                self.reply(200, {'ok': ok, 'reply': reply})
             elif self.path == '/api/stop':
                 recorder.stop()
                 self.reply(200, {'ok': True})
@@ -430,6 +471,11 @@ h2 { margin:0 0 14px; font-size:17px; font-weight:600; color:var(--muted); }
 .stats span { display:block; font-size:14px; color:var(--muted); }
 .stats b { font-size:26px; font-variant-numeric:tabular-nums; }
 .stats b.bad { color:var(--stop); font-size:20px; }
+.rpm-row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.rpm-row input { width:120px; padding:10px 12px; font-size:18px; border:2px solid var(--line); border-radius:10px; }
+.preset { padding:10px 18px; border:2px solid var(--line); border-radius:10px; background:#fff; font:600 16px "Segoe UI", system-ui, sans-serif; cursor:pointer; }
+.rpm-row .btn { border:0; cursor:pointer; font-size:16px; }
+.rpm-row button:disabled { opacity:.5; cursor:not-allowed; }
 .msg { margin-top:12px; color:var(--stop); font-weight:600; min-height:1.4em; }
 .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
 .head h2 { margin:0; }
@@ -462,6 +508,18 @@ td a { color:#1f5fa8; font-weight:600; }
   <section class="card">
     <h2>Connect to the node</h2>
     <div class="hint" style="margin:0">Connect this laptop to the Wi-Fi <b>COE-NODE</b> (no password). Data then arrives here by itself.</div>
+  </section>
+
+  <section class="card">
+    <h2>Shaft speed</h2>
+    <div class="rpm-row">
+      <input id="rpm" type="number" min="60" max="3600" step="1" value="1800">
+      <button class="preset" data-rpm="1800">1800</button>
+      <button class="preset" data-rpm="3600">3600</button>
+      <button id="rpmset" class="btn">Set</button>
+      <span>Latest window: <b id="rpmnow">-</b> RPM</span>
+    </div>
+    <div id="rpmmsg" class="hint" style="margin:8px 0 0">The node has no tachometer: type the speed the VFD is set to. Needs the STM32 USB cable in this laptop. The node starts at 1800 after a reset.</div>
   </section>
 
   <section class="card">
@@ -537,6 +595,19 @@ $('toggle').onclick = async () => {
   refresh();
 };
 
+for (const b of document.querySelectorAll('.preset')) b.onclick = () => { $('rpm').value = b.dataset.rpm; };
+$('rpmset').onclick = async () => {
+  const v = parseInt($('rpm').value, 10);
+  if (!(v >= 60 && v <= 3600)) { $('rpmmsg').textContent = 'Enter a whole number from 60 to 3600.'; return; }
+  $('rpmset').disabled = true; $('rpmmsg').textContent = 'Sent. Waiting for the node (it applies the speed at the next window end)...';
+  try {
+    const d = await post('/api/rpm', {rpm:v});
+    $('rpmmsg').textContent = 'Node replied: ' + d.reply + (d.ok ? '' : ' (not accepted)');
+  } catch (e) { $('rpmmsg').textContent = e.message; }
+  $('rpmset').disabled = false;
+  refresh();
+};
+
 async function del(id, text) {
   if (!confirm('Delete this run?\n\n' + text + '\n\nIts data will be removed from disk. This cannot be undone.')) return;
   try { await post('/api/delete', {run_id:id}); } catch (e) { $('msg').textContent = e.message; }
@@ -559,6 +630,10 @@ function render() {
     ? 'Announcing this laptop as ' + state.beacon_ips.map(ip => ip + ':' + (location.port || '80')).join(', ')
     : 'Beacon: no network address found';
   const t = $('toggle');
+  const rpmBusy = !!state.rpm_busy;
+  $('rpmnow').textContent = state.last_packet && state.last_packet.age_s <= 5 ? state.last_packet.rpm : '-';
+  $('rpmset').disabled = rpmBusy || !!rec;
+  t.disabled = rpmBusy && !rec;
   t.textContent = rec ? 'Stop recording' : 'Start recording';
   t.className = 'toggle ' + (rec ? 'stop' : 'start');
   $('note').disabled = !!rec;
