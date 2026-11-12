@@ -1,0 +1,34 @@
+{
+  "sample_rate_hz": 30000,
+  "cutoffs_hz": [
+    2000,
+    8000
+  ],
+  "sections": 4,
+  "overall_order": 8,
+  "samples_per_fixture": 1024,
+  "initial_state": "zero",
+  "inputs_rounded_to": "float32",
+  "reference": "unchanged Python step 02, original float64 coefficients",
+  "max_scipy_float32_error_g": [
+    5.7941225310720323e-08,
+    1.4719318675027182e-06,
+    4.582115571416523e-07,
+    1.5684149259898028e-07
+  ],
+  "frequency_response": {
+    "500": 0.0016556854780527882,
+    "2000": 0.707106780394112,
+    "4000": 0.9999999312369791,
+    "8000": 0.707106767318413,
+    "12000": 0.00801949441410282
+  },
+  "tolerance": "abs(error) <= 2e-5 * (1 + abs(expected))",
+  "source_files": [
+    "healthy_1750rpm.mat",
+    "outer_race_1750rpm.mat",
+    "inner_race_1750rpm.mat",
+    "ball_1750rpm.mat"
+  ],
+  "mcu_execution": "pending board verification"
+}

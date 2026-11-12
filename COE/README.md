@@ -13,6 +13,7 @@ The two scripts below receive those windows on a laptop:
 
 Run **one of them at a time**: they use the same port and the same node. Both need only Python 3.8 or newer.
 
+The node's own code (STM32 and ESP32 firmware) is in [`firmware/`](firmware/README.md); only COE needs it.
 Design documents for the node: `Project architecture/COE/`.
 
 ## Connect to the node (both scripts)

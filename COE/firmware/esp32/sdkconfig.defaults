@@ -1,0 +1,23 @@
+# The board is an ESP32-C6 (a fresh clone has no sdkconfig to say so).
+CONFIG_IDF_TARGET="esp32c6"
+
+# Keep the CH343 / UART0 connector as the programming and display interface.
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+CONFIG_ESP_CONSOLE_UART_BAUDRATE=115200
+
+# Verify HTTPS servers through the vendor certificate bundle.
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+
+# 16 MB verified on the connected nanoESP32-C6 board with esptool.
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+
+# Use the native driver for the BOYA flash detected on this board.
+CONFIG_SPI_FLASH_SUPPORT_BOYA_CHIP=y
+
+# Leave room for the Wi-Fi and HTTP firmware.
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+
+# Cap Wi-Fi transmit power from the first moment of start-up (dBm), so the
+# start-up current burst stays small on the shared 5 V converter.
+CONFIG_ESP_PHY_MAX_WIFI_TX_POWER=10
+CONFIG_ESP_PHY_MAX_TX_POWER=10

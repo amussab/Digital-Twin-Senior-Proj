@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-04",
+  "project": "C:\\Users\\USER2\\OneDrive - KFUPM\\Senior Design\\coe_firmware\\ESP32\\feature_receiver",
+  "layout_choice": "Keep separate ESP-IDF project inside coe_firmware, confirmed by user",
+  "protocol_choice": "HTTP POST JSON, confirmed by user",
+  "stm32_sender": {
+    "build": "passed previously; ELF unchanged",
+    "elf_sha256": "adf810756b28b09ad5752593c4505afa8affda6e80cf08e910ca7a77a3aaf3c3",
+    "physical_uart": "not verified; user has not wired/tested boards"
+  },
+  "esp_source": {
+    "uart_decoder": "unchanged; previous host tests passed",
+    "valid_packet_indicator": "WS2812 GPIO8 green latch; vendor led_strip 3.0.3",
+    "http_sender": "separate FreeRTOS task, 16-vector owned queue, 3 attempts",
+    "configuration": "main/config/connection_settings.local.h; disabled by default"
+  },
+  "verified_host_tests": {
+    "actual_c_json_encoder_strict_gcc_compile": "passed",
+    "test_groups": 5,
+    "float32_roundtrip_values": 3200,
+    "buffer_capacities_checked_with_asan_ubsan": 2049,
+    "http_save_acknowledgment": "passed",
+    "identical_retry_deduplication": "passed",
+    "conflicting_retry_409": "passed",
+    "malformed_payload_400": "passed",
+    "network_scope": "loopback only; synthetic test values, no board-result claims"
+  },
+  "pending": [
+    "Full ESP-IDF firmware build (SDK not located)",
+    "Actual LED color/pin operation on the user board",
+    "Physical STM32-to-ESP32 UART test",
+    "ESP32 Wi-Fi association/HTTP delivery to configured host",
+    "New MCU end-to-end timing under physical communications load"
+  ],
+  "limitations": [
+    "Queue overflow and exhausted retries are logged and discard affected vectors",
+    "No persistent offline storage",
+    "Host must deduplicate delivery identity",
+    "Green LED establishes UART validation only; HTTP 2xx is logged separately"
+  ]
+}

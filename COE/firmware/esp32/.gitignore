@@ -1,0 +1,18 @@
+/build/
+/sdkconfig
+/sdkconfig.old
+
+/managed_components/
+/main/config/connection_settings.local.h
+/tests/build/
+/tests/__pycache__/
+/tests/received_features.jsonl
+
+.cache/
+
+__pycache__/
+
+*.pyc
+
+# Recorder runs (training data) stay on the laptop
+tools/training_data/

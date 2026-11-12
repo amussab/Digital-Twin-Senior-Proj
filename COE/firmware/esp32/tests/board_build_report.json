@@ -1,0 +1,37 @@
+{
+  "verified_at_utc": "2026-10-04T17:58:01.348016+00:00",
+  "project": "C:\\Users\\USER2\\OneDrive - KFUPM\\Senior Design\\coe_esp32",
+  "sdk": "ESP-IDF v6.1, official EIM v0.19.0",
+  "sdk_path": "C:\\Users\\USER2\\esp\\v6.1\\esp-idf",
+  "tools_path": "C:\\Espressif\\tools",
+  "vscode_extension": "espressif.esp-idf-extension v2.3.0",
+  "sdk_python_requirements_check": "passed; imports verified with warnings treated as errors",
+  "encoding_package": "charset-normalizer 3.5.2, official pure Python wheel; optional native extension was blocked by Windows Application Control",
+  "build": "passed from original project path; no drive alias required",
+  "target": "esp32c6",
+  "detected_board": {
+    "port": "COM6",
+    "chip": "ESP32-C6 QFN40 revision v0.2",
+    "flash_mb": 16,
+    "flash_vendor": "BOYA"
+  },
+  "application_image_bytes": 217904,
+  "application_partition_bytes": 1048576,
+  "elf_sha256": "bef10f2465900c460ca8cf349bead3ff46ff82627fa71a37234ca670dd7b1f48",
+  "application_image_sha256": "b45b2d9a75280f38e30d05b5c577553c36d25cd2786a08a5b96a9df84607daf6",
+  "flash": "passed; esptool verified written image hash",
+  "running_image_matches_built_elf": true,
+  "actual_startup_capture": "board_startup.log",
+  "idle_test_duration_seconds": 8,
+  "startup": "receiver ready, forwarding disabled, no UART errors or startup fault in capture",
+  "board_changes": [
+    "GPIO18 RX idle-high pull-up",
+    "16 MB flash configuration",
+    "Native BOYA flash driver"
+  ],
+  "other_c_h_files_unchanged": 11,
+  "physical_stm32_feature_reception": "not tested; user reports UART wires not connected",
+  "green_led_after_valid_packet": "not tested; awaits actual UART packet",
+  "wifi_http_delivery": "not tested; disabled, credentials and host URL not supplied",
+  "measurement_scope": "ESP build/flash/idle startup only; no new STM32 DSP timing or real sensor validation"
+}

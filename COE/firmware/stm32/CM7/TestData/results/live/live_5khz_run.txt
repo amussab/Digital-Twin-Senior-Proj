@@ -1,0 +1,671 @@
+=== COE CM7 LIVE: AD7606 -> DSP -> ESP32 ===
+Clock HSE 8 MHz (ST-LINK MCO), core measured 401128200 Hz. ADC pins held low.
+Switch on the 24 V supply (ADC power), then press B1 to start.
+Press B1 again to stop BEFORE switching the ADC power off.
+Speed 1750 RPM, bearing profile 1, channels B1X/B1Y/B2X/B2Y = AIN2/4/6/8.
+UNCALIBRATED: COE_LIVE_VOLTS_PER_G is not set in live_config.h.
+DSP runs on ADC volts for timing checks; NO packets are sent.
+
+Timeline (us): RESET 100 ns @1000, CONVST @5000, RESET 50 us @10000-10050, CONVST @15000, end @20000
+  BUSY starts low; 0 changes:
+  (healthy: up just after each CONVST, down about 4 us later; RESET should not raise BUSY)
+Short test (pull-downs on, one line driven high):
+  nothing driven -> high:
+  RST high -> also high: none
+  CONVST A high -> also high: none
+  CS high -> also high: none
+  SCLK high -> also high: none
+  CONVST B high -> also high: none
+
+Probe: BUSY high 0/64 before RESET, 0/64 while RESET held high (expect low while RESET is high)
+After RESET (high samples of 64): BUSY no-pull 0, pull-down 0, pull-up 0 -> driven LOW
+  DOUTA (CS low) pull-down 0, pull-up 0 -> driven LOW
+  CS high: DOUTA -> driven LOW (expect FLOATING: CS reaches the ADC)
+  CS high: BUSY -> driven LOW (expect driven; FLOATING: wire is on FD/a data pin)
+  CS low, SCLK/RD high: DOUTA -> driven LOW (driven: serial mode; FLOATING: parallel mode)
+  Test CONVST (1 us high): BUSY rise -1 ns, fall -1 ns, edges 0 (expect rise <100, fall about 4000, edges 2; -1 = none)
+
+AD7606 start failed: no BUSY pulse after a test CONVST (ADC unpowered? BUSY/CONVST wiring?). Pins held low.
+
+Timeline (us): RESET 100 ns @1000, CONVST @5000, RESET 50 us @10000-10050, CONVST @15000, end @20000
+  BUSY starts low; 0 changes:
+  (healthy: up just after each CONVST, down about 4 us later; RESET should not raise BUSY)
+Short test (pull-downs on, one line driven high):
+  nothing driven -> high:
+  RST high -> also high: none
+  CONVST A high -> also high: none
+  CS high -> also high: none
+  SCLK high -> also high: none
+  CONVST B high -> also high: none
+
+Probe: BUSY high 0/64 before RESET, 0/64 while RESET held high (expect low while RESET is high)
+After RESET (high samples of 64): BUSY no-pull 0, pull-down 0, pull-up 0 -> driven LOW
+  DOUTA (CS low) pull-down 0, pull-up 0 -> driven LOW
+  CS high: DOUTA -> driven LOW (expect FLOATING: CS reaches the ADC)
+  CS high: BUSY -> driven LOW (expect driven; FLOATING: wire is on FD/a data pin)
+  CS low, SCLK/RD high: DOUTA -> driven LOW (driven: serial mode; FLOATING: parallel mode)
+  Test CONVST (1 us high): BUSY rise -1 ns, fall -1 ns, edges 0 (expect rise <100, fall about 4000, edges 2; -1 = none)
+
+AD7606 start failed: no BUSY pulse after a test CONVST (ADC unpowered? BUSY/CONVST wiring?). Pins held low.
+
+Timeline (us): RESET 100 ns @1000, CONVST @5000, RESET 50 us @10000-10050, CONVST @15000, end @20000
+  BUSY starts low; 0 changes:
+  (healthy: up just after each CONVST, down about 4 us later; RESET should not raise BUSY)
+Short test (pull-downs on, one line driven high):
+  nothing driven -> high:
+  RST high -> also high: none
+  CONVST A high -> also high: none
+  CS high -> also high: none
+  SCLK high -> also high: none
+  CONVST B high -> also high: none
+
+Probe: BUSY high 0/64 before RESET, 0/64 while RESET held high (expect low while RESET is high)
+After RESET (high samples of 64): BUSY no-pull 0, pull-down 0, pull-up 0 -> driven LOW
+  DOUTA (CS low) pull-down 0, pull-up 0 -> driven LOW
+  CS high: DOUTA -> driven LOW (expect FLOATING: CS reaches the ADC)
+  CS high: BUSY -> driven LOW (expect driven; FLOATING: wire is on FD/a data pin)
+  CS low, SCLK/RD high: DOUTA -> driven LOW (driven: serial mode; FLOATING: parallel mode)
+  Test CONVST (1 us high): BUSY rise -1 ns, fall -1 ns, edges 0 (expect rise <100, fall about 4000, edges 2; -1 = none)
+
+AD7606 start failed: no BUSY pulse after a test CONVST (ADC unpowered? BUSY/CONVST wiring?). Pins held low.
+
+Timeline (us): RESET 100 ns @1000, CONVST @5000, RESET 50 us @10000-10050, CONVST @15000, end @20000
+  BUSY starts low; 0 changes:
+  (healthy: up just after each CONVST, down about 4 us later; RESET should not raise BUSY)
+Short test (pull-downs on, one line driven high):
+  nothing driven -> high:
+  RST high -> also high: none
+  CONVST A high -> also high: none
+  CS high -> also high: none
+  SCLK high -> also high: none
+  CONVST B high -> also high: none
+
+Probe: BUSY high 0/64 before RESET, 0/64 while RESET held high (expect low while RESET is high)
+After RESET (high samples of 64): BUSY no-pull 0, pull-down 0, pull-up 0 -> driven LOW
+  DOUTA (CS low) pull-down 0, pull-up 0 -> driven LOW
+  CS high: DOUTA -> driven LOW (expect FLOATING: CS reaches the ADC)
+  CS high: BUSY -> driven LOW (expect driven; FLOATING: wire is on FD/a data pin)
+  CS low, SCLK/RD high: DOUTA -> driven LOW (driven: serial mode; FLOATING: parallel mode)
+  Test CONVST (1 us high): BUSY rise -1 ns, fall -1 ns, edges 0 (expect rise <100, fall about 4000, edges 2; -1 = none)
+
+AD7606 start failed: no BUSY pulse after a test CONVST (ADC unpowered? BUSY/CONVST wiring?). Pins held low.
+
+Timeline (us): RESET 100 ns @1000, CONVST @5000, RESET 50 us @10000-10050, CONVST @15000, end @20000
+  BUSY starts low; 0 changes:
+  (healthy: up just after each CONVST, down about 4 us later; RESET should not raise BUSY)
+Short test (pull-downs on, one line driven high):
+  nothing driven -> high:
+  RST high -> also high: none
+  CONVST A high -> also high: none
+  CS high -> also high: none
+  SCLK high -> also high: none
+  CONVST B high -> also high: none
+
+Probe: BUSY high 0/64 before RESET, 0/64 while RESET held high (expect low while RESET is high)
+After RESET (high samples of 64): BUSY no-pull 0, pull-down 0, pull-up 0 -> driven LOW
+  DOUTA (CS low) pull-down 0, pull-up 0 -> driven LOW
+  CS high: DOUTA -> driven LOW (expect FLOATING: CS reaches the ADC)
+  CS high: BUSY -> driven LOW (expect driven; FLOATING: wire is on FD/a data pin)
+  CS low, SCLK/RD high: DOUTA -> driven LOW (driven: serial mode; FLOATING: parallel mode)
+  Test CONVST (1 us high): BUSY rise -1 ns, fall -1 ns, edges 0 (expect rise <100, fall about 4000, edges 2; -1 = none)
+
+AD7606 start failed: no BUSY pulse after a test CONVST (ADC unpowered? BUSY/CONVST wiring?). Pins held low.
+
+Timeline (us): RESET 100 ns @1000, CONVST @5000, RESET 50 us @10000-10050, CONVST @15000, end @20000
+  BUSY starts low; 0 changes:
+  (healthy: up just after each CONVST, down about 4 us later; RESET should not raise BUSY)
+Short test (pull-downs on, one line driven high):
+  nothing driven -> high:
+  RST high -> also high: none
+  CONVST A high -> also high: none
+  CS high -> also high: none
+  SCLK high -> also high: none
+  CONVST B high -> also high: none
+
+Probe: BUSY high 0/64 before RESET, 0/64 while RESET held high (expect low while RESET is high)
+After RESET (high samples of 64): BUSY no-pull 0, pull-down 0, pull-up 0 -> driven LOW
+  DOUTA (CS low) pull-down 0, pull-up 0 -> driven LOW
+  CS high: DOUTA -> driven LOW (expect FLOATING: CS reaches the ADC)
+  CS high: BUSY -> driven LOW (expect driven; FLOATING: wire is on FD/a data pin)
+  CS low, SCLK/RD high: DOUTA -> driven LOW (driven: serial mode; FLOATING: parallel mode)
+  Test CONVST (1 us high): BUSY rise -1 ns, fall -1 ns, edges 0 (expect rise <100, fall about 4000, edges 2; -1 = none)
+
+AD7606 start failed: no BUSY pulse after a test CONVST (ADC unpowered? BUSY/CONVST wiring?). Pins held low.
+
+Timeline (us): RESET 100 ns @1000, CONVST @5000, RESET 50 us @10000-10050, CONVST @15000, end @20000
+  BUSY starts low; 0 changes:
+  (healthy: up just after each CONVST, down about 4 us later; RESET should not raise BUSY)
+Short test (pull-downs on, one line driven high):
+  nothing driven -> high:
+  RST high -> also high: none
+  CONVST A high -> also high: none
+  CS high -> also high: none
+  SCLK high -> also high: none
+  CONVST B high -> also high: none
+
+Probe: BUSY high 0/64 before RESET, 0/64 while RESET held high (expect low while RESET is high)
+After RESET (high samples of 64): BUSY no-pull 0, pull-down 0, pull-up 0 -> driven LOW
+  DOUTA (CS low) pull-down 0, pull-up 0 -> driven LOW
+  CS high: DOUTA -> driven LOW (expect FLOATING: CS reaches the ADC)
+  CS high: BUSY -> driven LOW (expect driven; FLOATING: wire is on FD/a data pin)
+  CS low, SCLK/RD high: DOUTA -> driven LOW (driven: serial mode; FLOATING: parallel mode)
+  Test CONVST (1 us high): BUSY rise -1 ns, fall -1 ns, edges 0 (expect rise <100, fall about 4000, edges 2; -1 = none)
+
+AD7606 start failed: no BUSY pulse after a test CONVST (ADC unpowered? BUSY/CONVST wiring?). Pins held low.
+
+Timeline (us): RESET 100 ns @1000, CONVST @5000, RESET 50 us @10000-10050, CONVST @15000, end @20000
+  BUSY starts low; 0 changes:
+  (healthy: up just after each CONVST, down about 4 us later; RESET should not raise BUSY)
+Short test (pull-downs on, one line driven high):
+  nothing driven -> high:
+  RST high -> also high: none
+  CONVST A high -> also high: none
+  CS high -> also high: none
+  SCLK high -> also high: none
+  CONVST B high -> also high: none
+
+Probe: BUSY high 0/64 before RESET, 0/64 while RESET held high (expect low while RESET is high)
+After RESET (high samples of 64): BUSY no-pull 0, pull-down 0, pull-up 0 -> driven LOW
+  DOUTA (CS low) pull-down 0, pull-up 0 -> driven LOW
+  CS high: DOUTA -> driven LOW (expect FLOATING: CS reaches the ADC)
+  CS high: BUSY -> driven LOW (expect driven; FLOATING: wire is on FD/a data pin)
+  CS low, SCLK/RD high: DOUTA -> driven LOW (driven: serial mode; FLOATING: parallel mode)
+  Test CONVST (1 us high): BUSY rise -1 ns, fall -1 ns, edges 0 (expect rise <100, fall about 4000, edges 2; -1 = none)
+
+AD7606 start failed: no BUSY pulse after a test CONVST (ADC unpowered? BUSY/CONVST wiring?). Pins held low.
+
+Timeline (us): RESET 100 ns @1000, CONVST @5000, RESET 50 us @10000-10050, CONVST @15000, end @20000
+  BUSY starts HIGH; 3 changes: down@5004.7 up@10000.1 down@15004.7
+  (healthy: up just after each CONVST, down about 4 us later; RESET should not raise BUSY)
+Short test (pull-downs on, one line driven high):
+  nothing driven -> high:
+  RST high -> also high: BUSY
+  CONVST A high -> also high: BUSY
+  CS high -> also high: BUSY
+  SCLK high -> also high: BUSY
+  CONVST B high -> also high: none
+
+Probe: BUSY high 64/64 before RESET, 64/64 while RESET held high (expect low while RESET is high)
+BUSY was high after RESET; one CONVST was sent to clear it.
+After RESET (high samples of 64): BUSY no-pull 0, pull-down 0, pull-up 0 -> driven LOW
+  DOUTA (CS low) pull-down 0, pull-up 0 -> driven LOW
+  CS high: DOUTA -> FLOATING (not driven: wire, pin or ADC power?) (expect FLOATING: CS reaches the ADC)
+  CS high: BUSY -> driven LOW (expect driven; FLOATING: wire is on FD/a data pin)
+  CS low, SCLK/RD high: DOUTA -> driven LOW (driven: serial mode; FLOATING: parallel mode)
+  Test CONVST (1 us high): BUSY rise 110 ns, fall 4545 ns, edges 2 (expect rise <100, fall about 4000, edges 2; -1 = none)
+
+AD7606 started: 29998.50 S/s per channel (TIM4 200000000 Hz / 6667), SCLK 6250000 Hz, read 20480 ns, clock HSE 8 MHz
+  window 1 (20571 samples/channel, 1750 RPM): features ready 10.71 ms after its last sample (max 10.71 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.38 kurt 1.50 crest 1.71 envRMS 300.92 FTF 0.04 BSF 0.05 BPFO 0.05 BPFI 0.17
+    B1Y: RMS 334.41 kurt 1.50 crest 1.71 envRMS 300.94 FTF 0.04 BSF 0.05 BPFO 0.05 BPFI 0.17
+    B2X: RMS 334.42 kurt 1.50 crest 1.71 envRMS 300.95 FTF 0.04 BSF 0.05 BPFO 0.05 BPFI 0.17
+    B2Y: RMS 334.43 kurt 1.50 crest 1.71 envRMS 300.95 FTF 0.03 BSF 0.05 BPFO 0.05 BPFI 0.17
+[1s] rate 0.00 Hz | windows 1 sent 0 withheld 1 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.40% | window latency max 10.71 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 2 (20571 samples/channel, 1750 RPM): features ready 11.04 ms after its last sample (max 11.04 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.03 BSF 0.06 BPFO 0.07 BPFI 0.18
+    B1Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.03 BSF 0.06 BPFO 0.07 BPFI 0.18
+    B2X: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.03 BSF 0.06 BPFO 0.06 BPFI 0.18
+    B2Y: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.03 BSF 0.06 BPFO 0.07 BPFI 0.18
+[2s] rate 29998.50 Hz | windows 2 sent 0 withheld 2 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.37% | window latency max 11.04 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 3 (20571 samples/channel, 1750 RPM): features ready 10.41 ms after its last sample (max 11.04 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.03 BSF 0.06 BPFO 0.09 BPFI 0.27
+    B1Y: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.03 BSF 0.06 BPFO 0.09 BPFI 0.26
+    B2X: RMS 334.48 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.03 BSF 0.06 BPFO 0.09 BPFI 0.26
+    B2Y: RMS 334.49 kurt 1.50 crest 1.42 envRMS 301.40 FTF 0.03 BSF 0.06 BPFO 0.09 BPFI 0.26
+  window 4 (20571 samples/channel, 1750 RPM): features ready 10.76 ms after its last sample (max 11.04 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.04 BSF 0.05 BPFO 0.08 BPFI 0.44
+    B1Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.04 BSF 0.05 BPFO 0.07 BPFI 0.44
+    B2X: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.40 FTF 0.05 BSF 0.05 BPFO 0.08 BPFI 0.45
+    B2Y: RMS 334.48 kurt 1.50 crest 1.42 envRMS 301.41 FTF 0.04 BSF 0.05 BPFO 0.08 BPFI 0.44
+[3s] rate 29998.50 Hz | windows 4 sent 0 withheld 4 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 16.44% | window latency max 11.04 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 5 (20571 samples/channel, 1750 RPM): features ready 11.11 ms after its last sample (max 11.11 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.10 BPFO 0.06 BPFI 0.41
+    B1Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.04 BSF 0.11 BPFO 0.06 BPFI 0.41
+    B2X: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.04 BSF 0.10 BPFO 0.06 BPFI 0.41
+    B2Y: RMS 334.48 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.04 BSF 0.10 BPFO 0.06 BPFI 0.41
+[4s] rate 29998.50 Hz | windows 5 sent 0 withheld 5 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.38% | window latency max 11.11 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 6 (20571 samples/channel, 1750 RPM): features ready 10.48 ms after its last sample (max 11.11 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.06 BSF 0.06 BPFO 0.03 BPFI 0.09
+    B1Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.06 BSF 0.06 BPFO 0.03 BPFI 0.09
+    B2X: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.06 BSF 0.06 BPFO 0.03 BPFI 0.09
+    B2Y: RMS 334.48 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.06 BSF 0.06 BPFO 0.03 BPFI 0.09
+  window 7 (20571 samples/channel, 1750 RPM): features ready 10.83 ms after its last sample (max 11.11 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.05 BSF 0.07 BPFO 0.10 BPFI 0.43
+    B1Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.41 FTF 0.05 BSF 0.07 BPFO 0.10 BPFI 0.43
+    B2X: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.41 FTF 0.05 BSF 0.06 BPFO 0.10 BPFI 0.43
+    B2Y: RMS 334.48 kurt 1.50 crest 1.42 envRMS 301.42 FTF 0.05 BSF 0.07 BPFO 0.10 BPFI 0.43
+[5s] rate 29998.50 Hz | windows 7 sent 0 withheld 7 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 16.44% | window latency max 11.11 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 8 (20571 samples/channel, 1750 RPM): features ready 11.17 ms after its last sample (max 11.17 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.05 BSF 0.08 BPFO 0.03 BPFI 0.50
+    B1Y: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.40 FTF 0.05 BSF 0.08 BPFO 0.03 BPFI 0.51
+    B2X: RMS 334.48 kurt 1.50 crest 1.42 envRMS 301.41 FTF 0.05 BSF 0.08 BPFO 0.04 BPFI 0.51
+    B2Y: RMS 334.49 kurt 1.50 crest 1.42 envRMS 301.41 FTF 0.05 BSF 0.08 BPFO 0.04 BPFI 0.51
+[6s] rate 29998.50 Hz | windows 8 sent 0 withheld 8 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.51% | window latency max 11.17 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 9 (20571 samples/channel, 1750 RPM): features ready 10.54 ms after its last sample (max 11.17 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.05 BSF 0.07 BPFO 0.11 BPFI 0.39
+    B1Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.05 BSF 0.07 BPFO 0.11 BPFI 0.39
+    B2X: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.05 BSF 0.07 BPFO 0.11 BPFI 0.39
+    B2Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.05 BSF 0.07 BPFO 0.11 BPFI 0.39
+  window 10 (20571 samples/channel, 1750 RPM): features ready 10.89 ms after its last sample (max 11.17 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.04 BSF 0.10 BPFO 0.04 BPFI 0.35
+    B1Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.10 BPFO 0.04 BPFI 0.35
+    B2X: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.10 BPFO 0.04 BPFI 0.35
+    B2Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.10 BPFO 0.04 BPFI 0.35
+[7s] rate 29998.50 Hz | windows 10 sent 0 withheld 10 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 16.43% | window latency max 11.17 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 11 (20571 samples/channel, 1750 RPM): features ready 11.24 ms after its last sample (max 11.24 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.04 BPFO 0.05 BPFI 0.20
+    B1Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.04 BSF 0.04 BPFO 0.05 BPFI 0.19
+    B2X: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.04 BSF 0.04 BPFO 0.05 BPFI 0.20
+    B2Y: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.04 BSF 0.04 BPFO 0.05 BPFI 0.20
+[8s] rate 29998.50 Hz | windows 11 sent 0 withheld 11 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.38% | window latency max 11.24 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 12 (20571 samples/channel, 1750 RPM): features ready 10.61 ms after its last sample (max 11.24 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.06 BSF 0.07 BPFO 0.13 BPFI 0.16
+    B1Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.06 BSF 0.07 BPFO 0.13 BPFI 0.16
+    B2X: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.06 BSF 0.07 BPFO 0.13 BPFI 0.16
+    B2Y: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.06 BSF 0.07 BPFO 0.14 BPFI 0.16
+  window 13 (20571 samples/channel, 1750 RPM): features ready 10.96 ms after its last sample (max 11.24 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.05 BSF 0.06 BPFO 0.08 BPFI 1.22
+    B1Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.05 BSF 0.06 BPFO 0.09 BPFI 1.22
+    B2X: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.40 FTF 0.05 BSF 0.06 BPFO 0.08 BPFI 1.22
+    B2Y: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.40 FTF 0.05 BSF 0.06 BPFO 0.08 BPFI 1.22
+[9s] rate 29998.50 Hz | windows 13 sent 0 withheld 13 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 16.44% | window latency max 11.24 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 14 (20571 samples/channel, 1750 RPM): features ready 11.30 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.03 BSF 0.05 BPFO 0.10 BPFI 0.34
+    B1Y: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.03 BSF 0.05 BPFO 0.10 BPFI 0.34
+    B2X: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.03 BSF 0.05 BPFO 0.10 BPFI 0.34
+    B2Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.03 BSF 0.05 BPFO 0.10 BPFI 0.34
+[10s] rate 29998.50 Hz | windows 14 sent 0 withheld 14 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.39% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 15 (20571 samples/channel, 1750 RPM): features ready 10.67 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.05 BSF 0.04 BPFO 0.13 BPFI 0.77
+    B1Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.05 BSF 0.05 BPFO 0.13 BPFI 0.76
+    B2X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.05 BSF 0.05 BPFO 0.13 BPFI 0.77
+    B2Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.40 FTF 0.05 BSF 0.04 BPFO 0.13 BPFI 0.77
+  window 16 (20571 samples/channel, 1750 RPM): features ready 11.01 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.02 BSF 0.06 BPFO 0.17 BPFI 0.89
+    B1Y: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.02 BSF 0.06 BPFO 0.17 BPFI 0.89
+    B2X: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.02 BSF 0.06 BPFO 0.16 BPFI 0.89
+    B2Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.02 BSF 0.06 BPFO 0.17 BPFI 0.89
+[11s] rate 29998.50 Hz | windows 16 sent 0 withheld 16 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 16.44% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 17 (20571 samples/channel, 1750 RPM): features ready 10.39 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.07 BSF 0.10 BPFO 0.22 BPFI 2.16
+    B1Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.07 BSF 0.10 BPFO 0.22 BPFI 2.16
+    B2X: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.07 BSF 0.10 BPFO 0.22 BPFI 2.16
+    B2Y: RMS 334.47 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.07 BSF 0.10 BPFO 0.22 BPFI 2.16
+[12s] rate 29998.50 Hz | windows 17 sent 0 withheld 17 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.51% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 18 (20571 samples/channel, 1750 RPM): features ready 10.74 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.02 BSF 0.07 BPFO 0.14 BPFI 2.00
+    B1Y: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.01 BSF 0.07 BPFO 0.14 BPFI 2.00
+    B2X: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.01 BSF 0.07 BPFO 0.14 BPFI 2.01
+    B2Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.01 BSF 0.07 BPFO 0.14 BPFI 2.00
+[13s] rate 29998.50 Hz | windows 18 sent 0 withheld 18 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.37% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 19 (20571 samples/channel, 1750 RPM): features ready 11.08 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.08 BSF 0.05 BPFO 0.10 BPFI 1.15
+    B1Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.08 BSF 0.05 BPFO 0.10 BPFI 1.15
+    B2X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.08 BSF 0.05 BPFO 0.10 BPFI 1.15
+    B2Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.08 BSF 0.05 BPFO 0.10 BPFI 1.15
+  window 20 (20571 samples/channel, 1750 RPM): features ready 10.46 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.08 BPFO 0.14 BPFI 0.88
+    B1Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.09 BPFO 0.14 BPFI 0.88
+    B2X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.04 BSF 0.08 BPFO 0.14 BPFI 0.88
+    B2Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.04 BSF 0.08 BPFO 0.14 BPFI 0.88
+[14s] rate 29998.50 Hz | windows 20 sent 0 withheld 20 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 16.44% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 21 (20571 samples/channel, 1750 RPM): features ready 10.80 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.02 BSF 0.04 BPFO 0.14 BPFI 0.78
+    B1Y: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.02 BSF 0.04 BPFO 0.13 BPFI 0.78
+    B2X: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.02 BSF 0.04 BPFO 0.14 BPFI 0.78
+    B2Y: RMS 334.46 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.02 BSF 0.04 BPFO 0.14 BPFI 0.78
+[15s] rate 29998.50 Hz | windows 21 sent 0 withheld 21 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.38% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 22 (20571 samples/channel, 1750 RPM): features ready 11.14 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.04 BSF 0.10 BPFO 0.07 BPFI 0.72
+    B1Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.04 BSF 0.10 BPFO 0.07 BPFI 0.72
+    B2X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.10 BPFO 0.07 BPFI 0.72
+    B2Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.10 BPFO 0.07 BPFI 0.72
+  window 23 (20571 samples/channel, 1750 RPM): features ready 10.53 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.04 BSF 0.05 BPFO 0.09 BPFI 0.58
+    B1Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.05 BPFO 0.09 BPFI 0.58
+    B2X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.05 BPFO 0.09 BPFI 0.58
+    B2Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.05 BPFO 0.09 BPFI 0.58
+[16s] rate 29998.50 Hz | windows 23 sent 0 withheld 23 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 16.44% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 24 (20571 samples/channel, 1750 RPM): features ready 10.87 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.05 BSF 0.06 BPFO 0.10 BPFI 0.49
+    B1Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.06 BSF 0.06 BPFO 0.10 BPFI 0.49
+    B2X: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.05 BSF 0.06 BPFO 0.10 BPFI 0.49
+    B2Y: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.05 BSF 0.06 BPFO 0.10 BPFI 0.49
+[17s] rate 29998.50 Hz | windows 24 sent 0 withheld 24 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.50% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 25 (20571 samples/channel, 1750 RPM): features ready 11.21 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.26 FTF 0.03 BSF 0.08 BPFO 0.11 BPFI 3.03
+    B1Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.29 FTF 0.03 BSF 0.08 BPFO 0.11 BPFI 3.04
+    B2X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.03 BSF 0.08 BPFO 0.11 BPFI 3.04
+    B2Y: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.03 BSF 0.08 BPFO 0.11 BPFI 3.03
+  window 26 (20571 samples/channel, 1750 RPM): features ready 10.59 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.03 BSF 0.05 BPFO 0.06 BPFI 0.19
+    B1Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.03 BSF 0.05 BPFO 0.07 BPFI 0.19
+    B2X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.03 BSF 0.05 BPFO 0.07 BPFI 0.19
+    B2Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.03 BSF 0.05 BPFO 0.07 BPFI 0.19
+[18s] rate 29998.50 Hz | windows 26 sent 0 withheld 26 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 16.45% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 27 (20571 samples/channel, 1750 RPM): features ready 10.93 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.03 BSF 0.05 BPFO 0.12 BPFI 1.31
+    B1Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.03 BSF 0.05 BPFO 0.12 BPFI 1.31
+    B2X: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.03 BSF 0.05 BPFO 0.12 BPFI 1.31
+    B2Y: RMS 334.45 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.03 BSF 0.05 BPFO 0.12 BPFI 1.31
+[19s] rate 29998.50 Hz | windows 27 sent 0 withheld 27 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.38% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 28 (20571 samples/channel, 1750 RPM): features ready 11.27 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.04 BSF 0.02 BPFO 0.07 BPFI 0.43
+    B1Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.04 BSF 0.02 BPFO 0.06 BPFI 0.43
+    B2X: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.03 BPFO 0.06 BPFI 0.43
+    B2Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.02 BPFO 0.06 BPFI 0.43
+  window 29 (20571 samples/channel, 1750 RPM): features ready 10.66 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.04 BPFO 0.07 BPFI 0.39
+    B1Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.04 BSF 0.04 BPFO 0.08 BPFI 0.39
+    B2X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.04 BSF 0.04 BPFO 0.08 BPFI 0.39
+    B2Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.04 BSF 0.04 BPFO 0.08 BPFI 0.39
+[20s] rate 29998.50 Hz | windows 29 sent 0 withheld 29 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 16.44% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 30 (20571 samples/channel, 1750 RPM): features ready 11.00 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.04 BSF 0.07 BPFO 0.05 BPFI 0.37
+    B1Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.07 BPFO 0.05 BPFI 0.37
+    B2X: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.07 BPFO 0.05 BPFI 0.37
+    B2Y: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.04 BSF 0.07 BPFO 0.05 BPFI 0.37
+[21s] rate 29998.50 Hz | windows 30 sent 0 withheld 30 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.37% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 31 (20571 samples/channel, 1750 RPM): features ready 10.37 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.29 FTF 0.05 BSF 0.06 BPFO 0.07 BPFI 0.41
+    B1Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.05 BSF 0.06 BPFO 0.07 BPFI 0.41
+    B2X: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.05 BSF 0.06 BPFO 0.07 BPFI 0.41
+    B2Y: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.05 BSF 0.06 BPFO 0.07 BPFI 0.41
+  window 32 (20571 samples/channel, 1750 RPM): features ready 10.71 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.29 FTF 0.03 BSF 0.07 BPFO 0.08 BPFI 0.45
+    B1Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.03 BSF 0.07 BPFO 0.08 BPFI 0.45
+    B2X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.03 BSF 0.07 BPFO 0.08 BPFI 0.45
+    B2Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.03 BSF 0.07 BPFO 0.08 BPFI 0.45
+[22s] rate 29998.50 Hz | windows 32 sent 0 withheld 32 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 16.57% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 33 (20571 samples/channel, 1750 RPM): features ready 11.06 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.04 BSF 0.05 BPFO 0.12 BPFI 0.52
+    B1Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.04 BPFO 0.12 BPFI 0.52
+    B2X: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.04 BPFO 0.12 BPFI 0.52
+    B2Y: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.04 BPFO 0.12 BPFI 0.52
+[23s] rate 29998.50 Hz | windows 33 sent 0 withheld 33 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.37% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 34 (20571 samples/channel, 1750 RPM): features ready 10.43 ms after its last sample (max 11.30 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.05 BSF 0.06 BPFO 0.04 BPFI 0.43
+    B1Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.05 BSF 0.06 BPFO 0.04 BPFI 0.43
+    B2X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.05 BSF 0.06 BPFO 0.04 BPFI 0.43
+    B2Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.05 BSF 0.06 BPFO 0.04 BPFI 0.43
+[24s] rate 29998.50 Hz | windows 34 sent 0 withheld 34 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 611/4096 | block max 11.84 ms, DSP 15.38% | window latency max 11.30 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 35 (20571 samples/channel, 1750 RPM): features ready 16.08 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.29 FTF 0.04 BSF 0.07 BPFO 0.11 BPFI 1.10
+    B1Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.04 BSF 0.07 BPFO 0.11 BPFI 1.10
+    B2X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.04 BSF 0.07 BPFO 0.10 BPFI 1.10
+    B2Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.04 BSF 0.07 BPFO 0.11 BPFI 1.10
+  window 36 (20571 samples/channel, 1750 RPM): features ready 11.13 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.04 BSF 0.07 BPFO 0.08 BPFI 0.95
+    B1Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.04 BSF 0.07 BPFO 0.08 BPFI 0.95
+    B2X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.04 BSF 0.07 BPFO 0.08 BPFI 0.95
+    B2Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.07 BPFO 0.08 BPFI 0.95
+[25s] rate 29998.50 Hz | windows 36 sent 0 withheld 36 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 16.44% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 37 (20571 samples/channel, 1750 RPM): features ready 10.50 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.03 BSF 0.06 BPFO 0.11 BPFI 0.33
+    B1Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.03 BSF 0.06 BPFO 0.11 BPFI 0.33
+    B2X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.03 BSF 0.06 BPFO 0.11 BPFI 0.33
+    B2Y: RMS 334.44 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.03 BSF 0.06 BPFO 0.11 BPFI 0.33
+[26s] rate 29998.50 Hz | windows 37 sent 0 withheld 37 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 15.38% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 38 (20571 samples/channel, 1750 RPM): features ready 10.84 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.05 BSF 0.05 BPFO 0.08 BPFI 0.41
+    B1Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.05 BSF 0.05 BPFO 0.08 BPFI 0.42
+    B2X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.05 BSF 0.05 BPFO 0.08 BPFI 0.41
+    B2Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.40 FTF 0.05 BSF 0.05 BPFO 0.08 BPFI 0.41
+  window 39 (20571 samples/channel, 1750 RPM): features ready 11.19 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.37 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.03 BSF 0.05 BPFO 0.07 BPFI 0.15
+    B1Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.05 BPFO 0.07 BPFI 0.15
+    B2X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.05 BPFO 0.07 BPFI 0.15
+    B2Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.05 BPFO 0.07 BPFI 0.15
+[27s] rate 29998.50 Hz | windows 39 sent 0 withheld 39 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 16.44% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 40 (20571 samples/channel, 1750 RPM): features ready 10.56 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.36 kurt 1.50 crest 1.42 envRMS 301.27 FTF 0.05 BSF 0.05 BPFO 0.08 BPFI 0.21
+    B1Y: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.05 BSF 0.05 BPFO 0.07 BPFI 0.21
+    B2X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.05 BSF 0.05 BPFO 0.07 BPFI 0.21
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.04 BSF 0.05 BPFO 0.07 BPFI 0.22
+[28s] rate 29998.50 Hz | windows 40 sent 0 withheld 40 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 15.50% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 41 (20571 samples/channel, 1750 RPM): features ready 10.91 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.37 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.08 BSF 0.05 BPFO 0.06 BPFI 0.31
+    B1Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.08 BSF 0.05 BPFO 0.06 BPFI 0.31
+    B2X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.08 BSF 0.05 BPFO 0.06 BPFI 0.32
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.08 BSF 0.05 BPFO 0.06 BPFI 0.31
+  window 42 (20571 samples/channel, 1750 RPM): features ready 11.26 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.06 BSF 0.05 BPFO 0.13 BPFI 0.80
+    B1Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.06 BSF 0.05 BPFO 0.13 BPFI 0.81
+    B2X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.06 BSF 0.05 BPFO 0.13 BPFI 0.80
+    B2Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.06 BSF 0.05 BPFO 0.13 BPFI 0.80
+[29s] rate 29998.50 Hz | windows 42 sent 0 withheld 42 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 16.43% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 43 (20571 samples/channel, 1750 RPM): features ready 10.63 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.06 BSF 0.04 BPFO 0.09 BPFI 0.23
+    B1Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.06 BSF 0.03 BPFO 0.09 BPFI 0.23
+    B2X: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.06 BSF 0.03 BPFO 0.08 BPFI 0.23
+    B2Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.06 BSF 0.03 BPFO 0.09 BPFI 0.23
+[30s] rate 29998.50 Hz | windows 43 sent 0 withheld 43 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 15.38% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 44 (20571 samples/channel, 1750 RPM): features ready 10.97 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.37 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.03 BSF 0.02 BPFO 0.08 BPFI 0.28
+    B1Y: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.03 BSF 0.02 BPFO 0.08 BPFI 0.29
+    B2X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.03 BSF 0.02 BPFO 0.08 BPFI 0.29
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.03 BSF 0.02 BPFO 0.08 BPFI 0.29
+  window 45 (20571 samples/channel, 1750 RPM): features ready 11.32 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.04 BSF 0.06 BPFO 0.07 BPFI 0.38
+    B1Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.06 BPFO 0.07 BPFI 0.38
+    B2X: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.06 BPFO 0.07 BPFI 0.38
+    B2Y: RMS 334.43 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.06 BPFO 0.07 BPFI 0.38
+[31s] rate 29998.50 Hz | windows 45 sent 0 withheld 45 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 16.44% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 46 (20571 samples/channel, 1750 RPM): features ready 10.69 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.37 kurt 1.50 crest 1.42 envRMS 301.29 FTF 0.03 BSF 0.05 BPFO 0.10 BPFI 0.24
+    B1Y: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.03 BSF 0.05 BPFO 0.10 BPFI 0.24
+    B2X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.02 BSF 0.06 BPFO 0.10 BPFI 0.24
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.03 BSF 0.05 BPFO 0.10 BPFI 0.24
+[32s] rate 29998.50 Hz | windows 46 sent 0 withheld 46 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 15.38% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 47 (20571 samples/channel, 1750 RPM): features ready 11.04 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.06 BSF 0.03 BPFO 0.06 BPFI 0.27
+    B1Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.06 BSF 0.03 BPFO 0.06 BPFI 0.27
+    B2X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.06 BSF 0.03 BPFO 0.06 BPFI 0.27
+    B2Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.06 BSF 0.03 BPFO 0.07 BPFI 0.27
+  window 48 (20571 samples/channel, 1750 RPM): features ready 10.41 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.37 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.05 BPFO 0.09 BPFI 0.22
+    B1Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.04 BSF 0.05 BPFO 0.09 BPFI 0.22
+    B2X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.39 FTF 0.04 BSF 0.05 BPFO 0.09 BPFI 0.22
+    B2Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.40 FTF 0.04 BSF 0.05 BPFO 0.09 BPFI 0.22
+[33s] rate 29998.50 Hz | windows 48 sent 0 withheld 48 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 16.43% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 49 (20571 samples/channel, 1750 RPM): features ready 10.76 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.26 FTF 0.05 BSF 0.02 BPFO 0.09 BPFI 0.79
+    B1Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.29 FTF 0.05 BSF 0.02 BPFO 0.09 BPFI 0.79
+    B2X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.05 BSF 0.02 BPFO 0.09 BPFI 0.79
+    B2Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.04 BSF 0.02 BPFO 0.09 BPFI 0.79
+[34s] rate 29998.50 Hz | windows 49 sent 0 withheld 49 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 15.50% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 50 (20571 samples/channel, 1750 RPM): features ready 11.10 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.36 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.04 BSF 0.06 BPFO 0.09 BPFI 0.84
+    B1Y: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.07 BPFO 0.09 BPFI 0.84
+    B2X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.07 BPFO 0.09 BPFI 0.84
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.07 BPFO 0.09 BPFI 0.83
+  window 51 (20571 samples/channel, 1750 RPM): features ready 10.47 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.37 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.07 BSF 0.07 BPFO 0.06 BPFI 0.91
+    B1Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.07 BSF 0.07 BPFO 0.06 BPFI 0.91
+    B2X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.07 BSF 0.07 BPFO 0.05 BPFI 0.91
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.07 BSF 0.07 BPFO 0.05 BPFI 0.91
+[35s] rate 29998.50 Hz | windows 51 sent 0 withheld 51 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 16.44% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 52 (20571 samples/channel, 1750 RPM): features ready 10.82 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.04 BSF 0.05 BPFO 0.12 BPFI 0.35
+    B1Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.05 BPFO 0.11 BPFI 0.35
+    B2X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.04 BPFO 0.11 BPFI 0.35
+    B2Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.05 BPFO 0.11 BPFI 0.35
+[36s] rate 29998.50 Hz | windows 52 sent 0 withheld 52 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 15.38% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 53 (20571 samples/channel, 1750 RPM): features ready 11.17 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.36 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.04 BSF 0.03 BPFO 0.06 BPFI 0.24
+    B1Y: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.04 BSF 0.03 BPFO 0.06 BPFI 0.24
+    B2X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.04 BSF 0.03 BPFO 0.06 BPFI 0.24
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.04 BSF 0.03 BPFO 0.06 BPFI 0.24
+[37s] rate 29998.50 Hz | windows 53 sent 0 withheld 53 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 15.38% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 54 (20571 samples/channel, 1750 RPM): features ready 10.54 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.37 kurt 1.50 crest 1.42 envRMS 301.25 FTF 0.03 BSF 0.04 BPFO 0.08 BPFI 0.28
+    B1Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.02 BSF 0.04 BPFO 0.08 BPFI 0.28
+    B2X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.03 BSF 0.04 BPFO 0.08 BPFI 0.28
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.29 FTF 0.03 BSF 0.04 BPFO 0.08 BPFI 0.28
+  window 55 (20571 samples/channel, 1750 RPM): features ready 10.89 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.36 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.04 BSF 0.05 BPFO 0.07 BPFI 0.31
+    B1Y: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.05 BPFO 0.07 BPFI 0.31
+    B2X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.04 BSF 0.05 BPFO 0.07 BPFI 0.31
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.36 FTF 0.04 BSF 0.05 BPFO 0.07 BPFI 0.31
+[38s] rate 29998.50 Hz | windows 55 sent 0 withheld 55 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 16.43% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 56 (20571 samples/channel, 1750 RPM): features ready 11.23 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.37 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.04 BSF 0.04 BPFO 0.11 BPFI 0.65
+    B1Y: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.33 FTF 0.04 BSF 0.04 BPFO 0.11 BPFI 0.65
+    B2X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.04 BPFO 0.11 BPFI 0.65
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.04 BPFO 0.11 BPFI 0.65
+[39s] rate 29998.50 Hz | windows 56 sent 0 withheld 56 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 15.51% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 57 (20571 samples/channel, 1750 RPM): features ready 10.60 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.08 BSF 0.04 BPFO 0.09 BPFI 0.46
+    B1Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.08 BSF 0.04 BPFO 0.09 BPFI 0.46
+    B2X: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.08 BSF 0.04 BPFO 0.09 BPFI 0.46
+    B2Y: RMS 334.42 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.08 BSF 0.04 BPFO 0.10 BPFI 0.46
+  window 58 (20571 samples/channel, 1750 RPM): features ready 10.95 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.37 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.05 BSF 0.02 BPFO 0.11 BPFI 0.46
+    B1Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.05 BSF 0.02 BPFO 0.11 BPFI 0.47
+    B2X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.05 BSF 0.02 BPFO 0.11 BPFI 0.47
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.05 BSF 0.02 BPFO 0.11 BPFI 0.47
+[40s] rate 29998.50 Hz | windows 58 sent 0 withheld 58 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 16.43% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 59 (20571 samples/channel, 1750 RPM): features ready 11.30 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.36 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.02 BSF 0.04 BPFO 0.05 BPFI 0.42
+    B1Y: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.02 BSF 0.04 BPFO 0.05 BPFI 0.42
+    B2X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.02 BSF 0.04 BPFO 0.05 BPFI 0.42
+    B2Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.35 FTF 0.02 BSF 0.04 BPFO 0.05 BPFI 0.42
+[41s] rate 29998.50 Hz | windows 59 sent 0 withheld 59 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 15.39% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 60 (20571 samples/channel, 1750 RPM): features ready 10.67 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.36 kurt 1.50 crest 1.42 envRMS 301.25 FTF 0.03 BSF 0.05 BPFO 0.06 BPFI 0.33
+    B1Y: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.04 BSF 0.04 BPFO 0.06 BPFI 0.33
+    B2X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.03 BSF 0.05 BPFO 0.06 BPFI 0.33
+    B2Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.29 FTF 0.04 BSF 0.05 BPFO 0.06 BPFI 0.33
+  window 61 (20571 samples/channel, 1750 RPM): features ready 11.02 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.36 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.06 BSF 0.04 BPFO 0.13 BPFI 1.26
+    B1Y: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.06 BSF 0.04 BPFO 0.13 BPFI 1.26
+    B2X: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.06 BSF 0.04 BPFO 0.13 BPFI 1.26
+    B2Y: RMS 334.41 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.06 BSF 0.04 BPFO 0.13 BPFI 1.26
+[42s] rate 29998.50 Hz | windows 61 sent 0 withheld 61 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 16.44% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 62 (20571 samples/channel, 1750 RPM): features ready 10.39 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.36 kurt 1.50 crest 1.42 envRMS 301.34 FTF 0.04 BSF 0.06 BPFO 0.08 BPFI 0.32
+    B1Y: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.04 BSF 0.06 BPFO 0.08 BPFI 0.32
+    B2X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.37 FTF 0.04 BSF 0.06 BPFO 0.08 BPFI 0.32
+    B2Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.38 FTF 0.04 BSF 0.06 BPFO 0.08 BPFI 0.32
+[43s] rate 29998.50 Hz | windows 62 sent 0 withheld 62 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 15.38% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+  window 63 (20571 samples/channel, 1750 RPM): features ready 10.73 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.35 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.02 BSF 0.09 BPFO 0.06 BPFI 0.28
+    B1Y: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.02 BSF 0.09 BPFO 0.06 BPFI 0.28
+    B2X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.02 BSF 0.09 BPFO 0.06 BPFI 0.28
+    B2Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.02 BSF 0.09 BPFO 0.06 BPFI 0.28
+  window 64 (20571 samples/channel, 1750 RPM): features ready 11.07 ms after its last sample (max 16.08 ms, limit 333) OK, packet not sent (uncalibrated)
+    32 features (amplitudes in mV; kurtosis and crest factor plain), valid mask 0xf:
+    B1X: RMS 334.35 kurt 1.50 crest 1.42 envRMS 301.28 FTF 0.04 BSF 0.08 BPFO 0.10 BPFI 0.91
+    B1Y: RMS 334.38 kurt 1.50 crest 1.42 envRMS 301.30 FTF 0.04 BSF 0.07 BPFO 0.10 BPFI 0.91
+    B2X: RMS 334.39 kurt 1.50 crest 1.42 envRMS 301.31 FTF 0.04 BSF 0.08 BPFO 0.10 BPFI 0.91
+    B2Y: RMS 334.40 kurt 1.50 crest 1.42 envRMS 301.32 FTF 0.04 BSF 0.08 BPFO 0.10 BPFI 0.91
+[44s] rate 29998.50 Hz | windows 64 sent 0 withheld 64 fail 0 | gaps 0 dropped blocks 0 restarts 0 stall 0
+  fill max 770/4096 | block max 11.84 ms, DSP 16.44% | window latency max 16.08 ms (limit 333) | UART done 0 err 0 max 0.00 ms
+
+AD7606 stopped by B1 after 64 windows. Pins held low; ADC power may be switched off.

@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "COE: flash both cores and debug M7",
+      "type": "stlinkgdbtarget",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "serverApID": "0",
+      "runEntry": "main",
+      "imagesAndSymbols": [
+        {
+          "imageFileName": "${workspaceFolder}/CM4/build/coe_firmware_CM4.elf"
+        },
+        {
+          "imageFileName": "${workspaceFolder}/CM7/build/coe_firmware_CM7.elf",
+          "symbolFileName": "${workspaceFolder}/CM7/build/coe_firmware_CM7.elf"
+        }
+      ],
+      "deviceCore": "Cortex-M7",
+      "deviceName": "STM32H755ZIT6",
+      "program": "${workspaceFolder}/CM7/build/coe_firmware_CM7.elf"
+    }
+  ]
+}

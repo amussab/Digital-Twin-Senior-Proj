@@ -1,2 +1,7 @@
 __pycache__/
 training_data/
+
+# Keep the firmware projects complete (the repo root ignores these patterns)
+!firmware/stm32/.vscode/
+!firmware/esp32/.vscode/
+!firmware/esp32/tests/board_startup.log

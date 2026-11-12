@@ -1,0 +1,12 @@
+{
+    "configurations": [
+        {
+            "name": "STM32_CM4",
+            "compileCommands": "${workspaceFolder}/CM4/build/compile_commands.json"
+        },
+        {
+            "name": "STM32_CM7",
+            "compileCommands": "${workspaceFolder}/CM7/build/compile_commands.json"
+        }
+    ]
+}

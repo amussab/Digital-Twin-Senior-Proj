@@ -1,0 +1,50 @@
+{
+  "source_fixture_sha256": "9603d1704ff0378139192563c71bd9655e121d209e2ef9a9f305340e9f7a6554",
+  "input": "repeat exact float32 bandpass_test_expected snippets; independent envelope component test",
+  "reference": "unchanged Python steps 04 and 05, float64 filter, continuous state and phase",
+  "sample_rate_hz": 30000,
+  "envelope_rate_hz": 5000,
+  "decimation_factor": 6,
+  "passband_hz": 350,
+  "stopband_hz": 1250,
+  "butterworth_order": 7,
+  "sections": 4,
+  "max_quantized_pole_radius": 0.9789249074365032,
+  "quantized_response_db": {
+    "0": -0.00011268705196484352,
+    "350": -0.10007639668035286,
+    "1250": -61.391549325463984,
+    "2500": -104.59882539603302
+  },
+  "samples_per_window": [
+    20571,
+    10000
+  ],
+  "retained_per_consecutive_window": [
+    [
+      3429,
+      3428
+    ],
+    [
+      1667,
+      1667
+    ]
+  ],
+  "max_scipy_float32_error_g": [
+    [
+      1.3342990442324898e-06,
+      4.5950812982198386e-05,
+      6.679680164878299e-06,
+      4.613665502278819e-06
+    ],
+    [
+      1.3342990442324898e-06,
+      4.5950812982198386e-05,
+      6.679680164878299e-06,
+      4.613665502278819e-06
+    ]
+  ],
+  "tolerance": "abs(error) <= 2e-5 * (1 + abs(reference))",
+  "initial_state": "zero at stream startup only; phase zero at sample index zero",
+  "mcu_execution": "pending board verification"
+}
