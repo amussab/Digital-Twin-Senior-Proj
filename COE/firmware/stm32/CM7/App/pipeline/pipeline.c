@@ -10,6 +10,36 @@
 _Static_assert(COE_DMA_BLOCK_SAMPLES > 0U, "Scratch block must be nonempty.");
 _Static_assert(COE_MAX_ENVELOPE_SAMPLES > 0U, "Envelope storage must be nonempty.");
 
+/** Window size for a speed: whole revolutions (20, or fewer at slow speeds) and samples.
+ * False when the window does not fit the fixed buffers. */
+static bool window_geometry(uint32_t nominal_rpm, uint32_t *revolutions_out, uint32_t *samples_out)
+{
+    /* 20 revolutions, or the most whole revolutions that fit at slow speeds. */
+    const uint64_t samples_per_minute = (uint64_t)COE_INPUT_SAMPLE_RATE_HZ * 60U;
+    uint64_t revolutions = ((uint64_t)COE_MAX_WINDOW_SAMPLES * nominal_rpm) / samples_per_minute;
+    if (revolutions > COE_WINDOW_REVOLUTIONS)
+        revolutions = COE_WINDOW_REVOLUTIONS;
+    if (revolutions == 0U)
+        return false;
+    const uint64_t numerator = samples_per_minute * revolutions;
+    const uint32_t samples = (uint32_t)((numerator + nominal_rpm / 2U) / nominal_rpm);
+    const uint32_t maximum_retained = (samples + COE_ENVELOPE_DECIMATION_FACTOR - 1U)
+                                      / COE_ENVELOPE_DECIMATION_FACTOR;
+    if (samples < 2U || maximum_retained > COE_MAX_ENVELOPE_SAMPLES)
+        return false;
+    *revolutions_out = (uint32_t)revolutions;
+    *samples_out = samples;
+    return true;
+}
+
+bool pipeline_rpm_supported(uint32_t nominal_rpm, const BearingFeatureProfile *bearing_profile)
+{
+    uint32_t revolutions, samples;
+    return nominal_rpm >= COE_MIN_RPM && nominal_rpm <= COE_MAX_RPM
+           && frequency_profile_is_valid(bearing_profile, nominal_rpm)
+           && window_geometry(nominal_rpm, &revolutions, &samples);
+}
+
 /** Start a supported nominal-speed stream with empty records and fresh states. */
 bool pipeline_init(PipelineState *pipeline, uint32_t nominal_rpm,
                     PipelineEnvelopeBuffer *envelope_buffer,
@@ -20,28 +50,15 @@ bool pipeline_init(PipelineState *pipeline, uint32_t nominal_rpm,
     if (pipeline == NULL)
         return false;
     memset(pipeline, 0, sizeof(*pipeline));
-    if (nominal_rpm < COE_MIN_RPM || nominal_rpm > COE_MAX_RPM
-        || envelope_buffer == NULL || spectrum_workspace == NULL || callback == NULL
-        || !frequency_profile_is_valid(bearing_profile, nominal_rpm))
+    if (envelope_buffer == NULL || spectrum_workspace == NULL || callback == NULL
+        || !pipeline_rpm_supported(nominal_rpm, bearing_profile))
         return false;
 
+    uint32_t revolutions, samples;
+    (void)window_geometry(nominal_rpm, &revolutions, &samples);
     pipeline->nominal_rpm = nominal_rpm;
-    /* 20 revolutions, or the most whole revolutions that fit at slow speeds. */
-    const uint64_t samples_per_minute = (uint64_t)COE_INPUT_SAMPLE_RATE_HZ * 60U;
-    uint64_t revolutions = ((uint64_t)COE_MAX_WINDOW_SAMPLES * nominal_rpm) / samples_per_minute;
-    if (revolutions > COE_WINDOW_REVOLUTIONS)
-        revolutions = COE_WINDOW_REVOLUTIONS;
-    if (revolutions == 0U)
-        return false;
-    pipeline->window_revolutions = (uint32_t)revolutions;
-    const uint64_t numerator = samples_per_minute * revolutions;
-    pipeline->window_samples = (uint32_t)((numerator + nominal_rpm / 2U)
-                                          / nominal_rpm);
-    const uint32_t maximum_retained = (pipeline->window_samples
-                                      + COE_ENVELOPE_DECIMATION_FACTOR - 1U)
-                                     / COE_ENVELOPE_DECIMATION_FACTOR;
-    if (pipeline->window_samples < 2U || maximum_retained > COE_MAX_ENVELOPE_SAMPLES)
-        return false;
+    pipeline->window_revolutions = revolutions;
+    pipeline->window_samples = samples;
     pipeline->on_window = callback;
     pipeline->callback_context = context;
     pipeline->envelope_buffer = envelope_buffer;

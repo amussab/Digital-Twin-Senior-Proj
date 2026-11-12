@@ -142,6 +142,7 @@ else()
     target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         App/acquisition/ad7606.c
         App/acquisition/acquisition_console.c
+        App/acquisition/rpm_command.c
     )
     if(COE_FIRMWARE_MODE STREQUAL "LIVE_RAW")
         target_sources(${CMAKE_PROJECT_NAME} PRIVATE App/acquisition/raw_monitor.c)

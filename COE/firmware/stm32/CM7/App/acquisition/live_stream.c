@@ -10,6 +10,7 @@
 #include "feature_uart.h"
 #include "main.h"
 #include "pipeline.h"
+#include "rpm_command.h"
 #include <string.h>
 
 volatile bool live_calibrated;
@@ -43,6 +44,9 @@ static EnvelopeSpectrumWorkspace workspace; /* CPU-only FFT work area in DTCM. *
 static PipelineEnvelopeBuffer envelope_buffer
     __attribute__((section(".pipeline_live_buffers"), aligned(32)));
 static float input[COE_CHANNEL_COUNT][AD7606_BLOCK_FRAMES];
+static uint32_t current_rpm = COE_LIVE_NOMINAL_RPM; /* Power-up default; not saved anywhere. */
+static uint32_t pending_rpm;  /* Requested by the laptop, applied at the next window end; 0 = none. */
+static bool window_closed;    /* A window ended in the block just processed. */
 static bool stream_ok;
 static uint32_t handled_gaps;
 static uint32_t started_tick, report_tick;
@@ -81,6 +85,7 @@ static bool on_window(const PipelineWindowResult *result, void *context)
 {
     (void)context;
     ++live_windows;
+    window_closed = true;
     /* Conservative S2 latency: from the newest sample of this block (at or
      * after the window's last sample) to features and packet being ready.
      */
@@ -113,10 +118,76 @@ static bool on_window(const PipelineWindowResult *result, void *context)
 
 static void restart_stream(void)
 {
-    stream_ok = pipeline_init(&pipeline, COE_LIVE_NOMINAL_RPM, &envelope_buffer, &workspace,
+    stream_ok = pipeline_init(&pipeline, current_rpm, &envelope_buffer, &workspace,
                               &COE_LIVE_BEARING_PROFILE, on_window, NULL);
     if (!stream_ok)
         ++live_pipeline_errors;
+}
+
+/** NULL if the node can run at this speed, else a short reason. */
+static const char *rpm_reject_reason(uint32_t rpm)
+{
+    if (rpm < COE_MIN_RPM || rpm > COE_MAX_RPM)
+        return "out of range 60..3600";
+    if (!frequency_profile_is_valid(&COE_LIVE_BEARING_PROFILE, rpm))
+        return "bearing bands do not fit at this speed";
+    if (!pipeline_rpm_supported(rpm, &COE_LIVE_BEARING_PROFILE))
+        return "window does not fit";
+    return NULL;
+}
+
+/** Start the pending speed: the pipeline restarts exactly as at start-up (new window,
+ * filters cleared). Called only between blocks in the main loop, at a window end. */
+static void apply_pending_rpm(void)
+{
+    const uint32_t wanted = pending_rpm, old = current_rpm;
+    pending_rpm = 0U;
+    current_rpm = wanted;
+    restart_stream();
+    if (!stream_ok) /* Not expected: the speed was checked when it was accepted. */
+    {
+        current_rpm = old;
+        restart_stream();
+        console_emit("@ERR RPM %lu pipeline refused it, back to %lu
+",
+                     (unsigned long)wanted, (unsigned long)old);
+        return;
+    }
+    console_emit("@OK RPM %lu
+", (unsigned long)wanted);
+}
+
+/** One command line from the laptop. Replies start with '@' so a host can find them. */
+static void handle_command(const char *line)
+{
+    const rpm_command_t command = rpm_command_parse(line);
+    if (command.kind == RPM_CMD_QUERY)
+    {
+        if (pending_rpm != 0U)
+            console_emit("@RPM %lu PENDING %lu
+", (unsigned long)current_rpm, (unsigned long)pending_rpm);
+        else
+            console_emit("@RPM %lu PENDING none
+", (unsigned long)current_rpm);
+    }
+    else if (command.kind == RPM_CMD_SET)
+    {
+        const char *reason = rpm_reject_reason(command.rpm);
+        if (reason != NULL)
+            console_emit("@ERR RPM %lu %s
+", (unsigned long)command.rpm, reason);
+        else if (command.rpm == current_rpm)
+        {
+            pending_rpm = 0U; /* Also cancels an earlier, different request. */
+            console_emit("@OK RPM %lu
+", (unsigned long)current_rpm);
+        }
+        else
+            pending_rpm = command.rpm; /* A newer request replaces an older pending one. */
+    }
+    else
+        console_emit("@ERR RPM ? use RPM <n> or RPM?
+");
 }
 
 static void reset_counters(void)
@@ -186,7 +257,12 @@ static void consume_blocks(void)
             restart_stream();
         }
         if (stream_ok)
+        {
+            window_closed = false;
             process_block(block, status.frames - (start + AD7606_BLOCK_FRAMES));
+            if (window_closed && pending_rpm != 0U)
+                apply_pending_rpm(); /* A window just ended: safe point to change speed. */
+        }
         else
             ++live_discarded_blocks;
         ad7606_release_block();
@@ -235,10 +311,11 @@ bool live_stream_init(void)
                                          : AD7606_VOLTS_PER_COUNT;
 
     restart_stream();
+    console_rx_init();
     console_banner("LIVE: AD7606 -> DSP -> ESP32");
-    console_emit("Speed %u RPM, window %lu revolutions (%lu samples), bearing profile %lu,"
+    console_emit("Speed %u RPM (the laptop can change it: RPM <n>), window %lu revolutions (%lu samples), bearing profile %lu,"
                  " channels %s/%s/%s/%s = AIN2/4/6/8.\r\n",
-                 (unsigned)COE_LIVE_NOMINAL_RPM, (unsigned long)pipeline.window_revolutions,
+                 (unsigned)current_rpm, (unsigned long)pipeline.window_revolutions,
                  (unsigned long)pipeline.window_samples, (unsigned long)COE_LIVE_BEARING_PROFILE.id,
                  channel_names[0], channel_names[1], channel_names[2], channel_names[3]);
     console_emit(live_calibrated
@@ -290,7 +367,13 @@ void live_stream_poll(void)
         console_emit("\r\nAD7606 STALL: no frame for %u ms; stopped and pins held low."
                      " Check ADC power/BUSY, then press B1.\r\n", (unsigned)AD7606_STALL_MS);
 
+    const char *command_line;
+    while ((command_line = console_rx_line()) != NULL)
+        handle_command(command_line);
+
     consume_blocks();
+    if (pending_rpm != 0U && !ad7606_running())
+        apply_pending_rpm(); /* Nothing streaming: no window to wait for. */
 
     if (ad7606_running() && (uint32_t)(HAL_GetTick() - report_tick) >= REPORT_MS)
     {

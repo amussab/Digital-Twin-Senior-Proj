@@ -65,6 +65,10 @@ typedef struct
     bool valid;
 } PipelineState;
 
+/** True when pipeline_init would accept this speed and bearing profile (range, band
+ * layout and window size). No state is touched; use it to check a speed first. */
+bool pipeline_rpm_supported(uint32_t nominal_rpm, const BearingFeatureProfile *bearing_profile);
+
 /**
  * Start a stream at a settled speed of COE_MIN_RPM..COE_MAX_RPM; reset all states.
  * Call once at stream startup, not per window. False rejects invalid arguments

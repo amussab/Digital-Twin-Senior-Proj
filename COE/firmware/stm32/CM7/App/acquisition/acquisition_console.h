@@ -33,6 +33,12 @@ void console_banner(const char *mode_line);
 /** Start the AD7606 and print the start-up probe and the result. */
 ad7606_result_t console_start_acquisition(void);
 
+/** Enable receiving on the same COM port (USART3 RX interrupt). Call once, after BSP_COM_Init. */
+void console_rx_init(void);
+
+/** The next complete input line (no terminator), or NULL. Valid until the next call. Main loop only. */
+const char *console_rx_line(void);
+
 /** Green: slow blink idle, fast blink running. Red: any error since start. */
 void console_update_leds(bool running, bool error);
 
