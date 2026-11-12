@@ -53,6 +53,25 @@ ENGINEERED = [
     "rpm_norm",
 ]
 
+# Contract v3e_node: ONE extra column, computed after the 21 above (so every older contract is unchanged), and the
+# classifier input set. Principle (chosen a priori, not from any rig result): every classifier input is relative to the
+# unit's own 24-window commissioning baseline (or a pure ratio / normalised share of such ratios), so a sensor that is
+# naturally impulsive (heavy-tailed healthy noise) moves its own baseline instead of looking faulty.
+#   crest_rise = max(max over axes of crest - max over axes of baseline crest, 0)         [analogue of kurtosis_rise]
+# Dropped as ABSOLUTE (rig/sensor-specific): kurtosis_max, crest_max (raw level of the stat), raw_*_share (energy
+# shares of the un-baselined band magnitudes: depend on the unit's own spectral colour).
+EXTRA_ENGINEERED = ["crest_rise"]
+ENGINEERED_EXT = ENGINEERED + EXTRA_ENGINEERED
+V3E_COLUMNS = [
+    "hi",
+    "log_env_ratio", "log_bp_ratio",
+    "kurtosis_rise", "crest_rise",
+    "axis_asymmetry",
+    "ftf_share", "bsf_share", "bpfo_share", "bpfi_share", "family_contrast",
+    "log_ftf_ratio", "log_bsf_ratio", "log_bpfo_ratio", "log_bpfi_ratio",
+    "rpm_norm",
+]
+
 # Default model inputs (selected on validation data, see reports/model_selection_*.json).
 TFT_INPUTS = list(ENGINEERED)
 NHITS_TARGET = "hi"
@@ -69,8 +88,8 @@ def health_index(env_ratio: np.ndarray, bp_ratio: np.ndarray, fam_ratio: np.ndar
     return np.clip(hi, 0.0, HI_CLIP_MAX)
 
 
-def engineer_arrays(raw16: np.ndarray, rpm: np.ndarray, baseline16: np.ndarray) -> np.ndarray:
-    """(n,16) raw + (n,) rpm + (16,) baseline -> (n, len(ENGINEERED)) float64.
+def engineer_arrays(raw16: np.ndarray, rpm: np.ndarray, baseline16: np.ndarray, extended: bool = False) -> np.ndarray:
+    """(n,16) raw + (n,) rpm + (16,) baseline -> (n, len(ENGINEERED)) float64 (len(ENGINEERED_EXT) if extended).
 
     The reference implementation the C# host mirrors line by line.
     """
@@ -92,6 +111,7 @@ def engineer_arrays(raw16: np.ndarray, rpm: np.ndarray, baseline16: np.ndarray) 
     kurt = np.stack([ax[0][:, 1], ax[1][:, 1]], axis=1)
     crest = np.stack([ax[0][:, 2], ax[1][:, 2]], axis=1)
     kurt_base = max(bx[0][1], bx[1][1])
+    crest_base = max(bx[0][2], bx[1][2])
 
     # Baseline-normalised family shares on the axis with the larger envelope ratio.
     loud = env_r.argmax(axis=1)
@@ -120,6 +140,8 @@ def engineer_arrays(raw16: np.ndarray, rpm: np.ndarray, baseline16: np.ndarray) 
         raw_shares[:, 0], raw_shares[:, 1], raw_shares[:, 2], raw_shares[:, 3],
         (rpm - RPM_CENTER) / RPM_SCALE,
     ]
+    if extended:
+        cols.append(np.maximum(crest.max(axis=1) - crest_base, 0.0))
     return np.stack(cols, axis=1)
 
 
@@ -191,14 +213,15 @@ def compute_baselines(table: pd.DataFrame,
 
 
 def engineer_table(table: pd.DataFrame, baselines: dict[str, np.ndarray] | None = None,
-                   provider=None) -> pd.DataFrame:
+                   provider=None, extended: bool = False) -> pd.DataFrame:
     """Add ENGINEERED columns to a window table (all units)."""
     table = table.sort_values(["unit_id", "window_index"]).reset_index(drop=True)
     baselines = baselines or compute_baselines(table, provider)
-    out = np.zeros((len(table), len(ENGINEERED)))
+    names = ENGINEERED_EXT if extended else ENGINEERED
+    out = np.zeros((len(table), len(names)))
     raw = table[BEARING_FEATURES].to_numpy(dtype=np.float64)
     rpm = table["rpm"].to_numpy(dtype=np.float64)
     for uid, idx in table.groupby("unit_id", sort=False).indices.items():
-        out[idx] = engineer_arrays(raw[idx], rpm[idx], baselines[uid])
-    eng = pd.DataFrame(out.astype(np.float32), columns=ENGINEERED, index=table.index)
+        out[idx] = engineer_arrays(raw[idx], rpm[idx], baselines[uid], extended)
+    eng = pd.DataFrame(out.astype(np.float32), columns=names, index=table.index)
     return pd.concat([table, eng], axis=1)

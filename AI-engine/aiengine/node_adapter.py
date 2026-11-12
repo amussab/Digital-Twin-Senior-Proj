@@ -9,7 +9,7 @@ The node (COE/firmware, COE/inference) sends one JSON object per 20-revolution w
 B1Y (4th sensor uncabled). That is exactly the model contract's raw order (bearing 1 = [0:16], bearing 2 = [16:32]).
 
     node_json_to_raw(msg) -> float32[32]            (validation only; no scaling, no reordering)
-    NodeEngine(contract_file="model_contract_v3d_node.json").predict(msg) -> per-bearing result dict
+    NodeEngine(contract_file="model_contract_v3e_node.json")  (v3d_node: model_contract_v3d_node.json).predict(msg) -> per-bearing result dict
 
 `NodeEngine` does NOT re-implement anything: it drives `aiengine.engine.HybridEngine` (features.py engineered
 features with the 24-window median baseline, classifier ONNX, causal onset detector, RUL/stage heads and the
@@ -80,7 +80,7 @@ def window_time_ms(msg: dict, rpm: float) -> int:
 class NodeEngine:
     """Streaming predictor over node messages. One instance per node/session; call `predict` once per window, in order."""
 
-    def __init__(self, contract_file: str = "model_contract_v3d_node.json", model_dir: Path = MODELS_DIR,
+    def __init__(self, contract_file: str = "model_contract_v3e_node.json", model_dir: Path = MODELS_DIR,
                  threads: int = 1, baselines: Optional[dict] = None, require_all_channels: bool = True):
         self.engine = HybridEngine(model_dir, threads=threads, baselines=baselines, contract_file=contract_file)
         self.contract = self.engine.c

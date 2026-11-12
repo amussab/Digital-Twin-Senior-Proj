@@ -33,3 +33,17 @@ AI-engine/data/cache_up2, AI-engine/checkpoints/up2_v3.
 ## Step D -- DONE [MEASURED on rig, healthy only, firmware RPM=250 so order bands invalid], 931 windows, after 24+25 warm-up:
 - B1 healthy 43.4 % (rpm as sent) / 48.3 % (rpm forced 1800); B2 86.7 % / 90.0 %. onset never flagged. Host latency p50 1.9 ms, p95 2.4 ms.
 - NOT tuned. Open: real B1Y has kurtosis ~6.5 (heavier than sim), cage/ball false alarms on B1; needs real 1800-rpm capture with fw 1800 + seeded faults.
+
+## Step E -- contract v3e_node (baseline-relative classifier) -- DONE 2026-11-12 (aiengine/node_v3e.py; node_eval.py)
+- Classifier inputs = 16 baseline-relative columns (features.V3E_COLUMNS): dropped kurtosis_max, crest_max, raw_*_share (absolute);
+  added crest_rise (22nd engineered column, features.ENGINEERED_EXT, engine enables it when contract engineered_order has it; older contracts unchanged).
+  Trained ONLY on synth_coe_node train (no synth_v3). Grid 4 xgb hp x gate (family/env x 7 tau) on val; selected depth4 lr.05, gate family tau .75.
+- [SIMULATION] test (scored once): macro-F1 0.877 (>= 0.85); F1 healthy .915 outer .893 inner .927 ball .907 cage .744; B2 false-fault 4.4 %, missed 18.6 %.
+  v3d_node (same procedure) test 0.8716.
+- [SIMULATION] heavy-tail val variant (Student-t df 3.5 on B1Y/B2Y; B1Y kurt med 7.0 / crest 8.8 vs 3.8 / 5.9 normal): healthy specificity
+  v3d 0.926 vs v3e 0.909 (clean-partner 0.925 vs 0.907). v3e did NOT improve on the proxy. Val F1 v3d .8467 vs v3e .8393.
+- node_adapter default contract -> v3e_node (meets 0.85 on sim test). v3d_node still available.
+- [MEASURED on rig, healthy only, DEV file, fw RPM=250 so order bands invalid] v3e_node, 907 windows after warm-up: B1 healthy 36.6 % (cage 51.6, ball 11.2),
+  B2 healthy 99.6 %; identical with rpm forced 1800. Worse than v3d on B1 (43-48 %). NOT tuned. Conclusion: relative features alone do not fix B1;
+  the cage false alarms probably come from band (ftf/bsf) ratios vs the 24-window baseline with fw250 order bands -> needs fw 1800 capture.
+- Tool: python -m aiengine.node_eval <jsonl|csv> [--contract v3e_node] [--rpm-override N]  (reports/node_eval_*.json)

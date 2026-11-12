@@ -74,7 +74,8 @@ class HybridEngine:
         r = dict(self.c["rul"])
         self.calib = rul.RULCalibration.from_dict({k: r[k] for k in rul.RULCalibration.__dataclass_fields__ if k in r})
         self.interval_rel = float(r.get("interval_rel", 0.5))
-        self.eidx = {n: i for i, n in enumerate(feat.ENGINEERED)}
+        self.ext = "crest_rise" in self.c.get("feature_engineering", {}).get("engineered_order", [])   # contract v3e_node
+        self.eidx = {n: i for i, n in enumerate(feat.ENGINEERED_EXT if self.ext else feat.ENGINEERED)}
         self.pp = self.c.get("postprocess")          # contract v3b: required causal post-processing of the heads
         self.baselines = baselines or {}
         self.reset()
@@ -142,13 +143,13 @@ class HybridEngine:
                         "reason": f"commissioning baseline {len(b.pending)}/{feat.BASELINE_WINDOWS}"}
             raws = np.stack([p[0] for p in b.pending])
             b.baseline = feat._floor(np.median(raws, axis=0))
-            rows = feat.engineer_arrays(raws, np.array([p[1] for p in b.pending]), b.baseline)
+            rows = feat.engineer_arrays(raws, np.array([p[1] for p in b.pending]), b.baseline, self.ext)
             for (r16, rp, th), e in zip(b.pending, rows):
                 self._push(b, e, th)
             b.pending = []
             e = rows[-1]
         else:
-            e = feat.engineer_arrays(raw16[None], np.array([rpm]), b.baseline)[0]
+            e = feat.engineer_arrays(raw16[None], np.array([rpm]), b.baseline, self.ext)[0]
             self._push(b, e, t_h)
         t_feat = (time.perf_counter() - t0) * 1000
         if len(b.eng) < self.TL + 1:
