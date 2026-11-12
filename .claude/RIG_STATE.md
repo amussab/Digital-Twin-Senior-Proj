@@ -57,3 +57,15 @@ AI-engine/data/cache_up2, AI-engine/checkpoints/up2_v3.
   v3e settle180+base90 (default) 81.1/94.9 %; settle180+base100 79.8/95.6 %; baseline 180-280, scored 280+ 79.7/95.7 % (was 36.6/99.6 % with 24-window).
   v3d same three: 80.1/92.6, 78.5/93.3, 78.5/93.2 % (was 43-48/87-90). Remaining B1 error mostly cage (~17 %).
 - Sim: NodeEngine not in the sim scoring path; sim test macro-F1 0.877 (v3e) unchanged by construction. Sim runs are 70 windows < 270 -> sim keeps the 24-window baseline (not mixed).
+
+## RESUME HERE (paused 2026-11-12 by user; continue Saturday)
+- Branch `fix/rig-new-bearing` (worktree Repo/DT-main), NOT pushed. Commits fabb638..f12409a.
+- Runtime RPM firmware (6758ced), node_rpm.py + recorder Shaft-speed control (cdceba8), docs (f12409a) are committed but
+  NEVER COMPILED: gnu-tools-for-stm32 bundle was still downloading in VS Code. Release ELFs in
+  COE/firmware/stm32/release/rig_1800_runtime_rpm/ do NOT exist yet.
+- Saturday order: (1) finish bundle install in VS Code (STM32Cube > Bundles: gnu-tools-for-stm32), (2) tools/build.ps1 -Mode LIVE,
+  fix compile errors, (3) copy ELFs to release/ + SHA-256, (4) 24 V off, ST-LINK USB in, tools/flash_release.ps1, 24 V on,
+  (5) python COE/training/node_rpm.py --query, (6) record commissioning baseline (2 min settle + 1 min) at 1800 and 3600,
+  (7) fresh healthy runs scored ONCE with `python -m aiengine.node_eval <csv> --contract v3e_node`, (8) live run via node_live.
+- Dev-file result (fw250): v3e_node B1 81.1 % / B2 94.9 % healthy with settle policy [MEASURED on rig, healthy only, DEV].
+- Uncommitted on purpose: COE/firmware/stm32/.settings/*, .vscode/c_cpp_properties.json (VS Code extension edits).
