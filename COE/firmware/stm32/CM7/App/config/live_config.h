@@ -6,9 +6,10 @@
 #define COE_LIVE_CONFIG_H
 
 /* Settled shaft speed of the machine, any value 60..3600 RPM (pipeline_config.h).
- * Change it here, rebuild and flash. 11 Nov 2026: the lab machine runs at 250 RPM.
+ * Change it here, rebuild and flash. 11 Nov 2026: was 250 (wrong: no tachometer, the
+ * value is only a setting). 12 Nov 2026: the rig runs at 1800 RPM; build 3600 for the 2nd speed.
  */
-#define COE_LIVE_NOMINAL_RPM 250U
+#define COE_LIVE_NOMINAL_RPM 1800U
 
 /* 1: start acquiring on power-up (first try after the delay, so the ADC has
  * power) and retry while stopped, so the node runs with no one at the board.

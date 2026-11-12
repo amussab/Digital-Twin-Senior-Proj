@@ -18,6 +18,10 @@
 /* Envelope: filter at the input rate, then retain one sample in six. */
 #define COE_ENVELOPE_PASSBAND_HZ 350U
 #define COE_ENVELOPE_STOPBAND_HZ 1250U
+/* Highest frequency a bearing band may reach. Above the 0.1 dB passband edge
+ * (350 Hz) the order-7 Butterworth loses only ~0.2 dB at 367 Hz (-3 dB ~458 Hz),
+ * so 400 Hz admits BPFI at 3600 RPM with the 12 Nov 2026 rig bearing. */
+#define COE_ENVELOPE_BAND_LIMIT_HZ 400U
 #define COE_ENVELOPE_DECIMATION_FACTOR 6U
 #define COE_ENVELOPE_SAMPLE_RATE_HZ (COE_INPUT_SAMPLE_RATE_HZ / COE_ENVELOPE_DECIMATION_FACTOR)
 
