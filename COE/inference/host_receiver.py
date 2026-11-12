@@ -94,7 +94,8 @@ class FeatureHandler(BaseHTTPRequestHandler):
         self.server.seen[key] = canonical
         if len(self.server.seen) > 10000:
             self.server.seen.popitem(last=False)
-        print(f"Saved window={message['window_id']}, RPM={message['rpm']}, features=32", flush=True)
+        if not getattr(self.server, 'quiet', False):
+            print(f"Saved window={message['window_id']}, RPM={message['rpm']}, features=32", flush=True)
         self.reply(200, {'accepted': True, 'duplicate': False})
 
 
