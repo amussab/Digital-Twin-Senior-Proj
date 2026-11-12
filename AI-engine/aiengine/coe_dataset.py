@@ -38,14 +38,13 @@ from .coe.sources import FAULT_FAMILY, SampleBlock, SimulatedRigSource
 from .config import BEARING_FEATURES, SEED
 from .config import UP2_CACHE_DIR as CACHE_DIR
 
-DATASET = "synth_coe"
+DATASET = "synth_coe_node"      # v3d_node dataset (new bearing, 1800/3600 rpm, node channel map); synth_coe = old v3b_coe set, frozen
 PROVENANCE = "[SIMULATION] raw samples from aiengine.coe.sources (DualFaultRigSource) through the real CoePipeline"
 FAULTS = ["outer_race", "inner_race", "ball", "cage"]
 SEVERITIES = (0.15, 0.3, 0.5, 0.75, 1.0)
-# (rpm, weight, speed_policy). 1750/3600 = the COE steady modes; 1738/3624 = off-nominal INSIDE the +-1 % mode band;
-# 2400/3000 = off-mode speeds that need speed_policy "range" (COE3 sweep), reported as a separate slice.
-RPMS = ((1750.0, 0.34, "modes"), (3600.0, 0.34, "modes"), (1738.0, 0.08, "modes"), (3624.0, 0.08, "modes"),
-        (2400.0, 0.08, "range"), (3000.0, 0.08, "range"))
+# (rpm, weight, speed_policy). 1800/3600 = the rig's two nominal speeds (firmware build setting); 1785/3620 = actual speed
+# slightly off the nominal INSIDE the +-1 % mode band (the node still places its order bands with the NOMINAL rpm).
+RPMS = ((1800.0, 0.42, "modes"), (3600.0, 0.42, "modes"), (1785.0, 0.08, "modes"), (3620.0, 0.08, "modes"))
 SCENARIOS = (("none", 0.15), ("b1", 0.30), ("b2", 0.30), ("both", 0.25))
 HEALTHY_WINDOWS = 30
 FAULT_WINDOWS = 40
@@ -67,7 +66,7 @@ class DualFaultRigSource(SimulatedRigSource):
     scenario script does. Optional per-channel sensor gain mismatch `ch_gain` (4 values, 1 = ideal).
     """
 
-    def __init__(self, faults: dict[int, tuple[str, float]], rpm: float = 1750.0, seed: int = 0,
+    def __init__(self, faults: dict[int, tuple[str, float]], rpm: float = 1800.0, seed: int = 0,
                  n_blocks: Optional[int] = None, resonance_hz: float = 5000.0, rpm_jitter: float = 0.001,
                  cfg: Optional[CoeConfig] = None, ch_gain: Optional[np.ndarray] = None):
         fl = {int(b): (c, float(s)) for b, (c, s) in faults.items() if c != "healthy"}
@@ -147,9 +146,11 @@ class DualFaultRigSource(SimulatedRigSource):
                     rr = rr + (1.0 if bearing == b else self.OFF_PLANE) * ring[b]
                 shaft = (self.SHAFT_1X_MS2 * np.cos(2 * np.pi * ph - 0.4 * ch)
                          + self.SHAFT_2X_MS2 * np.cos(4 * np.pi * ph - 0.9 * ch))
-                acc[:, ch] = g_a * (rr + shaft) + rng.normal(0.0, self.NOISE_MS2, nb)
+                acc[:, ch] = g_a * (rr + shaft) + self.noise(rng, nb) * self.CH_NOISE[ch]
             if self.ch_gain is not None:
                 acc = acc * self.ch_gain[None, :]
+            if self.B2X_IS_B1Y:
+                acc[:, 2] = acc[:, 1]
             v_acc = acc / G * (cfg.accel_sens_mv_per_g / 1000.0) + cfg.accel_offset_v
             prox = np.empty((nb, 2))
             for p in range(2):
@@ -184,6 +185,8 @@ class RunSpec:
     off_plane: float
     y_gain: float
     ch_gain: tuple
+    ch_noise: tuple      # per-channel noise multiplier [CALIBRATED to MEASURED healthy rig spread]
+    noise_df: float      # Student-t df of the sensor noise
     split: str
 
     def to_dict(self) -> dict:
@@ -211,7 +214,8 @@ def plan(n_runs: int = N_RUNS, seed: int = SEED, run_offset: int = 70000) -> lis
             shaft_1x=float(SimulatedRigSource.SHAFT_1X_MS2 * rng.uniform(0.6, 1.6)),
             shaft_2x=float(SimulatedRigSource.SHAFT_2X_MS2 * rng.uniform(0.6, 1.6)),
             off_plane=float(rng.uniform(0.25, 0.45)), y_gain=float(rng.uniform(0.65, 0.95)),
-            ch_gain=tuple(float(x) for x in rng.uniform(0.95, 1.05, 4)), split=""))
+            ch_gain=tuple(float(x) for x in rng.uniform(0.95, 1.05, 4)),
+            ch_noise=tuple(float(x) for x in rng.uniform(0.8, 1.25, 4)), noise_df=float(rng.uniform(4.5, 8.0)), split=""))
     # stratified run-level split: within each scenario, shuffle and cut 60/15/25
     srng = np.random.default_rng([seed, 31337])
     for sc in sc_names:
@@ -235,6 +239,7 @@ def simulate_run(spec: RunSpec, healthy_windows: int = HEALTHY_WINDOWS, fault_wi
                              resonance_hz=spec.resonance_hz, cfg=cfg, ch_gain=np.asarray(spec.ch_gain))
     src.NOISE_MS2, src.SHAFT_1X_MS2, src.SHAFT_2X_MS2 = spec.noise_ms2, spec.shaft_1x, spec.shaft_2x
     src.OFF_PLANE, src.Y_GAIN = spec.off_plane, spec.y_gain
+    src.CH_NOISE, src.NOISE_T_DF = tuple(spec.ch_noise), spec.noise_df
     pipe = CoePipeline(src, cfg)
     n_total = healthy_windows + fault_windows
     feats, disp, rpm, t20, sev = [], [], [], [], []
@@ -266,7 +271,8 @@ def simulate_run(spec: RunSpec, healthy_windows: int = HEALTHY_WINDOWS, fault_wi
 
 def _worker(spec_dict: dict) -> dict:
     spec = RunSpec(**{**spec_dict, "b1": tuple(spec_dict["b1"]), "b2": tuple(spec_dict["b2"]),
-                      "ch_gain": tuple(spec_dict["ch_gain"])})
+                      "ch_gain": tuple(spec_dict["ch_gain"]),
+                      "ch_noise": tuple(spec_dict["ch_noise"])})
     return simulate_run(spec)
 
 

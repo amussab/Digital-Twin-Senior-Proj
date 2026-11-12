@@ -85,9 +85,10 @@ class CoePipeline:
         c = self.cfg
         self._sos_bp = signal.butter(c.bandpass_order, [c.bandpass_hz[0], c.bandpass_hz[1]], btype="bandpass",
                                      output="sos", fs=c.fs_hz)
-        self._sos_lp = signal.butter(c.envelope_lp_order, c.envelope_lowpass_hz, btype="lowpass",
-                                     output="sos", fs=c.fs_hz)
-        self._hann_cache: dict[int, np.ndarray] = {}
+        n_lp, wn_lp = signal.buttord(c.envelope_passband_hz, c.envelope_stopband_hz, c.envelope_ripple_db,
+                                     c.envelope_atten_db, fs=c.fs_hz)
+        self._sos_lp = signal.butter(n_lp, wn_lp, btype="lowpass", output="sos", fs=c.fs_hz)
+        self._hann_cache: dict[int, tuple[np.ndarray, float, float]] = {}
         self._reset_filters()
         self._win: Optional[_Window] = None
         self._last_seq: Optional[int] = None
@@ -113,10 +114,10 @@ class CoePipeline:
 
     # ----------------------------------------------------------------- Component 2
     def calibrate(self, codes: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """int16 codes (256,8) -> acceleration m/s2 (256,4) and displacement um (256,2)."""
+        """int16 codes (256,8) -> acceleration in g (256,4) (the node sends g) and displacement um (256,2)."""
         c = self.cfg
         volts = codes.astype(np.float64) / c.counts_per_volt
-        acc = (volts[:, 0:4] - c.accel_offset_v) / (c.accel_sens_mv_per_g / 1000.0) * G
+        acc = (volts[:, 0:4] - c.accel_offset_v) / (c.accel_sens_mv_per_g / 1000.0)       # g, as the node
         disp = (volts[:, 4:6] - c.prox_offset_v) / (c.prox_sens_mv_per_um / 1000.0)
         return acc, disp
 
@@ -207,10 +208,12 @@ class CoePipeline:
         w.n_prox += int(m.sum())
 
     # ----------------------------------------------------------------- Components 6-9
-    def _hann(self, n: int) -> np.ndarray:
+    def _hann(self, n: int) -> tuple[np.ndarray, float, float]:
+        """PERIODIC Hann (divides by n, as envelope_spectrum.c::prepare_taper) + sum(w), sum(w^2)."""
         h = self._hann_cache.get(n)
         if h is None:
-            h = self._hann_cache[n] = np.hanning(n)
+            w = 0.5 - 0.5 * np.cos(2.0 * np.pi * np.arange(n) / n)
+            h = self._hann_cache[n] = (w, float(w.sum()), float((w * w).sum()))
         return h
 
     def _speed_ok(self, rpm: float) -> bool:
@@ -243,22 +246,28 @@ class CoePipeline:
         m4 = w.s4 / n - 4 * mean * w.s3 / n + 6 * mean ** 2 * w.s2 / n - 3 * mean ** 4
         rms = np.sqrt(w.s2 / n)
         truncated = False
-        shaft_hz = rpm / 60.0
+        # the node has no tachometer: bands are placed with the NOMINAL rpm build setting (frequency_features.c)
+        nominal = min(c.modes_rpm, key=lambda m: abs(m - rpm)) if (c.node_nominal_order_axis and c.speed_policy == "modes") else rpm
+        shaft_hz = nominal / 60.0
         for ch in range(4):
             env = np.concatenate(w.env[ch])
             env_rms = float(np.sqrt(np.mean(env ** 2)))
-            rec = env - env.mean()
+            rec = env - env.mean()                       # firmware: mean removed before the taper
             if rec.size > c.fft_size:
                 rec, truncated = rec[:c.fft_size], True
-            rec = rec * self._hann(rec.size)
+            hw, _, hw2 = self._hann(rec.size)
             padded = np.zeros(c.fft_size)
-            padded[:rec.size] = rec
-            mag = np.abs(np.fft.rfft(padded)) * 2.0 / rec.size
-            orders = np.fft.rfftfreq(c.fft_size, d=1.0 / c.envelope_rate_hz) / shaft_hz
+            padded[:rec.size] = rec * hw
+            # one-sided PSD, Hann-power corrected (envelope_spectrum.c::unpack_spectrum): 2|X|^2 / (fs_env * sum(w^2))
+            psd = np.abs(np.fft.rfft(padded)) ** 2 / (c.envelope_rate_hz * hw2)
+            psd[1:-1] *= 2.0
+            df = c.envelope_rate_hz / c.fft_size
             fam = []
             for f in FAMILIES:
-                sel = (orders >= c.orders[f] - c.order_half_width) & (orders <= c.orders[f] + c.order_half_width)
-                fam.append(float(np.sqrt(np.sum(mag[sel] ** 2))))
+                centre = c.orders[f] * shaft_hz
+                half = max(c.order_half_width * shaft_hz, df)             # frequency_features.c::band_half_width_hz
+                first, last = int(np.ceil((centre - half) / df)), int(np.floor((centre + half) / df))
+                fam.append(float(np.sqrt(psd[first:last + 1].sum() * df)))
             kurt = float(m4[ch] / var[ch] ** 2) if var[ch] > 0 else 0.0
             crest = float(w.peak[ch] / rms[ch]) if rms[ch] > 0 else 0.0
             feats[ch] = [rms[ch], kurt, crest, env_rms, *fam]
@@ -270,7 +279,7 @@ class CoePipeline:
         disp = np.array([amp[0], phase[0], amp[1], phase[1]], dtype=np.float32)
         f32 = feats.reshape(32).astype(np.float32)
         t20_ms = int(round(t20 * 1000.0)) & 0xFFFFFFFF
-        wp = payload_mod.Window(rpm=float(rpm), features=f32, p1_amp_um=float(disp[0]),
+        wp = payload_mod.Window(rpm=float(nominal), features=f32, p1_amp_um=float(disp[0]),
                                 p1_phase_rad=float(disp[1]), p2_amp_um=float(disp[2]),
                                 p2_phase_rad=float(disp[3]), t20_ms=t20_ms)
         if not (np.isfinite(f32).all() and np.isfinite(disp).all()):
@@ -279,6 +288,6 @@ class CoePipeline:
         raw = payload_mod.encode(wp)
         now = time.perf_counter()
         self.stats.valid += 1
-        return WindowResult(True, "", rpm=float(rpm), features=f32, displacement=disp, t20_ms=t20_ms,
+        return WindowResult(True, "", rpm=float(nominal), features=f32, displacement=disp, t20_ms=t20_ms,
                             payload=raw, t0_s=t0, t20_s=t20, truncated=truncated,
                             finalize_ms=(now - t_fin) * 1e3, t20_to_payload_ms=(now - t_in) * 1e3)
