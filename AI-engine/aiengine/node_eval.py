@@ -48,8 +48,8 @@ def read_runs(path: Path) -> dict[str, dict]:
     return runs
 
 
-def evaluate_run(messages: list[dict], contract: str, rpm_override: float | None) -> dict:
-    eng = NodeEngine(contract_file=f"model_contract_{contract}.json")
+def evaluate_run(messages: list[dict], contract: str, rpm_override: float | None, legacy: bool = False) -> dict:
+    eng = NodeEngine(contract_file=f"model_contract_{contract}.json", policy=None if legacy else "contract")
     dist = {1: {}, 2: {}}
     onset = {1: None, 2: None}
     lat, skipped = [], 0
@@ -86,6 +86,7 @@ def main(argv=None) -> int:
     ap.add_argument("file")
     ap.add_argument("--contract", default="v3e_node", help="contract name without model_contract_ / .json")
     ap.add_argument("--rpm-override", type=float, default=None)
+    ap.add_argument("--legacy-baseline", action="store_true", help="ignore the contract baseline policy (24-window median)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
     path = Path(a.file)
@@ -93,7 +94,7 @@ def main(argv=None) -> int:
     report = {"file": str(path), "contract": a.contract, "rpm_override": a.rpm_override,
               "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"), "runs": {}}
     for key, run in runs.items():
-        r = evaluate_run(run["messages"], a.contract, a.rpm_override)
+        r = evaluate_run(run["messages"], a.contract, a.rpm_override, a.legacy_baseline)
         r["label"] = run["label"]
         report["runs"][key] = r
         print(f"== {key} (label={run['label']}) windows={r['windows']} skipped={r['skipped_invalid']} latency={r['latency_ms']}")

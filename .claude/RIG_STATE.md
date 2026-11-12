@@ -47,3 +47,13 @@ AI-engine/data/cache_up2, AI-engine/checkpoints/up2_v3.
   B2 healthy 99.6 %; identical with rpm forced 1800. Worse than v3d on B1 (43-48 %). NOT tuned. Conclusion: relative features alone do not fix B1;
   the cage false alarms probably come from band (ftf/bsf) ratios vs the 24-window baseline with fw250 order bands -> needs fw 1800 capture.
 - Tool: python -m aiengine.node_eval <jsonl|csv> [--contract v3e_node] [--rpm-override N]  (reports/node_eval_*.json)
+
+## AI: commissioning-baseline policy (contract v3e_node.1) -- DONE 2026-11-12
+- Finding: dev-file B1 false alarms came from a 24-window baseline taken during rig warm-up (B1Y kurtosis median 5.4 -> 6.7), not fw-250 bands.
+- Policy (contract feature_engineering.baseline.policy): settle_seconds 120, baseline_seconds 60 -> windows = s*rpm/1200 (1800 rpm: 180 + 90). Median, keyed per rpm (+-5 %),
+  rpm change -> stored baseline or warm-up + buffers reset; warming output fault_class "warming_up". NodeEngine.save_baseline/load_baseline (JSON, contract version checked).
+  Contracts without policy / policy=None = legacy 24-window (sim scoring, golden vectors untouched). node_eval --legacy-baseline. Live runner aiengine/node_live.py (+ README paste snippet).
+- [MEASURED on rig, healthy only, DEV file, fw RPM=250 so order bands invalid; rpm forced 1800; not tuned] healthy fraction B1/B2:
+  v3e settle180+base90 (default) 81.1/94.9 %; settle180+base100 79.8/95.6 %; baseline 180-280, scored 280+ 79.7/95.7 % (was 36.6/99.6 % with 24-window).
+  v3d same three: 80.1/92.6, 78.5/93.3, 78.5/93.2 % (was 43-48/87-90). Remaining B1 error mostly cage (~17 %).
+- Sim: NodeEngine not in the sim scoring path; sim test macro-F1 0.877 (v3e) unchanged by construction. Sim runs are 70 windows < 270 -> sim keeps the 24-window baseline (not mixed).

@@ -267,7 +267,11 @@ def cmd_export(a) -> int:
                                       "note": "[SIMULATION] baseline-relative classifier trained on synth_coe_node only; hyper-params + "
                                               "gate tau selected on val only; RUL/z/stage heads = v3b unchanged (NOT valid on node features)"}
     fe = con["feature_engineering"]
+    con["contract_version"] = "3e-node.1"
     fe["engineered_order"] = list(feat.ENGINEERED_EXT)
+    fe["baseline"]["policy"] = {"settle_seconds": 120, "baseline_seconds": 60, "statistic": "median",
+                                "keyed_by": "rpm (+-5 %)", "warmup_output": "fault_class 'warming_up'",
+                                "legacy": "policy absent => median of first 24 windows"}   # see aiengine/node_adapter.py
     fe["reference_impl"] = "aiengine/features.py::engineer_arrays(extended=True)"
     fe["crest_rise"] = {"definition": "max(max_over_axes(crest) - max_over_axes(baseline crest), 0); baseline = 24-window median "
                                       "(same form as kurtosis_rise); appended as the 22nd engineered column"}

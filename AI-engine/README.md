@@ -110,3 +110,17 @@ SECONDARY robustness (`reports/model_selection_robustness_lobo_20261004T214321Z.
 XJTU-SY bearings, v1 models): S7 median 73.7 %, mean 221.7 %, 0/15 bearings <= 15 %.
 
 Synthetic pipeline-proof results (superseded): `reports/spec_check_20261004T192939Z_synthetic.md`.
+
+## Commissioning baseline policy and live hook (contract v3e_node.1)
+
+`NodeEngine` skips `settle_seconds` (120 s) after start / rpm change, takes the median of the next `baseline_seconds`
+(60 s) as the per-rpm baseline (windows = seconds x rpm / 1200: 180 + 90 at 1800 rpm), outputs `fault_class: "warming_up"`
+until the classifier buffer is full, and switches/warms up on rpm change (+-5 %). `save_baseline(path)` / `load_baseline(path)`
+persist it as JSON (contract version checked). Contracts without `feature_engineering.baseline.policy` keep the legacy
+24-window baseline (sim scoring, golden vectors).
+
+Ready-to-paste `COE/inference/model_hook.py` (not edited by this repo change; needs AI-engine on PYTHONPATH):
+
+    from aiengine.node_live import setup as _setup, predict as _predict
+    def setup():            return _setup()                      # env NODE_BASELINE=/path/baseline.json optional
+    def predict(window, model): return _predict(window, model)   # one-line string
