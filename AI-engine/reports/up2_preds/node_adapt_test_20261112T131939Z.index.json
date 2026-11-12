@@ -1,0 +1,39 @@
+{
+ "meta": {
+  "provenance": "[SIMULATION] COE simulator -> real CoePipeline (synth_coe) + [SYNTHETIC] synth_v3",
+  "seed": 20261004,
+  "git_commit": "3c07730",
+  "git_dirty": true,
+  "command": "python -m aiengine.coe_adapt_eval test",
+  "utc": "2026-11-12T13:19:47+00:00",
+  "tag": "20261112T131939Z",
+  "touch": "synth_coe test runs: FIRST and only scoring pass (baseline + selected)",
+  "selected": {
+   "candidate": "mix_w0.3",
+   "gate_tau": 0.75,
+   "gate_signal": "family",
+   "coe_val": {
+    "macro_f1": 0.8467,
+    "accuracy": 0.8556,
+    "per_class_f1": {
+     "healthy": 0.8794,
+     "outer_race": 0.9138,
+     "inner_race": 0.948,
+     "ball": 0.8414,
+     "cage": 0.651
+    },
+    "b2_transmitted_false_fault_rate": 0.1282051282051282,
+    "transmitted_false_fault_rate": 0.06747638326585695,
+    "clean_false_fault_rate": 0.0006858710562414266,
+    "missed_fault_rate": 0.24835164835164836,
+    "wrong_class_rate": 0.014652014652014652
+   },
+   "synth_val_macro_f1": 0.9644
+  }
+ },
+ "files": {
+  "base": "node_adapt_test_base_20261112T131939Z.cls.csv.gz",
+  "selected_nogate": "node_adapt_test_selected_nogate_20261112T131939Z.cls.csv.gz",
+  "rul_diag_raw_features": "node_adapt_test_rul_diag_20261112T131939Z.csv.gz"
+ }
+}

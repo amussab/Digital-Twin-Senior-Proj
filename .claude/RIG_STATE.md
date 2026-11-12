@@ -19,3 +19,17 @@ AI-engine/data/cache_up2, AI-engine/checkpoints/up2_v3.
 - Tests: tests/coe updated + firmware-formula reference test (sine + AM at BPFO). Full suite 83 passed, 1 skipped.
 
 ## Next: B node_adapter.py, C retrain v3d_node, D healthy-real false-alarm check
+
+## Step B -- DONE: AI-engine/aiengine/node_adapter.py (node_json_to_raw, NodeEngine -> HybridEngine), tests/test_node_adapter.py. 91 tests pass.
+
+## Step C -- DONE: contract v3d_node (models/model_contract_v3d_node.json, v3d_node_cls.onnx, golden_vectors_v3d_node.json); v3b_coe untouched.
+- Dataset synth_coe_node (420 runs, split by run 253/63/104 registered in splits.json BEFORE fit). Cmds (AIENGINE_COE_VARIANT=node):
+  python -m aiengine.coe_adapt_eval data|select|test|export  (logs in AI-engine/checkpoints/node_*.log, git-ignored)
+- Selected on val only: mix_w0.3 + cross_bearing_gate tau 0.75 (family). Tau grid extended to 1.0/1.5 for B2X=B1Y; old tau 0.6 not kept. val F1 0.8467.
+- [SIMULATION] test (scored once): macro-F1 0.8716, acc 0.8905; F1 healthy .910 outer .893 inner .887 ball .908 cage .761;
+  B2 false-fault 8.2 %, B1 0.5 %, missed-fault 18.5 %. v3b_coe-as-deployed on same data: 0.5315.
+- Mixed with old synth_v3 (old bearing, payload-level) as before; RUL/stage heads = v3b unchanged (NOT valid on node features).
+
+## Step D -- DONE [MEASURED on rig, healthy only, firmware RPM=250 so order bands invalid], 931 windows, after 24+25 warm-up:
+- B1 healthy 43.4 % (rpm as sent) / 48.3 % (rpm forced 1800); B2 86.7 % / 90.0 %. onset never flagged. Host latency p50 1.9 ms, p95 2.4 ms.
+- NOT tuned. Open: real B1Y has kurtosis ~6.5 (heavier than sim), cage/ball false alarms on B1; needs real 1800-rpm capture with fw 1800 + seeded faults.
