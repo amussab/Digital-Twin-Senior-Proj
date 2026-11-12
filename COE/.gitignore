@@ -5,3 +5,5 @@ training_data/
 !firmware/stm32/.vscode/
 !firmware/esp32/.vscode/
 !firmware/esp32/tests/board_startup.log
+!firmware/stm32/release/
+!firmware/stm32/release/**

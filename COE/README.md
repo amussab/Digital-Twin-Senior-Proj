@@ -37,6 +37,20 @@ Design documents for the node: `Project architecture/COE/`.
   netsh advfirewall firewall add rule name="COE node TCP 8000" dir=in action=allow protocol=TCP localport=8000 profile=any
   ```
 
+## Change the shaft speed (no reflash)
+
+The node has **no tachometer**: the speed it uses (to size the window and place the bearing bands)
+is only a setting, so the number you type must match the VFD.
+
+1. Plug the **STM32 USB cable into the laptop** (the ST-LINK port; the ESP link is separate).
+2. `python training/node_rpm.py 3600` sets 3600 RPM; `python training/node_rpm.py --query` reads it.
+   The recorder page (training/README.md) has the same control.
+3. The node applies it at the next window end (a window is at most 0.72 s), restarts its filters as at
+   start-up, and answers `@OK RPM 3600`. Every packet carries the RPM actually used for its window.
+
+Power-up default: **1800 RPM**. The speed is not saved, so after a reset or power cycle send it again.
+Allowed: 60..3600, where the bearing bands still fit (3600 is the top).
+
 ## What a window contains
 
 - 32 features, always in this order: for each channel `B1X, B1Y, B2X, B2Y`, the features

@@ -19,6 +19,15 @@ Conditions: **Healthy, Inner race, Outer race, Ball, Cage**.
 4. Choose the condition, add a note if useful, and press **Start**. Press **Stop** when the run is done.
 5. Download the CSV for one run or for all runs.
 
+## Shaft speed
+
+The page has a **Shaft speed** box: type an RPM or press 1800 / 3600, then **Set**. It sends the
+command over the STM32 USB cable (must be plugged into this laptop) and shows the node's reply and the
+RPM of the latest window. The node has no tachometer, so the value must match the VFD. After a node
+reset it is back at 1800. Start is disabled while a change is pending, and the speed cannot be changed
+while recording. Same from a terminal: `python node_rpm.py 3600` or `python node_rpm.py --query`
+(close any serial terminal first: only one program can use the port).
+
 ## The data
 
 - Files are saved in `COE/training/training_data/`. Git ignores this folder,
