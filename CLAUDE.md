@@ -86,6 +86,17 @@ around. These docs get extracted/updated by the user from the team's shared cont
 materials; re-read them if the user says they've been updated before trusting your own memory of
 their contents.
 
+## RIG INTEGRATION — current state (2026-11-13) — read this first, it supersedes older sections where they conflict
+
+- Work branch **`fix/rig-new-bearing`** (worktree `Repo/DT-main`, cut from `main` 6bfb85b), NOT pushed yet.
+- Resume ledger: **`.claude/RIG_STATE.md`** (top "START HERE"). Runbook for the rig day: **`RIG_DAY.md`**.
+  Facts: `.claude/FACTS.md` section "Real node + rig".
+- The real COE node exists and streams 32 features/window as **JSON over HTTP to the laptop :8000** (Wi-Fi COE-NODE).
+  The old "SampleSource -> 152-byte payload -> UDP 5005" boundary below is the simulator path only.
+- Goal: AI meets specs on REAL node data + full system live (node -> AI -> dashboard). Only healthy real data so far;
+  fault bearings at several health levels are recorded on rig day, then `aiengine.train_real` trains `v4_real`.
+- Firmware RPM/bearing are runtime-settable over the ST-LINK USB (untested on hardware until flashed).
+
 ## AI-engine — current state (UP2, updated 2026-10-25)
 
 `AI-engine/` is the working ML/DSP code; `AI-test/` is the HISTORICAL first testbench (kept for
@@ -102,7 +113,7 @@ ledger and `evidence/UP2_Evidence.md` for the coach-facing summary. Short versio
   arrive) + COE-simulator windows (`coe_dataset`). Public datasets (XJTU-SY, IMS, MaFaulDa) are
   git-ignored; they live in the sibling checkout `Repo/Digital-Twin-Senior-Proj/AI-engine/data` —
   set `AIENGINE_DATA_DIR` to it. PPR (v2) public-data results are history and stay in the evidence.
-- **Hardware boundary:** `SampleSource` -> COE pipeline -> 152-byte payload -> UDP 5005 -> backend.
+- **Hardware boundary (simulator path; the real node uses HTTP JSON, see RIG INTEGRATION above):** `SampleSource` -> COE pipeline -> 152-byte payload -> UDP 5005 -> backend.
   Hardware day = replace the sender only (`aiengine/coe/README.md`). **Update 2026-11-05:** the real
   COE node now exists and sends a 160-byte packet (see the payload convention below), so the
   host-side decoder must change to 160 bytes before it can receive real packets.
@@ -162,7 +173,7 @@ ledger and `evidence/UP2_Evidence.md` for the coach-facing summary. Short versio
    keep the comparison visible.
 3. **Other departments' evidence** — ME reported C6 + S1 met and S2 + S3 50 % (2026-10-26, in `OVERRIDES`); C1 (ME) and C2 (COE) still to be supplied; add to
    `up2_helpers.OVERRIDES`. BOM (C3) is excluded by the reviewer; item count is 17, bar >=13.
-4. **COE stage/RUL head on real COE features** needs refitting on rig commissioning + run-to-failure data;
+4. **COE stage/RUL head on real COE features** needs refitting on rig commissioning + run-to-failure data (2026-11-13: classifier + severity/stage head via `aiengine.train_real` on rig day; RUL still needs run-to-failure);
    `tau` of the cross-bearing gate likewise. Real Wi-Fi hop, STM32 timing and laptop-vs-Pi-5 latency
    are unmeasured (IS1 is design-level until then).
 5. Official course report (second instalment) is separate and later; this repo's evidence feeds it.
