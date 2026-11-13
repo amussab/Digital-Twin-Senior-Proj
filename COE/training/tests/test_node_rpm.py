@@ -60,7 +60,8 @@ class Parser(unittest.TestCase):
 class Host(unittest.TestCase):
     def test_command_text(self):
         self.assertEqual(node_rpm.build_command(3600), 'RPM 3600\n')
-        self.assertEqual(node_rpm.build_command(None), 'RPM?\n')
+        # The query became CONFIG? (it reports rpm and the bearing); the firmware still accepts RPM?.
+        self.assertEqual(node_rpm.build_command(None), 'CONFIG?\n')
 
     def test_reply(self):
         lines = ['  window 5 (... RPM) ...', '@OK RPM 3600', 'other']

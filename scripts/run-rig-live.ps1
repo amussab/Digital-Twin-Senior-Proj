@@ -53,7 +53,7 @@ $rx = Start-Process $py -PassThru -WindowStyle Minimized -WorkingDirectory (Join
 
 # wait for backend
 $ok = $false
-for ($i = 0; $i -lt 60 -and -not $ok; $i++) { Start-Sleep -Milliseconds 500; try { $ok = (Invoke-RestMethod "http://localhost:$BackendPort/api/health" -TimeoutSec 2).status -eq 'ok' } catch {} }
+for ($i = 0; $i -lt 120 -and -not $ok; $i++) { Start-Sleep -Milliseconds 500; try { $ok = (Invoke-RestMethod "http://127.0.0.1:$BackendPort/api/health" -TimeoutSec 2).status -eq 'ok' } catch {} }
 if (-not $ok) { Write-Warning 'backend did not answer; see logs/backend.log, logs/backend.err.log' }
 $lan = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -match '^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)' } | Select-Object -First 1).IPAddress
 Write-Host "Dashboard : http://localhost:$BackendPort/   (LAN: http://${lan}:$BackendPort/)"

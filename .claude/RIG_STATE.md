@@ -103,3 +103,11 @@ AI-engine/data/cache_up2, AI-engine/checkpoints/up2_v3.
   laptop-receive->dashboard render (headless Edge, no GPU) p50 288 / p95 353 ms. Node->laptop Wi-Fi hop NOT measurable (node sends no timestamp).
 - Dashboard SignalR channel capacity 64 -> 2 (latest wins; 64 gave ~600 ms render lag). Screenshot: Repo/rig_data/rehearsal_dashboard.png.
 - dotnet test: 37 passed (2 new LiveNodeTests).
+
+## RESUME HERE (2026-11-13 night, coordinator) -- supersedes the 11-12 "RESUME HERE"
+- Rig day runbook: `RIG_DAY.md` (repo root). Preflight: `scripts/preflight.ps1 [-Quick] [-Rehearse]`.
+- Preflight 2026-11-13: all checks pass except expected warnings (ST-LINK unplugged, not on COE-NODE, VPN ProTUN up,
+  firewall rule for TCP 8000 missing -> admin step 0.2). Tests: AI 107, COE host 12, backend 37 passed. Rehearsal
+  (120 replayed real windows -> receiver -> NodeEngine -> backend /api/live/latest) OK.
+- Flash files: COE/firmware/stm32/release/rig_runtime_config (hash-verified). Runtime RPM/BEARING/CONFIG? untested on hardware.
+- Known dashboard nit: "AI RUL Trend" shows -1 hours on node source (should be n/a); header said "Disconnected" in headless screenshot.
