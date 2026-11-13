@@ -47,7 +47,27 @@ Start the recorder with `python COE\training\training_recorder.py` and open **ht
 The top indicator turns green and says "Data arriving". Only one program can use port 8000: stop the recorder
 before going live in step 4.
 
-### 2.1 Fields to fill in for every run
+### 2.0 Recommended: let the run-sheet driver do it
+
+With the recorder running, in a second terminal:
+
+```powershell
+cd COE\training
+python rig_session.py --make-plan   # writes rig_plan.csv: 28 mounts x (1800, 3600) = 56 runs, priority order
+python rig_session.py               # step by step; rerun to resume after any stop
+```
+
+For each mount it tells you which bearing to fit and which VFD speed to set, then waits for **Enter**. It then
+sets the node RPM, checks the packets report that RPM, records 4 minutes with all labels filled in, checks the
+window count, backs up to `..\rig_data\<date>_training_data` and prints coverage. Each bearing is recorded at
+1800 and then 3600 before the next swap. At the swap prompt, type a different bearing ID if needed, or
+`s` to skip / `q` to quit. Edit `rig_plan.csv` first if your bearing set differs from the default
+(`H-01..03`, `OR/IR/BA/CA-L<level>-a/b`). Claude can run this for you: you only swap bearings,
+set the VFD and say "ready".
+
+The order of the plan already follows the priority below, so stopping early still leaves a trainable set.
+
+### 2.1 Fields to fill in for every run (manual mode, on the page)
 
 | Field | Value |
 |---|---|
