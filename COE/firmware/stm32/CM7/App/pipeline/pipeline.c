@@ -34,7 +34,7 @@ static bool window_geometry(uint32_t nominal_rpm, uint32_t *revolutions_out, uin
 
 bool pipeline_rpm_supported(uint32_t nominal_rpm, const BearingFeatureProfile *bearing_profile)
 {
-    uint32_t revolutions, samples;
+    uint32_t revolutions = 0U, samples = 0U;
     return nominal_rpm >= COE_MIN_RPM && nominal_rpm <= COE_MAX_RPM
            && frequency_profile_is_valid(bearing_profile, nominal_rpm)
            && window_geometry(nominal_rpm, &revolutions, &samples);
@@ -54,7 +54,7 @@ bool pipeline_init(PipelineState *pipeline, uint32_t nominal_rpm,
         || !pipeline_rpm_supported(nominal_rpm, bearing_profile))
         return false;
 
-    uint32_t revolutions, samples;
+    uint32_t revolutions = 0U, samples = 0U;
     (void)window_geometry(nominal_rpm, &revolutions, &samples);
     pipeline->nominal_rpm = nominal_rpm;
     pipeline->window_revolutions = revolutions;
