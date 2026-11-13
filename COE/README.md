@@ -57,7 +57,7 @@ Allowed: 60..3600, where the bearing bands still fit (3600 is the top).
   `rms, kurtosis, crest, envelope_rms, ftf, bsf, bpfo, bpfi`. Names: `B1X_rms` … `B2Y_bpfi`.
 - rms, envelope_rms and the four band values are in **g**; kurtosis and crest are ratios.
 - **B2X is a copy of B1Y**: the 4th sensor has no cable, so don't treat B2X as independent.
-- The speed is set in the firmware: **250 RPM**, the lab machine's speed. Changing it needs a COE reflash.
+- Speed and bearing orders are set at run time over the ST-LINK USB (`python training/node_config.py --rpm N` / `--bearing ftf bsf bpfo bpfi [hw]` / `--query`); defaults at power-up 1800 RPM and the 12 Nov bearing; no reflash needed.
 
 `host_receiver.py` (in both folders, same file) is the node's protocol: the node sends an
 HTTP POST of JSON to `/features` and waits for `200 {"accepted": true}`.
