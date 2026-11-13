@@ -4,7 +4,7 @@
 
 Inputs: host_receiver JSONL (one node message per line, or {"received_at":..,"message":{..}}) or the
 COE/training/training_recorder CSV (run_id,label,note,received_at,rpm,window_id,sequence,device_id,valid_channels, then
-B1X_rms .. B2Y_bpfi); CSV rows are grouped by run_id, one fresh engine (own 24-window baseline) per run.
+B1X_rms .. B2Y_bpfi, then optionally severity,bearing_id,position,is_baseline; read BY HEADER NAME); CSV rows are grouped by run_id, one fresh engine (own 24-window baseline) per run.
 Prints per-bearing class distribution after warm-up, first onset window, host latency p50/p95, writes a JSON report to
 reports/node_eval_<name>_<ts>.json. Provenance of every number = the input file (tag it when quoting).
 """
@@ -33,10 +33,13 @@ def read_runs(path: Path) -> dict[str, dict]:
     if path.suffix.lower() == ".csv":
         with open(path, newline="", encoding="utf-8") as f:
             for r in csv.DictReader(f):
-                m = {"schema_version": 1, "acceleration_unit": "g", "valid_channels": int(float(r["valid_channels"])),
+                m = {"schema_version": 1, "acceleration_unit": "g", "valid_channels": int(float(r.get("valid_channels") or 15)),
                      "rpm": float(r["rpm"]), "window_id": int(float(r["window_id"])), "sequence": int(float(r["sequence"])),
                      "features": [float(r[c]) for c in FEATURE_COLUMNS]}
-                run = runs.setdefault(r["run_id"], {"label": r.get("label"), "messages": []})
+                run = runs.setdefault(r["run_id"], {"label": r.get("label"), "messages": [],
+                                                    # appended recorder columns (absent in older CSVs): read by header name
+                                                    "severity": r.get("severity") or None, "bearing_id": r.get("bearing_id") or None,
+                                                    "position": r.get("position") or None, "is_baseline": r.get("is_baseline") in ("1", "True", "true")})
                 run["messages"].append(m)
     else:
         msgs = []
@@ -48,8 +51,11 @@ def read_runs(path: Path) -> dict[str, dict]:
     return runs
 
 
-def evaluate_run(messages: list[dict], contract: str, rpm_override: float | None, legacy: bool = False) -> dict:
-    eng = NodeEngine(contract_file=f"model_contract_{contract}.json", policy=None if legacy else "contract")
+def evaluate_run(messages: list[dict], contract: str, rpm_override: float | None, legacy: bool = False, baseline: str | None = None, models_dir=None) -> dict:
+    kw = {"model_dir": Path(models_dir)} if models_dir else {}
+    eng = NodeEngine(contract_file=f"model_contract_{contract}.json", policy=None if legacy else "contract", **kw)
+    if baseline:
+        eng.load_baseline(baseline)      # commissioning baseline saved by train_real / node_live (no self-baselining on a fault run)
     dist = {1: {}, 2: {}}
     onset = {1: None, 2: None}
     lat, skipped = [], 0
@@ -86,6 +92,8 @@ def main(argv=None) -> int:
     ap.add_argument("file")
     ap.add_argument("--contract", default="v3e_node", help="contract name without model_contract_ / .json")
     ap.add_argument("--rpm-override", type=float, default=None)
+    ap.add_argument("--baseline", default=None, help="baseline JSON (models/baseline_<contract>.json) instead of baselining on each run")
+    ap.add_argument("--models-dir", default=None, help="folder holding the contract (default AI-engine/models)")
     ap.add_argument("--legacy-baseline", action="store_true", help="ignore the contract baseline policy (24-window median)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
@@ -94,8 +102,9 @@ def main(argv=None) -> int:
     report = {"file": str(path), "contract": a.contract, "rpm_override": a.rpm_override,
               "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"), "runs": {}}
     for key, run in runs.items():
-        r = evaluate_run(run["messages"], a.contract, a.rpm_override, a.legacy_baseline)
+        r = evaluate_run(run["messages"], a.contract, a.rpm_override, a.legacy_baseline, a.baseline, a.models_dir)
         r["label"] = run["label"]
+        r["meta"] = {k: run.get(k) for k in ("severity", "bearing_id", "position", "is_baseline")}
         report["runs"][key] = r
         print(f"== {key} (label={run['label']}) windows={r['windows']} skipped={r['skipped_invalid']} latency={r['latency_ms']}")
         for k, b in r["bearings"].items():
