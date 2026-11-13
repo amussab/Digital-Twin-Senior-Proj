@@ -69,3 +69,13 @@ AI-engine/data/cache_up2, AI-engine/checkpoints/up2_v3.
   (7) fresh healthy runs scored ONCE with `python -m aiengine.node_eval <csv> --contract v3e_node`, (8) live run via node_live.
 - Dev-file result (fw250): v3e_node B1 81.1 % / B2 94.9 % healthy with settle policy [MEASURED on rig, healthy only, DEV].
 - Uncommitted on purpose: COE/firmware/stm32/.settings/*, .vscode/c_cpp_properties.json (VS Code extension edits).
+
+## Agent A (firmware) -- 2026-11-13
+- Review of 6758ced found a compile blocker: live_stream.c had raw newlines inside the "@OK/@ERR" string literals (never compiled). Fixed.
+  Also: rx_tail now volatile (ISR reads it), RX ring 128, line max 96, replies end \r\n.
+- New (21addf9): `BEARING <ftf> <bsf> <bpfo> <bpfi> [hw]`, `CONFIG?` (RPM? gives the same line). RPM and BEARING are validated jointly
+  (against the pending partner), applied at the next window boundary; packet bearing_profile stays 1, runtime orders only via CONFIG?.
+- Host: COE/training/node_config.py (--rpm/--bearing/--query/--selftest); node_rpm.py is a wrapper (recorder API unchanged).
+- Tests: python mirror of the C parser (firmware/stm32/tools/tests); C itself NOT compiled on host (no host C compiler);
+  syntax-checked only with the ST clangd bundle (only missing-libc errors).
+- Build status: see the final entry below if a build was made. tools/preflight_fw.ps1 = report-only pre-flash check.
