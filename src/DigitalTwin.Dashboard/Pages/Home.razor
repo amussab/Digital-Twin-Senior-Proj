@@ -15,6 +15,12 @@
         <span>@(Snapshot?.IsConnected == true ? "Live" : "Disconnected")</span>
         <span class="divider"></span>
         <span>@(Snapshot?.MachineId ?? "Waiting...")</span>
+        @if (Snapshot?.Live is { } lv)
+        {
+            <span class="divider"></span>
+            <span class="tag success">Source: Node (live)</span>
+            <span class="tag @(lv.Provenance.Contains("REPLAY") ? "" : "success")">@lv.Provenance</span>
+        }
     </div>
 </header>
 
@@ -30,6 +36,8 @@ else
 
         <section class="dashboard-main">
 
+            <LivePanel Live="Snapshot.Live" />
+
             <section class="metrics-grid">
                 <MetricCard Label="Health Index"
                             Value="@($"{Snapshot.HealthIndexPercent:F0}%")"
@@ -37,8 +45,8 @@ else
                             AccentClass="accent-cyan" />
 
                 <MetricCard Label="AI Remaining Life"
-                            Value="@($"{Snapshot.AiRulHours:F0} h")"
-                            Detail="N-HiTS estimate"
+                            Value="@(Snapshot.AiRulHours < 0 ? "n/a" : $"{Snapshot.AiRulHours:F0} h")"
+                            Detail="@(Snapshot.Live is null ? "N-HiTS estimate" : "RUL head not valid on node features")"
                             AccentClass="accent-violet" />
 
                 <MetricCard Label="Fault State"
@@ -70,7 +78,11 @@ else
                         <span class="tag">Optional input</span>
                     </div>
 
-                    @if (Snapshot.PhysicsRulHours is double physicsRul)
+                    @if (Snapshot.Live is not null)
+                    {
+                        <div class="comparison-row"><span>Physics twin</span><strong>n/a: node sends features only</strong></div>
+                    }
+                    else if (Snapshot.PhysicsRulHours is double physicsRul)
                     {
                         <div class="comparison-row">
                             <span>Physics RUL</span>

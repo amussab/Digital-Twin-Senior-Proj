@@ -43,13 +43,14 @@ def _recv_epoch(v):
         return None
 
 
-def predict(window: dict, model: NodeEngine) -> str:
+def predict_full(window: dict, model: NodeEngine):
+    """Like predict() but returns (engine_output_dict | None, one_line_string)."""
     msg = {"schema_version": 1, "acceleration_unit": "g", "valid_channels": window.get("valid_channels", 15),
            "rpm": window["rpm"], "window_id": window.get("window_id", 0), "features": list(window["features"])}
     try:
         out = model.predict(msg)
     except ValueError as e:
-        return f"window {msg['window_id']}: rejected ({e})"
+        return None, f"window {msg['window_id']}: rejected ({e})"
     p = getattr(model, "_baseline_path", None)
     if p and set(model.saved) != getattr(model, "_saved_keys", set()):
         model.save_baseline(p)
@@ -64,5 +65,9 @@ def predict(window: dict, model: NodeEngine) -> str:
         c = b["fault_class"]
         parts.append(f"B{b['bearing']} {c} {b['class_probs'].get(c, 0):.2f} onset={'Y' if b.get('onset_detected') else 'n'}")
     if out["bearings"][0].get("status") != "ok" and "baseline_phase" in out:
-        return f"warming_up {out['baseline_phase']} | {lat}"
-    return f"w{msg['window_id']} {msg['rpm']:.0f}rpm | " + " | ".join(parts) + f" | {lat}"
+        return out, f"warming_up {out['baseline_phase']} | {lat}"
+    return out, f"w{msg['window_id']} {msg['rpm']:.0f}rpm | " + " | ".join(parts) + f" | {lat}"
+
+
+def predict(window: dict, model: NodeEngine) -> str:
+    return predict_full(window, model)[1]

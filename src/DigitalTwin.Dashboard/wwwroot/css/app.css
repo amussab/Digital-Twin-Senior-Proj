@@ -399,3 +399,18 @@ h1 {
         position: static;
     }
 }
+
+/* Node (live) panel */
+.live-panel { border: 1px solid #22d3ee55; }
+.live-badge { font-weight: 700; }
+.live-note { font-size: 0.85rem; opacity: .8; margin: 6px 0 12px; }
+.live-bearings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 12px; }
+.live-bearing h3, .live-sub { font-size: 0.95rem; margin: 6px 0; }
+.prob-row { display: grid; grid-template-columns: 90px 1fr 44px; gap: 8px; align-items: center; font-size: 0.8rem; margin: 3px 0; }
+.prob-bar { background: #ffffff14; height: 8px; border-radius: 4px; overflow: hidden; }
+.prob-bar i { display: block; height: 100%; background: #22d3ee; }
+.prob-row em { font-style: normal; text-align: right; }
+.feat-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.feat-table th, .feat-table td { padding: 3px 6px; text-align: right; border-bottom: 1px solid #ffffff12; }
+.live-trends { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+@media (max-width: 900px) { .live-bearings, .live-trends { grid-template-columns: 1fr; } }

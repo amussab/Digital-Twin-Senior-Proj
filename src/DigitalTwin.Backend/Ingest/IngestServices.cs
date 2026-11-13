@@ -47,6 +47,7 @@ public sealed class DemoControl
     public const string Real = "demo";          // recorded XJTU-SY payloads (MEASURED public data)
     public const string TwinSim = "twin-sim";   // [SIMULATION] synthetic degrading run with FE-beam displacement
     public const string Synthetic = "synthetic";
+    public const string NodeLive = "node-live"; // real node (or its rehearsal replayer) -> Python NodeEngine -> POST /api/live/prediction
     public const string Up2 = "up2";            // [SYNTHETIC] UP2 demo stream (healthy -> fault -> failure) through the v3 contract
     private readonly string _machineId;
     private readonly bool _replayEnabled;
@@ -57,7 +58,7 @@ public sealed class DemoControl
         _machineId = o.Value.MachineId;
         _replayEnabled = o.Value.Replay.Enabled;
         var r = o.Value.Replay;
-        _source = r.Source.ToLowerInvariant() is Real or TwinSim or Synthetic or Up2 ? r.Source.ToLowerInvariant() : Real;
+        _source = r.Source.ToLowerInvariant() is Real or TwinSim or Synthetic or Up2 or NodeLive ? r.Source.ToLowerInvariant() : Real;
         if (r.Synthetic && string.IsNullOrEmpty(r.Path) && r.Source == "") _source = Synthetic;
     }
     public string Source => _source;
@@ -65,15 +66,16 @@ public sealed class DemoControl
     public bool TrySet(string name)
     {
         name = name.ToLowerInvariant();
-        if (name is not (Real or TwinSim or Synthetic or Up2)) return false;
+        if (name is not (Real or TwinSim or Synthetic or Up2 or NodeLive)) return false;
         _source = name; Interlocked.Increment(ref _version); return true;
     }
     /// <summary>Label shown on the dashboard (MachineId). Simulation sources are labelled explicitly.</summary>
-    public string MachineLabel => !_replayEnabled ? _machineId : _source switch   // replay off = live UDP/HTTP ingest: label is whatever the operator configured
+    public string MachineLabel => _source == NodeLive ? _machineId + " [Node (live)]" : !_replayEnabled ? _machineId : _source switch   // replay off = live UDP/HTTP ingest: label is whatever the operator configured
     {
         TwinSim => _machineId + " [SIMULATION: twin demo]",
         Synthetic => _machineId + " [SYNTHETIC]",
         Up2 => _machineId + " [SYNTHETIC / SIMULATED SOURCE]",
+        NodeLive => _machineId + " [Node (live)]",
         _ => _machineId + " [REPLAY: XJTU-SY public data]",
     };
 }
@@ -94,6 +96,7 @@ public sealed class ReplaySource : BackgroundService
         while (!ct.IsCancellationRequested)
         {
             var ver = _ctl.Version; var src = _ctl.Source;
+            if (src == DemoControl.NodeLive) { await Task.Delay(500, ct); continue; }   // live node owns the pipeline
             List<WindowPayload> records;
             try { records = Records(src); }
             catch (Exception ex) { _log.LogError(ex, "REPLAY: cannot load source {Src}; replay stopped", src); return; }

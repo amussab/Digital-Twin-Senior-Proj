@@ -40,4 +40,5 @@ public sealed record PipelineState(
     DateTimeOffset? LastPayloadUtc,
     double LastProcessingMs,
     long PayloadCount,
-    double? PhysicsRulHours);
+    double? PhysicsRulHours,
+    LiveInfo? Live = null);

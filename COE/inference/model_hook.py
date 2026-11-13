@@ -25,19 +25,39 @@ FEATURES = ('rms', 'kurtosis', 'crest', 'envelope_rms', 'ftf', 'bsf', 'bpfo', 'b
 FEATURE_NAMES = [f'{channel}_{feature}' for channel in CHANNELS for feature in FEATURES]
 
 
+import os
+import sys
+from pathlib import Path
+
+_AI = Path(__file__).resolve().parents[2] / 'AI-engine'
+_live = None
+
+
 def setup():
-    """Load your model once. Example:
-        import joblib
-        return joblib.load('my_model.joblib')
-    """
-    return None
+    """Load the AI-engine NodeEngine (aiengine.node_live). Env: NODE_CONTRACT (default v3e_node; v4_real after
+    training), NODE_BASELINE (baseline JSON, loaded if present and saved when captured), NODE_SETTLE_S, NODE_BASELINE_S.
+    Falls back to a no-model summary if the AI-engine cannot be imported."""
+    global _live
+    if str(_AI) not in sys.path:
+        sys.path.insert(0, str(_AI))
+    try:
+        from aiengine import node_live
+    except Exception as error:  # keep the receiver alive; say so loudly
+        print(f'WARNING: AI-engine not importable ({type(error).__name__}: {error}); running with NO model.', flush=True)
+        return None
+    _live = node_live
+    model = node_live.setup()
+    print(f"NodeEngine ready: contract={os.environ.get('NODE_CONTRACT', 'v3e_node')}", flush=True)
+    return model
+
+
+def predict_full(window, model):
+    """Return (engine_output_dict_or_None, one_line_string). The receiver forwards the dict to the backend."""
+    if model is None or _live is None:
+        named = window['named']
+        return None, f"no model | B1X rms {named['B1X_rms'] * 1000:.2f} mg, B2Y rms {named['B2Y_rms'] * 1000:.2f} mg"
+    return _live.predict_full(window, model)
 
 
 def predict(window, model):
-    """Return your model's output for one window. Example:
-        return model.predict([window['features']])[0]
-    Until a model is added, this returns a short summary of the window.
-    """
-    named = window['named']
-    return (f"no model yet | B1X rms {named['B1X_rms'] * 1000:.2f} mg, "
-            f"B2Y rms {named['B2Y_rms'] * 1000:.2f} mg")
+    return predict_full(window, model)[1]

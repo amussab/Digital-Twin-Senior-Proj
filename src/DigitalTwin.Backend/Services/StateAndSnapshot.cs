@@ -59,7 +59,7 @@ public sealed class SnapshotFactory
             Math.Round(w.ConfidencePercent, 2), Math.Round(Math.Clamp((w.HealthIndex ?? 0) * 100, 0, 100), 2),
             Math.Round(s.LastProcessingMs, 3), connected, s.PhysicsRulHours, residual,
             BearingAlert(s.Bearings, 1), BearingAlert(s.Bearings, 2),
-            w.State == BearingStates.Ready ? w.Details?.HealthStage : null);
+            w.State == BearingStates.Ready ? w.Details?.HealthStage : null, s.Live);
     }
 }
 

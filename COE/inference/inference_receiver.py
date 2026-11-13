@@ -26,6 +26,7 @@ import queue
 import socket
 import threading
 import time
+import urllib.request
 from http.server import ThreadingHTTPServer
 
 HERE = Path(__file__).resolve().parent
@@ -65,6 +66,9 @@ class WindowSink:
     def write(self, text):
         message = json.loads(text)
         window = {
+            'epoch_received': time.time(),
+            'device_id': message['device_id'], 'session_id': message['session_id'],
+            'sequence': message['sequence'], 'replay': bool(message.get('replay', False)),
             'received_at': datetime.now().astimezone().isoformat(timespec='milliseconds'),
             'rpm': message['rpm'],
             'window_id': message['window_id'],
@@ -107,23 +111,96 @@ class InferenceServer(ThreadingHTTPServer):
     daemon_threads = True
 
 
-def run_model(windows, stats, stop):
-    model = model_hook.setup()
-    print('Model ready (model_hook.setup() done). Waiting for windows...', flush=True)
+BACKEND_URL = os.environ.get('BACKEND_URL', 'http://localhost:5080').rstrip('/')
+LOG_DIR = Path(os.environ.get('RIG_LOG_DIR', HERE.parents[1] / 'logs'))
+FWD_QUEUE_LIMIT = 20
+
+
+def backend_body(window, out, took_ms, contract):
+    """Camel-case JSON for POST /api/live/prediction."""
+    bearings = []
+    for b in (out or {}).get('bearings', []):
+        ok = b.get('status') == 'ok'
+        bearings.append({'bearing': b['bearing'], 'status': b.get('status', 'warming_up'),
+                         'faultClass': b.get('fault_class', 'warming_up'),
+                         'classProbs': b.get('class_probs') if ok else None,
+                         'confidence': b.get('confidence') if ok else None,
+                         'healthIndex': b.get('health_index') if ok else None,
+                         'healthStage': b.get('health_stage') if ok else None,
+                         'onsetDetected': b.get('onset_detected') if ok else None,
+                         'reason': b.get('reason')})
+    now = time.time()
+    return {'seq': window['sequence'], 'windowId': window['window_id'], 'rpm': float(window['rpm']),
+            'validChannels': window['valid_channels'], 'deviceId': window['device_id'],
+            'sessionId': window['session_id'], 'contract': contract,
+            'provenance': '[REPLAY of recorded rig data]' if window['replay'] else '[LIVE rig data]',
+            'features': window['features'], 'baselinePhase': (out or {}).get('baseline_phase'),
+            'inferenceMs': round(took_ms, 3),
+            'receivedAtMs': int(window['epoch_received'] * 1000), 'predictedAtMs': int(now * 1000),
+            'postedAtMs': int(now * 1000), 'bearings': bearings}
+
+
+def run_forwarder(fwd, stats, stop):
+    """Posts results to the backend. Never blocks the model or the node ACK; failures are counted and dropped."""
     while not stop.is_set():
         try:
-            window = windows.get(timeout=0.5)
+            body = fwd.get(timeout=0.5)
         except queue.Empty:
             continue
-        started = time.perf_counter()
+        body['postsDropped'] = stats['fwd_dropped']
+        body['postedAtMs'] = int(time.time() * 1000)
+        t = time.perf_counter()
         try:
-            result = model_hook.predict(window, model)
-        except Exception as error:  # keep receiving even if the model fails once
-            result = f'MODEL ERROR: {type(error).__name__}: {error}'
-        stats['done'] += 1
-        took_ms = (time.perf_counter() - started) * 1000
-        print(f"{window['received_at'][11:23]}  window {window['window_id']:>6}  "
-              f"{window['rpm']} RPM  ->  {result}   ({took_ms:.0f} ms)", flush=True)
+            req = urllib.request.Request(BACKEND_URL + '/api/live/prediction', json.dumps(body).encode(),
+                                         {'Content-Type': 'application/json'})
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                resp.read()
+            stats['fwd_ok'] += 1
+            stats['last_post_ms'] = (time.perf_counter() - t) * 1000
+        except Exception as error:
+            stats['fwd_dropped'] += 1
+            if stats['fwd_dropped'] in (1, 10) or stats['fwd_dropped'] % 100 == 0:
+                print(f"Backend {BACKEND_URL} unreachable ({type(error).__name__}); dropped {stats['fwd_dropped']} posts so far.", flush=True)
+
+
+def run_model(windows, stats, stop, fwd):
+    model = model_hook.setup()
+    contract = os.environ.get('NODE_CONTRACT', 'v3e_node')
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOG_DIR / f"live_{datetime.now():%Y%m%d_%H%M%S}.jsonl"
+    stats['log_path'] = str(log_path)
+    print(f'Model ready. Logging every window + prediction to {log_path}. Backend: {BACKEND_URL}', flush=True)
+    with open(log_path, 'a', encoding='utf-8') as log:
+        while not stop.is_set():
+            try:
+                window = windows.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            started = time.perf_counter()
+            out = None
+            try:
+                out, result = model_hook.predict_full(window, model)
+            except Exception as error:  # keep receiving even if the model fails once
+                result = f'MODEL ERROR: {type(error).__name__}: {error}'
+            stats['done'] += 1
+            took_ms = (time.perf_counter() - started) * 1000
+            body = backend_body(window, out, took_ms, contract)
+            e2e_pred_ms = (time.time() - window['epoch_received']) * 1000
+            try:
+                fwd.put_nowait(body)
+            except queue.Full:
+                stats['fwd_dropped'] += 1
+            log.write(json.dumps({'received_at': window['received_at'], 'device_id': window['device_id'],
+                                  'session_id': window['session_id'], 'sequence': window['sequence'],
+                                  'window_id': window['window_id'], 'rpm': window['rpm'],
+                                  'replay': window['replay'], 'contract': contract, 'features': window['features'],
+                                  'prediction': out, 'infer_ms': round(took_ms, 3),
+                                  'recv_to_prediction_ms': round(e2e_pred_ms, 3),
+                                  'last_post_ms': round(stats.get('last_post_ms', 0.0), 3),
+                                  'fwd_dropped': stats['fwd_dropped']}) + '\n')
+            log.flush()
+            print(f"{window['received_at'][11:23]}  window {window['window_id']:>6}  "
+                  f"{window['rpm']} RPM  ->  {result}   (recv->pred {e2e_pred_ms:.0f} ms)", flush=True)
 
 
 def local_ipv4s():
@@ -183,7 +260,7 @@ def main():
 
     windows = queue.Queue(maxsize=QUEUE_LIMIT)
     stats = {'last_seen': None, 'started': time.monotonic(), 'dropped': 0,
-             'dropped_reported': 0, 'done': 0}
+             'dropped_reported': 0, 'done': 0, 'fwd_ok': 0, 'fwd_dropped': 0}
     try:
         server = InferenceServer(('0.0.0.0', args.port), InferenceHandler)
     except OSError as error:
@@ -195,7 +272,9 @@ def main():
     server.feature_lock = threading.Lock()
 
     stop = threading.Event()
-    threading.Thread(target=run_model, args=(windows, stats, stop), daemon=True).start()
+    fwd = queue.Queue(maxsize=FWD_QUEUE_LIMIT)
+    threading.Thread(target=run_model, args=(windows, stats, stop, fwd), daemon=True).start()
+    threading.Thread(target=run_forwarder, args=(fwd, stats, stop), daemon=True).start()
     threading.Thread(target=run_beacon, args=(server.server_port, stop), daemon=True).start()
     threading.Thread(target=watch_feed, args=(stats, stop), daemon=True).start()
     print(f'COE inference receiver on port {server.server_port}. Connect this laptop to the '
@@ -208,7 +287,7 @@ def main():
         stop.set()
         server.server_close()
         print(f"Stopped. Windows run through the model: {stats['done']}, "
-              f"dropped: {stats['dropped']}.", flush=True)
+              f"dropped: {stats['dropped']}. Backend posts ok: {stats['fwd_ok']}, dropped: {stats['fwd_dropped']}.", flush=True)
 
 
 if __name__ == '__main__':

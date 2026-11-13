@@ -626,3 +626,47 @@ public class V3StreamTests : IClassFixture<V3EngineFactory>
         Assert.True(maxStage >= 3);
     }
 }
+
+public class LiveNodeTests : IClassFixture<BackendFactory>
+{
+    private readonly BackendFactory _f;
+    public LiveNodeTests(BackendFactory f) => _f = f;
+
+    private static object Body(int seq, double[]? feats = null) => new
+    {
+        seq, windowId = seq, rpm = 1800.0, deviceId = "coe-node-01", sessionId = "0123456789abcdef", contract = "v3e_node",
+        provenance = "[LIVE rig data]", features = feats ?? Enumerable.Range(0, 32).Select(i => 0.01 * (i + 1)).ToArray(),
+        inferenceMs = 5.0, receivedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), predictedAtMs = 0, postedAtMs = 0,
+        bearings = new object[]
+        {
+            new { bearing = 1, status = "ok", faultClass = "healthy", confidence = 0.8, healthStage = 2, onsetDetected = false,
+                  classProbs = new Dictionary<string, double> { ["healthy"] = 0.8, ["cage"] = 0.2 } },
+            new { bearing = 2, status = "warming_up", faultClass = "warming_up", reason = "baseline 3/90" },
+        },
+    };
+
+    [Fact]
+    public async Task LivePrediction_ReachesSnapshotWithProvenance_AndNoPhysics()
+    {
+        var c = _f.CreateClient();
+        var r = await c.PostAsJsonAsync("/api/live/prediction", Body(1));
+        Assert.Equal(HttpStatusCode.Accepted, r.StatusCode);
+        var live = await c.GetFromJsonAsync<JsonElement>("/api/live/latest");
+        Assert.Equal("[LIVE rig data]", live.GetProperty("provenance").GetString());
+        Assert.Equal(32, live.GetProperty("features").GetArrayLength());
+        var state = await c.GetFromJsonAsync<JsonElement>("/api/state");
+        var snap = state.GetProperty("snapshot");
+        Assert.Equal("Healthy", snap.GetProperty("faultClass").GetString());
+        Assert.Contains("[Node (live)]", snap.GetProperty("machineId").GetString());
+        Assert.Equal(JsonValueKind.Null, snap.GetProperty("physicsRulHours").ValueKind);
+        Assert.True(snap.GetProperty("aiRulHours").GetDouble() < 0);   // RUL n/a on node features
+    }
+
+    [Fact]
+    public async Task LivePrediction_RejectsWrongFeatureCount()
+    {
+        var c = _f.CreateClient();
+        var r = await c.PostAsJsonAsync("/api/live/prediction", Body(2, new double[] { 1, 2, 3 }));
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+    }
+}
