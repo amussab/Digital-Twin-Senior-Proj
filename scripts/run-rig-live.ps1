@@ -43,7 +43,7 @@ $env:NODE_CONTRACT = $Contract
 if ($Baseline) { $env:NODE_BASELINE = (Resolve-Path -LiteralPath $Baseline -ErrorAction SilentlyContinue) ; if (-not $env:NODE_BASELINE) { $env:NODE_BASELINE = (Join-Path $root $Baseline) } }
 if ($SettleS) { $env:NODE_SETTLE_S = $SettleS }
 if ($BaselineS) { $env:NODE_BASELINE_S = $BaselineS }
-$env:BACKEND_URL = "http://localhost:$BackendPort"
+$env:BACKEND_URL = "http://127.0.0.1:$BackendPort"
 $env:RIG_LOG_DIR = $logs
 $env:PYTHONUNBUFFERED = '1'
 $rx = Start-Process $py -PassThru -WindowStyle Minimized -WorkingDirectory (Join-Path $root 'COE/inference') `

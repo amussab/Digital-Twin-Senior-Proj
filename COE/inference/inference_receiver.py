@@ -111,7 +111,7 @@ class InferenceServer(ThreadingHTTPServer):
     daemon_threads = True
 
 
-BACKEND_URL = os.environ.get('BACKEND_URL', 'http://localhost:5080').rstrip('/')
+BACKEND_URL = os.environ.get('BACKEND_URL', 'http://127.0.0.1:5080').rstrip('/')
 LOG_DIR = Path(os.environ.get('RIG_LOG_DIR', HERE.parents[1] / 'logs'))
 FWD_QUEUE_LIMIT = 20
 

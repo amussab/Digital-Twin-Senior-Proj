@@ -89,3 +89,17 @@ AI-engine/data/cache_up2, AI-engine/checkpoints/up2_v3.
 - Agent A BUILD (2026-11-13): compiler arrived; tools/build.ps1 -Mode LIVE built clean (0 warnings after initialising pipeline.c geometry outputs; the
   predecessor code otherwise compiled once the string-literal bug was fixed). Release in firmware/stm32/release/rig_runtime_config/ (commit 0c0a251):
   CM7 SHA256 397f4fe2..., CM4 ec012521... (full in SHA256SUMS.txt), BUILD_INFO.txt. NOT flashed. Order: preflight_fw.ps1, flash_release.ps1, node_config.py --query.
+
+## Agent C (integration) -- 2026-11-13
+- Path (a): receiver (COE/inference) runs NodeEngine via model_hook -> aiengine.node_live.predict_full, POSTs camelCase JSON to backend
+  POST /api/live/prediction (non-blocking forwarder, queue 20, drop+count). Backend maps it to state + SignalR snapshot (new `Live` block);
+  NO C# model runs (C# contracts are v3b, invalid for node features). RUL = n/a, physics twin = "n/a: node sends features only".
+  Stage/health index shown but labelled unvalidated on node data. Provenance badge: "[LIVE rig data]"; replayer sets "replay":true -> "[REPLAY of recorded rig data]".
+- Local-network guard (C5/I1) unchanged; new endpoints /api/live/prediction, /api/live/render-ack, /api/live/latest.
+- Start: scripts/run-rig-live.ps1 [-Contract v4_real -Baseline path.json -SettleS -BaselineS]; stop: scripts/stop-rig-live.ps1. Uses dotnet (Docker daemon not used).
+  Logs in logs/ (git-ignored): backend.log, receiver.log, live_<time>.jsonl (every window + prediction + latencies). Metrics: GET :5080/api/metrics (live_* stages).
+- Rehearsal: COE/inference/replay_node.py <jsonl|csv> --rpm-override 1800 --speed 10 (use 127.0.0.1; "localhost" adds ~2 s IPv6 fallback on Windows).
+- [MEASURED host, replayed rig data] 931 windows: node-ACK RTT p50 6.4 / p95 26 ms; inference p50 4.4 / p95 10 ms; laptop-receive->backend-ack p50 9 / p95 31 ms;
+  laptop-receive->dashboard render (headless Edge, no GPU) p50 288 / p95 353 ms. Node->laptop Wi-Fi hop NOT measurable (node sends no timestamp).
+- Dashboard SignalR channel capacity 64 -> 2 (latest wins; 64 gave ~600 ms render lag). Screenshot: Repo/rig_data/rehearsal_dashboard.png.
+- dotnet test: 37 passed (2 new LiveNodeTests).

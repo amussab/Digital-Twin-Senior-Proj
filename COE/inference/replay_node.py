@@ -41,7 +41,7 @@ def load(path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('source')
-    ap.add_argument('--host', default='localhost')
+    ap.add_argument('--host', default='127.0.0.1')
     ap.add_argument('--port', type=int, default=8000)
     ap.add_argument('--rpm-override', type=int)
     ap.add_argument('--speed', type=float, default=1.0)

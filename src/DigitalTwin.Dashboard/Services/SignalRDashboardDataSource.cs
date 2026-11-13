@@ -16,7 +16,7 @@ public sealed class SignalRDashboardDataSource : IDashboardDataSource
 
     public async IAsyncEnumerable<DashboardSnapshot> StreamAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var channel = Channel.CreateBounded<DashboardSnapshot>(new BoundedChannelOptions(64)
+        var channel = Channel.CreateBounded<DashboardSnapshot>(new BoundedChannelOptions(2)   // latest-wins: a deep queue adds seconds of render lag
         { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true });
 
         await using var conn = new HubConnectionBuilder().WithUrl(_hubUrl).WithAutomaticReconnect().Build();
