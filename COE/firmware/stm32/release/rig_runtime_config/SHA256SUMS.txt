@@ -1,0 +1,2 @@
+ec012521278ac0aefd0bf684bd5c08775c0d11da6391567fcf579ce5e45c1d4c  coe_firmware_CM4.elf
+397f4fe2fa1376e83902075a7ef2e65e3f25a4719ba913b00a18d25afe722fb3  coe_firmware_CM7_LIVE.elf
