@@ -1,16 +1,16 @@
 <#
 .SYNOPSIS
-Flash the prebuilt ELFs in release\rig_1800_runtime_rpm (CM4 + CM7 LIVE) through the ST-LINK. No build.
+Flash the prebuilt ELFs in release\rig_runtime_config (CM4 + CM7 LIVE) through the ST-LINK. No build.
 
 .DESCRIPTION
 Switch the 24 V supply (ADC power) off first: during reset the STM32 pins float until the
 firmware holds them low again. Same programmer commands as flash.ps1.
-Afterwards: switch 24 V on, wait for the green LED, then  python training\node_rpm.py --query
+Afterwards: switch 24 V on, wait for the green LED, then  python training\node_config.py --query
 
 .EXAMPLE
 .\tools\flash_release.ps1
 #>
-param([string]$Folder = (Join-Path (Split-Path -Parent $PSScriptRoot) 'release\rig_1800_runtime_rpm'))
+param([string]$Folder = (Join-Path (Split-Path -Parent $PSScriptRoot) 'release\rig_runtime_config'))
 
 . "$PSScriptRoot\common.ps1"
 Write-Host 'REMINDER: switch the 24 V supply OFF before flashing.' -ForegroundColor Yellow
@@ -37,4 +37,4 @@ foreach ($name in @('coe_firmware_CM4.elf', 'coe_firmware_CM7_LIVE.elf')) {
 }
 & $ProgrammerCli -c port=SWD mode=UR -hardRst | Out-Null
 Write-Host 'Flashed LIVE (1800 RPM default, runtime RPM command) on both cores and reset the board.'
-Write-Host 'Now: switch 24 V ON, wait for the green LED, then: python training\node_rpm.py --query' -ForegroundColor Yellow
+Write-Host 'Now: switch 24 V ON, wait for the green LED, then: python training\node_config.py --query' -ForegroundColor Yellow

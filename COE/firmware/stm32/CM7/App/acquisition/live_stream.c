@@ -11,6 +11,7 @@
 #include "main.h"
 #include "pipeline.h"
 #include "rpm_command.h"
+#include <stdio.h>
 #include <string.h>
 
 volatile bool live_calibrated;
@@ -26,6 +27,10 @@ volatile float live_dsp_load_percent;
 volatile float live_last_rms[COE_CHANNEL_COUNT];
 volatile float live_last_window_latency_ms;
 volatile float live_max_window_latency_ms;
+
+#ifndef COE_FW_VERSION /* The CMake build passes the git short hash. */
+#define COE_FW_VERSION __DATE__
+#endif
 
 #define REPORT_MS 1000U
 #define LATENCY_LIMIT_MS 333.0f /* S2: features within 333 ms of the window's end. */
@@ -46,6 +51,12 @@ static PipelineEnvelopeBuffer envelope_buffer
 static float input[COE_CHANNEL_COUNT][AD7606_BLOCK_FRAMES];
 static uint32_t current_rpm = COE_LIVE_NOMINAL_RPM; /* Power-up default; not saved anywhere. */
 static uint32_t pending_rpm;  /* Requested by the laptop, applied at the next window end; 0 = none. */
+/* Bearing orders in use. The pipeline points at active_profile; it is only rewritten in
+ * apply_pending(), right before the pipeline restarts. Id stays 1 (project bearing) in packets;
+ * the runtime orders are reported by CONFIG? only. */
+static BearingFeatureProfile active_profile;
+static BearingFeatureProfile pending_profile;
+static bool has_pending_bearing;
 static bool window_closed;    /* A window ended in the block just processed. */
 static bool stream_ok;
 static uint32_t handled_gaps;
@@ -119,42 +130,95 @@ static bool on_window(const PipelineWindowResult *result, void *context)
 static void restart_stream(void)
 {
     stream_ok = pipeline_init(&pipeline, current_rpm, &envelope_buffer, &workspace,
-                              &COE_LIVE_BEARING_PROFILE, on_window, NULL);
+                              &active_profile, on_window, NULL);
     if (!stream_ok)
         ++live_pipeline_errors;
 }
 
-/** NULL if the node can run at this speed, else a short reason. */
-static const char *rpm_reject_reason(uint32_t rpm)
+/** "0.4518" style text (4 decimals); console_fixed2 has only two. */
+static const char *fixed4(char *text, size_t size, float x)
+{
+    const uint32_t v = (uint32_t)((double)x * 10000.0 + 0.5);
+    snprintf(text, size, "%lu.%04lu", (unsigned long)(v / 10000U), (unsigned long)(v % 10000U));
+    return text;
+}
+
+/** NULL if the node can run at this speed with this bearing, else a short reason. */
+static const char *reject_reason(uint32_t rpm, const BearingFeatureProfile *profile)
 {
     if (rpm < COE_MIN_RPM || rpm > COE_MAX_RPM)
         return "out of range 60..3600";
-    if (!frequency_profile_is_valid(&COE_LIVE_BEARING_PROFILE, rpm))
+    if (!frequency_profile_is_valid(profile, rpm))
         return "bearing bands do not fit at this speed";
-    if (!pipeline_rpm_supported(rpm, &COE_LIVE_BEARING_PROFILE))
+    if (!pipeline_rpm_supported(rpm, profile))
         return "window does not fit";
     return NULL;
 }
 
-/** Start the pending speed: the pipeline restarts exactly as at start-up (new window,
- * filters cleared). Called only between blocks in the main loop, at a window end. */
-static void apply_pending_rpm(void)
+/** The bearing a new speed would run with: the pending one if any, else the active one. */
+static const BearingFeatureProfile *target_profile(void)
 {
-    const uint32_t wanted = pending_rpm, old = current_rpm;
+    return has_pending_bearing ? &pending_profile : &active_profile;
+}
+
+/** The speed a new bearing would run at: the pending one if any, else the current one. */
+static uint32_t target_rpm(void)
+{
+    return pending_rpm != 0U ? pending_rpm : current_rpm;
+}
+
+static void emit_bearing(const char *prefix, const BearingFeatureProfile *p)
+{
+    char a[16], b[16], c[16], d[16], h[16];
+    console_emit("%s ftf=%s bsf=%s bpfo=%s bpfi=%s hw=%s", prefix,
+                 fixed4(a, sizeof(a), p->orders[COE_FTF]), fixed4(b, sizeof(b), p->orders[COE_BSF]),
+                 fixed4(c, sizeof(c), p->orders[COE_BPFO]), fixed4(d, sizeof(d), p->orders[COE_BPFI]),
+                 fixed4(h, sizeof(h), p->half_width_order));
+}
+
+/** Start the pending speed/bearing: the pipeline restarts exactly as at start-up (new window,
+ * filters cleared). Called only between blocks in the main loop, at a window end, or when
+ * nothing is streaming. Both were validated together when accepted. */
+static void apply_pending(void)
+{
+    const uint32_t old_rpm = current_rpm;
+    const BearingFeatureProfile old_profile = active_profile;
+    const bool rpm_changed = pending_rpm != 0U, bearing_changed = has_pending_bearing;
+    if (rpm_changed)
+        current_rpm = pending_rpm;
+    if (bearing_changed)
+        active_profile = pending_profile;
     pending_rpm = 0U;
-    current_rpm = wanted;
+    has_pending_bearing = false;
     restart_stream();
-    if (!stream_ok) /* Not expected: the speed was checked when it was accepted. */
+    if (!stream_ok) /* Not expected: it was checked when accepted. */
     {
-        current_rpm = old;
+        current_rpm = old_rpm;
+        active_profile = old_profile;
         restart_stream();
-        console_emit("@ERR RPM %lu pipeline refused it, back to %lu
-",
-                     (unsigned long)wanted, (unsigned long)old);
+        console_emit("@ERR APPLY pipeline refused it, back to rpm=%lu\r\n", (unsigned long)old_rpm);
         return;
     }
-    console_emit("@OK RPM %lu
-", (unsigned long)wanted);
+    if (rpm_changed)
+        console_emit("@OK RPM %lu\r\n", (unsigned long)current_rpm);
+    if (bearing_changed)
+    {
+        emit_bearing("@OK BEARING", &active_profile);
+        console_emit("\r\n");
+    }
+}
+
+static void emit_config(void)
+{
+    char pending[12];
+    if (pending_rpm != 0U)
+        snprintf(pending, sizeof(pending), "%lu", (unsigned long)pending_rpm);
+    else
+        snprintf(pending, sizeof(pending), "none");
+    char head[48];
+    snprintf(head, sizeof(head), "@CONFIG rpm=%lu pending_rpm=%s", (unsigned long)current_rpm, pending);
+    emit_bearing(head, &active_profile);
+    console_emit(" pending_bearing=%s fw=%s\r\n", has_pending_bearing ? "yes" : "none", COE_FW_VERSION);
 }
 
 /** One command line from the laptop. Replies start with '@' so a host can find them. */
@@ -162,32 +226,41 @@ static void handle_command(const char *line)
 {
     const rpm_command_t command = rpm_command_parse(line);
     if (command.kind == RPM_CMD_QUERY)
-    {
-        if (pending_rpm != 0U)
-            console_emit("@RPM %lu PENDING %lu
-", (unsigned long)current_rpm, (unsigned long)pending_rpm);
-        else
-            console_emit("@RPM %lu PENDING none
-", (unsigned long)current_rpm);
-    }
+        emit_config();
     else if (command.kind == RPM_CMD_SET)
     {
-        const char *reason = rpm_reject_reason(command.rpm);
+        const char *reason = reject_reason(command.rpm, target_profile());
         if (reason != NULL)
-            console_emit("@ERR RPM %lu %s
-", (unsigned long)command.rpm, reason);
+            console_emit("@ERR RPM %lu %s\r\n", (unsigned long)command.rpm, reason);
         else if (command.rpm == current_rpm)
         {
             pending_rpm = 0U; /* Also cancels an earlier, different request. */
-            console_emit("@OK RPM %lu
-", (unsigned long)current_rpm);
+            console_emit("@OK RPM %lu\r\n", (unsigned long)current_rpm);
         }
         else
             pending_rpm = command.rpm; /* A newer request replaces an older pending one. */
     }
+    else if (command.kind == RPM_CMD_BEARING)
+    {
+        BearingFeatureProfile candidate = active_profile;
+        for (uint32_t i = 0U; i < COE_BEARING_FAMILIES; ++i)
+            candidate.orders[i] = command.orders[i];
+        if (command.has_half_width)
+            candidate.half_width_order = command.half_width;
+        const char *reason = reject_reason(target_rpm(), &candidate);
+        if (reason != NULL)
+        {
+            emit_bearing("@ERR BEARING", &candidate);
+            console_emit(" %s at %lu RPM\r\n", reason, (unsigned long)target_rpm());
+        }
+        else
+        {
+            pending_profile = candidate;
+            has_pending_bearing = true;
+        }
+    }
     else
-        console_emit("@ERR RPM ? use RPM <n> or RPM?
-");
+        console_emit("@ERR CMD use RPM <n>, BEARING <ftf> <bsf> <bpfo> <bpfi> [hw], CONFIG?\r\n");
 }
 
 static void reset_counters(void)
@@ -260,8 +333,8 @@ static void consume_blocks(void)
         {
             window_closed = false;
             process_block(block, status.frames - (start + AD7606_BLOCK_FRAMES));
-            if (window_closed && pending_rpm != 0U)
-                apply_pending_rpm(); /* A window just ended: safe point to change speed. */
+            if (window_closed && (pending_rpm != 0U || has_pending_bearing))
+                apply_pending(); /* A window just ended: safe point to change speed. */
         }
         else
             ++live_discarded_blocks;
@@ -310,13 +383,14 @@ bool live_stream_init(void)
         scale[channel] = live_calibrated ? AD7606_VOLTS_PER_COUNT / volts_per_g[channel]
                                          : AD7606_VOLTS_PER_COUNT;
 
+    active_profile = COE_LIVE_BEARING_PROFILE; /* Power-up default; runtime BEARING changes the copy. */
     restart_stream();
     console_rx_init();
     console_banner("LIVE: AD7606 -> DSP -> ESP32");
     console_emit("Speed %u RPM (the laptop can change it: RPM <n>), window %lu revolutions (%lu samples), bearing profile %lu,"
                  " channels %s/%s/%s/%s = AIN2/4/6/8.\r\n",
                  (unsigned)current_rpm, (unsigned long)pipeline.window_revolutions,
-                 (unsigned long)pipeline.window_samples, (unsigned long)COE_LIVE_BEARING_PROFILE.id,
+                 (unsigned long)pipeline.window_samples, (unsigned long)active_profile.id,
                  channel_names[0], channel_names[1], channel_names[2], channel_names[3]);
     console_emit(live_calibrated
                      ? "Calibrated (live_config.h): input in g, packets sent to the ESP32.\r\n"
@@ -372,8 +446,8 @@ void live_stream_poll(void)
         handle_command(command_line);
 
     consume_blocks();
-    if (pending_rpm != 0U && !ad7606_running())
-        apply_pending_rpm(); /* Nothing streaming: no window to wait for. */
+    if ((pending_rpm != 0U || has_pending_bearing) && !ad7606_running())
+        apply_pending(); /* Nothing streaming: no window to wait for. */
 
     if (ad7606_running() && (uint32_t)(HAL_GetTick() - report_tick) >= REPORT_MS)
     {

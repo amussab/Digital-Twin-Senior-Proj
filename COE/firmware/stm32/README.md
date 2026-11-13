@@ -187,24 +187,29 @@ second a status line (rate, windows, packets, gaps, DSP load, UART). Run 10 minu
 or more for the proof run; gaps, dropped blocks, restarts and stalls must stay 0.
 Packets go to the ESP32 only after calibration is set (section 2.1).
 
-#### Runtime RPM (LIVE)
+#### Runtime configuration (LIVE)
 
-The LIVE build listens on the ST-LINK virtual COM port (115200 8N1, USART3 RX interrupt into a ring;
-lines are parsed in the main loop). Commands end with 
- or :
+The LIVE build listens on the ST-LINK virtual COM port (115200 8N1, USART3 RX interrupt into a 128-byte ring;
+lines up to 95 characters are parsed in the main loop). Commands end with LF or CR, case does not matter:
 
-- `RPM <n>`: checked against 60..3600, `frequency_profile_is_valid` and the pipeline window size
-  (`pipeline_rpm_supported`). If valid it becomes pending and is applied right after the next window
-  ends: the pipeline is re-initialised like at start-up (window and filters reset). Reply `@OK RPM <n>`;
-  invalid: `@ERR RPM <n> <reason>`, old speed kept.
-- `RPM?`: reply `@RPM <current> PENDING <n|none>`.
+- `RPM <n>`: checked against 60..3600, `frequency_profile_is_valid` for the active (or pending) bearing and the
+  window size. If valid it becomes pending and is applied right after the next window ends (pipeline
+  re-initialised like at start-up). Reply `@OK RPM <n>`; invalid: `@ERR RPM <n> <reason>`, old speed kept.
+- `BEARING <ftf> <bsf> <bpfo> <bpfi> [half_width]`: orders as multiples of shaft speed (decimals, 0 < x < 100),
+  validated at the current (or pending) RPM, applied at the same boundary. Reply `@OK BEARING ftf=.. hw=..` or
+  `@ERR BEARING ... <reason>`. A later `RPM` is validated against the active/pending bearing and rejected if
+  the bands do not fit. The packet's `bearing_profile` field stays 1 (project bearing); the runtime orders are
+  reported by `CONFIG?` only.
+- `CONFIG?` (and `RPM?`): `@CONFIG rpm=<n> pending_rpm=<n|none> ftf= bsf= bpfo= bpfi= hw= pending_bearing=<yes|none> fw=<git hash>`.
 
-Replies start with `@` so a host finds them among the log lines. Parser: `CM7/App/acquisition/rpm_command.c`
-(pure C). Power-up default is `COE_LIVE_NOMINAL_RPM` (1800); nothing is stored in flash. Host tool:
-`training/node_rpm.py`. The USB cable must be in the laptop. Untested on the board until first flash.
+Replies start with `@` so a host finds them among the log lines (a reply can be lost if the 3-KB log queue is
+full; hosts retry). Power-up defaults: 1800 RPM, bearing {0.4518, 5.1393, 4.9699, 6.0301}, hw 0.08; nothing is
+stored (the host re-sends). Parser: `CM7/App/acquisition/rpm_command.c` (pure C; Python mirror test in
+`tools/tests/`). Host tool: `training/node_config.py` (`node_rpm.py` is a wrapper). Untested on the board.
 
-**Saturday flash (prebuilt files in `release/rig_1800_runtime_rpm/`):** 24 V off, plug the ST-LINK USB,
-run `tools/flash_release.ps1`, 24 V on, wait for the green LED, then `python training/node_rpm.py --query`.
+**Flash (prebuilt files in `release/rig_runtime_config/`):** 24 V off, plug the ST-LINK USB, run
+`tools/preflight_fw.ps1` (report only), then `tools/flash_release.ps1`, 24 V on, wait for the green LED, then
+`python training/node_config.py --query`.
 
 ### 2.6 Test 4: delivery to the host through the ESP32
 

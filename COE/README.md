@@ -43,7 +43,7 @@ The node has **no tachometer**: the speed it uses (to size the window and place 
 is only a setting, so the number you type must match the VFD.
 
 1. Plug the **STM32 USB cable into the laptop** (the ST-LINK port; the ESP link is separate).
-2. `python training/node_rpm.py 3600` sets 3600 RPM; `python training/node_rpm.py --query` reads it.
+2. `python training/node_config.py --rpm 3600` sets 3600 RPM (also `--bearing ...`, `--query`.
    The recorder page (training/README.md) has the same control.
 3. The node applies it at the next window end (a window is at most 0.72 s), restarts its filters as at
    start-up, and answers `@OK RPM 3600`. Every packet carries the RPM actually used for its window.

@@ -227,10 +227,10 @@ void console_update_leds(bool running, bool error)
 
 /* Receive: the interrupt only stores bytes in a ring; lines are built in the main loop.
  * The ring is written by the interrupt (head) and read by the main loop (tail). */
-#define RX_RING 64U
+#define RX_RING 128U /* 128 = power of two; holds a full 96-char line plus the next command. */
 static volatile uint8_t rx_ring[RX_RING];
 static volatile uint32_t rx_head;
-static uint32_t rx_tail;
+static volatile uint32_t rx_tail; /* Written by the main loop, read by the interrupt. */
 static rpm_line_t rx_line;
 
 void USART3_IRQHandler(void)
