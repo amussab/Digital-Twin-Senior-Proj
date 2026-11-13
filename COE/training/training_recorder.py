@@ -55,6 +55,10 @@ LABELS = [
     ('cage', 'Cage fault'),
 ]
 LABEL_NAMES = dict(LABELS)
+# Health level of the mounted bearing (0 = healthy). Training maps it to a health stage.
+SEVERITIES = [(0, '0 Healthy'), (1, '1 Incipient'), (2, '2 Moderate'), (3, '3 Severe')]
+# Which sensor bearing holds the faulty part: training labels the other one healthy.
+POSITIONS = [('both', 'Both bearings'), ('b1', 'Bearing 1 (B1 sensors)'), ('b2', 'Bearing 2 (B2 sensors)')]
 
 # Channel-major order, see coe_firmware/README.md section 6.
 CHANNELS = ('B1X', 'B1Y', 'B2X', 'B2Y')
@@ -62,6 +66,10 @@ FEATURES = ('rms', 'kurtosis', 'crest', 'envelope_rms', 'ftf', 'bsf', 'bpfo', 'b
 FEATURE_COLUMNS = [f'{channel}_{feature}' for channel in CHANNELS for feature in FEATURES]
 CSV_COLUMNS = ['run_id', 'label', 'note', 'received_at', 'rpm', 'window_id', 'sequence',
                'device_id', 'valid_channels'] + FEATURE_COLUMNS
+# Added later: appended at the END so older readers/CSVs keep working (read by header name).
+EXTRA_COLUMNS = ['severity', 'bearing_id', 'position', 'is_baseline']
+CSV_COLUMNS = CSV_COLUMNS + EXTRA_COLUMNS
+META_KEYS = ('run_id', 'label', 'note', 'started_at', 'stopped_at') + tuple(EXTRA_COLUMNS)
 
 BEACON_PORT = 8001
 BEACON_PERIOD_S = 2.0
@@ -98,7 +106,7 @@ class Recorder:
         return self.dir / f'{run_id}.jsonl'
 
     def _write_meta(self, meta):
-        data = {key: meta[key] for key in ('run_id', 'label', 'note', 'started_at', 'stopped_at')}
+        data = {key: meta.get(key) for key in META_KEYS}
         path = self._meta_path(meta['run_id'])
         temp = path.with_suffix('.json.tmp')
         temp.write_text(json.dumps(data, indent=2), encoding='utf-8')
@@ -129,24 +137,46 @@ class Recorder:
                     raise ValueError('unknown label')
                 meta['run_id'] = run_id
                 meta.setdefault('note', '')
-                windows, rpms, last = 0, set(), None
+                # Runs recorded before the health-level fields existed: healthy = 0, faulty = unknown.
+                if meta.get('severity') is None:
+                    meta['severity'] = 0 if meta['label'] == 'healthy' else None
+                meta['bearing_id'] = str(meta.get('bearing_id') or '')
+                meta['position'] = meta.get('position') if meta.get('position') in dict(POSITIONS) else 'both'
+                meta['is_baseline'] = bool(meta.get('is_baseline'))
+                windows, rpms, last, rpm_windows = 0, set(), None, {}
                 for row in self.rows(run_id):
                     windows += 1
-                    rpms.add(row['message'].get('rpm'))
+                    rpm = row['message'].get('rpm')
+                    rpms.add(rpm)
+                    rpm_windows[rpm] = rpm_windows.get(rpm, 0) + 1
                     last = row.get('received_at')
                 if not meta.get('stopped_at'):
                     # The script was closed while this run was recording: close it now.
                     meta['stopped_at'] = last or meta['started_at']
                     self._write_meta(meta)
-                meta['windows'], meta['rpms'] = windows, rpms
+                meta['windows'], meta['rpms'], meta['rpm_windows'] = windows, rpms, rpm_windows
                 self.runs[run_id] = meta
             except (OSError, ValueError, KeyError, TypeError) as error:
                 print(f'Skipping {meta_path.name}: {error}', flush=True)
 
-    def start(self, label, note):
+    def start(self, label, note, severity=None, bearing_id='', position='both', is_baseline=False):
         if label not in LABEL_NAMES:
             raise ValueError('Unknown label')
         note = ' '.join(str(note or '').split())[:200]
+        is_baseline = bool(is_baseline)
+        if severity is None:
+            severity = 0 if label == 'healthy' else 2
+        if isinstance(severity, bool) or severity not in (0, 1, 2, 3):
+            raise ValueError('Health level must be 0, 1, 2 or 3')
+        if label == 'healthy' and severity != 0:
+            raise ValueError('A healthy bearing has health level 0')
+        if label != 'healthy' and severity == 0:
+            raise ValueError('A faulty bearing needs health level 1, 2 or 3')
+        if is_baseline and label != 'healthy':
+            raise ValueError('The commissioning baseline must be a healthy run')
+        if position not in dict(POSITIONS):
+            raise ValueError('Unknown position')
+        bearing_id = ' '.join(str(bearing_id or '').split())[:40]
         with self.lock:
             if self.active:
                 raise RuntimeError('Already recording. Stop first.')
@@ -158,10 +188,11 @@ class Recorder:
                 number += 1
                 run_id = f'{base}_{number}'
             meta = {'run_id': run_id, 'label': label, 'note': note,
-                    'started_at': now_iso(), 'stopped_at': None}
+                    'started_at': now_iso(), 'stopped_at': None, 'severity': severity,
+                    'bearing_id': bearing_id, 'position': position, 'is_baseline': is_baseline}
             self._write_meta(meta)
             self._rows_path(run_id).touch()
-            meta['windows'], meta['rpms'] = 0, set()
+            meta['windows'], meta['rpms'], meta['rpm_windows'] = 0, set(), {}
             self.runs[run_id] = meta
             self.active = run_id
             print(f'Recording started: {run_id} label={label}', flush=True)
@@ -224,6 +255,7 @@ class Recorder:
             meta = self.runs[self.active]
             meta['windows'] += 1
             meta['rpms'].add(message['rpm'])
+            meta['rpm_windows'][message['rpm']] = meta['rpm_windows'].get(message['rpm'], 0) + 1
 
     def status(self):
         with self.lock:
@@ -239,10 +271,28 @@ class Recorder:
                     'duration_s': round(max(0.0, end - start), 1), 'windows': meta['windows'],
                     'rpm': ', '.join(str(r) for r in sorted(r for r in meta['rpms'] if r is not None)),
                     'recording': meta['run_id'] == self.active,
+                    'severity': meta['severity'], 'bearing_id': meta['bearing_id'],
+                    'position': meta['position'], 'is_baseline': meta['is_baseline'],
                 })
             summary = {key: 0 for key, _ in LABELS}
             for meta in self.runs.values():
                 summary[meta['label']] += meta['windows']
+            # Minutes recorded per (condition, health level, rpm); one window = 20 revolutions = 1200/rpm s.
+            cover = {}
+            for meta in self.runs.values():
+                cond = 'baseline' if meta['is_baseline'] else meta['label']
+                for rpm, count in meta['rpm_windows'].items():
+                    if not rpm:
+                        continue
+                    key = (cond, meta['severity'], rpm)
+                    item = cover.setdefault(key, {'condition': cond, 'severity': meta['severity'],
+                                                  'rpm': rpm, 'runs': 0, 'windows': 0, 'minutes': 0.0})
+                    item['runs'] += 1
+                    item['windows'] += count
+                    item['minutes'] += count * 1200.0 / rpm / 60.0
+            coverage = sorted(cover.values(), key=lambda c: (c['condition'], -1 if c['severity'] is None else c['severity'], c['rpm']))
+            for item in coverage:
+                item['minutes'] = round(item['minutes'], 2)
             last = None
             if self.last_packet:
                 seen, message = self.last_packet
@@ -250,7 +300,7 @@ class Recorder:
                         'valid_channels': message.get('valid_channels'),
                         'device_id': message.get('device_id')}
             active = next((run for run in runs if run['recording']), None)
-            return {'recording': active, 'last_packet': last, 'runs': runs, 'summary': summary,
+            return {'recording': active, 'last_packet': last, 'runs': runs, 'summary': summary, 'coverage': coverage,
                     'beacon_ips': list(self.beacon_ips), 'rpm_busy': self.rpm_busy}
 
     def csv_bytes(self, run_ids):
@@ -266,7 +316,10 @@ class Recorder:
                 writer.writerow([meta['run_id'], meta['label'], meta['note'], row.get('received_at'),
                                  message.get('rpm'), message.get('window_id'), message.get('sequence'),
                                  message.get('device_id'), message.get('valid_channels')]
-                                + list(message.get('features', [])))
+                                + list(message.get('features', []))
+                                + ['' if meta.get('severity') is None else meta['severity'],
+                                   meta.get('bearing_id', ''), meta.get('position', 'both'),
+                                   int(bool(meta.get('is_baseline')))])
         return text.getvalue().encode('utf-8')
 
 
@@ -313,7 +366,9 @@ class RecorderHandler(host_receiver.FeatureHandler):
             if not isinstance(body, dict):
                 raise ValueError('Expected a JSON object')
             if self.path == '/api/start':
-                run_id = recorder.start(body.get('label'), body.get('note', ''))
+                run_id = recorder.start(body.get('label'), body.get('note', ''), body.get('severity'),
+                                        body.get('bearing_id', ''), body.get('position', 'both'),
+                                        body.get('is_baseline', False))
                 self.reply(200, {'ok': True, 'run_id': run_id})
             elif self.path == '/api/rpm':
                 value = body.get('rpm')
@@ -454,6 +509,11 @@ h2 { margin:0 0 14px; font-size:17px; font-weight:600; color:var(--muted); }
 .selected b { color:var(--c); }
 .hint { color:var(--muted); font-size:14px; margin-left:8px; }
 .rec-row { display:flex; gap:20px; align-items:flex-end; }
+.opts { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px 18px; margin-bottom:16px; align-items:end; }
+.opts label { font-weight:600; color:var(--muted); font-size:14px; }
+.opts select, .opts input[type=text], .opts input:not([type]) { display:block; width:100%; margin-top:6px; padding:10px 12px; font-size:16px; border:2px solid var(--line); border-radius:10px; background:#fff; }
+.opts .chk { grid-column:1 / -1; display:flex; gap:10px; align-items:center; }
+.opts .chk input { width:20px; height:20px; margin:0; }
 .note { flex:1; }
 .note label { display:block; font-weight:600; color:var(--muted); margin-bottom:6px; }
 .note input { width:100%; padding:12px 14px; font-size:16px; border:2px solid var(--line); border-radius:10px; }
@@ -530,6 +590,12 @@ td a { color:#1f5fa8; font-weight:600; }
 
   <section class="card">
     <h2>2. Record</h2>
+    <div class="opts">
+      <label>Health level of the mounted bearing<select id="sev"></select></label>
+      <label>Bearing ID (what is mounted, e.g. B-03)<input id="bid" maxlength="40" placeholder="B-03"></label>
+      <label>Faulty part is in<select id="pos"></select></label>
+      <label class="chk"><input id="base" type="checkbox"> Commissioning baseline run (healthy bearing; ~2 min settle + 1 min)</label>
+    </div>
     <div class="rec-row">
       <div class="note">
         <label for="note">Note for this run (optional)</label>
@@ -555,11 +621,19 @@ td a { color:#1f5fa8; font-weight:600; }
     <div id="summary" class="summary"></div>
     <div id="runs" style="margin-top:16px"></div>
   </section>
+
+  <section class="card">
+    <h2>Coverage: minutes recorded per condition, health level and speed</h2>
+    <div id="coverage"></div>
+  </section>
 </main>
 <script>
 const LABELS = __LABELS__;
 const COLORS = {healthy:'#1e8449', inner_race:'#d35400', outer_race:'#7d3c98', ball:'#1f5fa8', cage:'#117a8b'};
 const NAME = Object.fromEntries(LABELS);
+const SEVERITIES = __SEVERITIES__, POSITIONS = __POSITIONS__;
+const SEVNAME = Object.fromEntries(SEVERITIES.map(([k, n]) => [String(k), n]));
+const POSNAME = Object.fromEntries(POSITIONS);
 const $ = id => document.getElementById(id);
 let selected = NAME[localStorage.getItem('label')] ? localStorage.getItem('label') : 'healthy';
 let state = null, runsKey = '', busy = false;
@@ -584,12 +658,23 @@ for (const [key, name] of LABELS) {
   $('modes').appendChild(b);
 }
 
+for (const [k, n] of SEVERITIES) $('sev').add(new Option(n, k));
+for (const [k, n] of POSITIONS) $('pos').add(new Option(n, k));
+function lsGet(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+$('bid').value = lsGet('bid', ''); $('pos').value = lsGet('pos', 'both');
+$('bid').onchange = () => lsSet('bid', $('bid').value);
+$('pos').onchange = () => lsSet('pos', $('pos').value);
+$('sev').onchange = () => { if ($('sev').value === '0' && selected !== 'healthy') { /* keep: start() validates */ } };
+$('base').onchange = () => { if ($('base').checked) { selected = 'healthy'; $('sev').value = '0'; render(); } };
+
 $('toggle').onclick = async () => {
   if (!state || busy) return;
   busy = true; $('toggle').disabled = true; $('msg').textContent = '';
   try {
     if (state.recording) await post('/api/stop');
-    else await post('/api/start', {label:selected, note:$('note').value});
+    else await post('/api/start', {label:selected, note:$('note').value, severity:parseInt($('sev').value, 10),
+      bearing_id:$('bid').value, position:$('pos').value, is_baseline:$('base').checked});
   } catch (e) { $('msg').textContent = e.message; }
   busy = false; $('toggle').disabled = false;
   refresh();
@@ -637,7 +722,9 @@ function render() {
   t.textContent = rec ? 'Stop recording' : 'Start recording';
   t.className = 'toggle ' + (rec ? 'stop' : 'start');
   $('note').disabled = !!rec;
+  for (const id of ['sev', 'bid', 'pos', 'base']) $(id).disabled = !!rec;
   if (rec && document.activeElement !== $('note')) $('note').value = rec.note;
+  if (rec) { $('sev').value = String(rec.severity == null ? 0 : rec.severity); $('bid').value = rec.bearing_id; $('pos').value = rec.position; $('base').checked = rec.is_baseline; }
   $('banner').className = 'banner' + (rec ? ' on' : '');
   $('banner').innerHTML = rec ? '<span class="dot"></span>RECORDING: ' + esc(rec.label_name) : 'Not recording';
   $('elapsed').textContent = rec ? dur(rec.duration_s) : '-';
@@ -656,7 +743,7 @@ function render() {
     last.className = ''; last.textContent = lp.age_s.toFixed(1) + ' s ago';
   }
 
-  const key = JSON.stringify([state.runs, state.summary]);
+  const key = JSON.stringify([state.runs, state.summary, state.coverage]);
   if (key === runsKey) return;
   runsKey = key;
   const max = Math.max(1, ...Object.values(state.summary));
@@ -664,6 +751,13 @@ function render() {
     '<div class="sum" style="--c:' + COLORS[k] + '">' + esc(n) + '<b>' + state.summary[k] + '</b>' +
     '<div class="bar"><i style="width:' + (100 * state.summary[k] / max) + '%"></i></div></div>').join('');
   $('all').className = 'btn' + (state.runs.length ? '' : ' off');
+  const cov = state.coverage || [];
+  $('coverage').innerHTML = cov.length ? '<table><thead><tr><th>Condition</th><th>Health level</th><th>RPM</th><th>Runs</th><th>Windows</th><th>Minutes</th></tr></thead><tbody>' +
+    cov.map(c => '<tr><td>' + esc(c.condition === 'baseline' ? 'Commissioning baseline' : NAME[c.condition]) + '</td><td>' +
+      esc(c.severity == null ? 'unknown' : SEVNAME[String(c.severity)]) + '</td><td>' + esc(c.rpm) + '</td><td class="num">' + c.runs +
+      '</td><td class="num">' + c.windows + '</td><td class="num">' + c.minutes.toFixed(1) + '</td></tr>').join('') + '</tbody></table>' +
+    '<div class="hint" style="margin-top:8px">Target: see COE/training/README.md (each condition x level x speed: 2+ runs on different mounts; use the Bearing ID).</div>'
+    : '<div class="empty">Nothing recorded yet.</div>';
   if (!state.runs.length) {
     $('runs').innerHTML = '<div class="empty">No runs yet. Choose a condition and press Start recording.</div>';
     return;
@@ -672,7 +766,7 @@ function render() {
     '<th>RPM</th><th>Note</th><th>CSV</th><th></th></tr></thead><tbody>' +
     state.runs.map(r => '<tr><td><span class="tag" style="--c:' + COLORS[r.label] + '">' + esc(r.label_name) + '</span></td>' +
       '<td>' + esc(r.started) + '</td><td class="num">' + dur(r.duration_s) + '</td><td class="num">' + r.windows + '</td>' +
-      '<td>' + esc(r.rpm || '-') + '</td><td>' + esc(r.note) + '</td>' +
+      '<td>' + esc(r.rpm || '-') + '</td><td>' + esc(r.is_baseline ? 'BASELINE ' : '') + esc((r.severity == null ? '?' : r.severity) + ' ' + (r.bearing_id || '') + ' ' + r.position + ' ' + r.note) + '</td>' +
       '<td><a href="/export/' + esc(r.run_id) + '.csv">Download</a></td>' +
       '<td>' + (r.recording ? '<span class="live">recording</span>' :
         '<button class="del" data-id="' + esc(r.run_id) + '" data-text="' +
@@ -697,7 +791,7 @@ setInterval(refresh, 1000);
 </script>
 </body>
 </html>
-'''.replace('__LABELS__', json.dumps(LABELS))
+'''.replace('__LABELS__', json.dumps(LABELS)).replace('__SEVERITIES__', json.dumps(SEVERITIES)).replace('__POSITIONS__', json.dumps(POSITIONS))
 
 
 def main():
