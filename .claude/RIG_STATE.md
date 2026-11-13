@@ -1,3 +1,39 @@
+# RIG_STATE — resume ledger for the real-rig integration
+
+## START HERE (updated 2026-11-13 night, for the rig-day session on 2026-11-14)
+Goal of rig day: flash once -> record labelled real data at several bearing health levels (1800 + 3600 rpm)
+-> train `v4_real` on it -> show the full system live (node -> AI -> dashboard). User only swaps bearings,
+sets the VFD, switches 24 V, says "ready". Claude drives everything else.
+
+Order of work (details + commands: `RIG_DAY.md`):
+1. `./scripts/preflight.ps1 -Quick` (last full run 2026-11-13: PASS except expected warnings: VPN ProTUN up,
+   firewall rule TCP 8000 missing (admin), ST-LINK unplugged, not on COE-NODE).
+2. User: 24 V off + ST-LINK USB in -> `COE\firmware\stm32\tools\flash_release.ps1` -> 24 V on -> green LED.
+3. `netsh wlan connect name=COE-NODE`; `python COE\training\node_config.py --query` -> expect `@CONFIG rpm=1800 ...`.
+   FIRST hardware test of the runtime RPM/BEARING commands. If no reply: record at default 1800 only, debug later.
+4. Ask the user the measured ball diameter (11 balls confirmed): 1.2 mm = defaults OK; 1.5875 mm ->
+   `node_config.py --bearing 0.437 3.873 4.802 6.198` AND realign sim (`aiengine/coe/config.py` orders) + retrain v3e.
+5. Ask which damaged bearings exist (type x level x count) -> `python COE\training\rig_session.py --make-plan`, then trim
+   `COE/training/rig_plan.csv`. Need >= 2 physical bearings per class for a held-out test.
+6. Recorder: `python COE\training\training_recorder.py` (port 8000); driver: `python COE\training\rig_session.py`
+   (resumable; backs up to `Repo/rig_data/<date>_training_data`).
+7. Train: `cd AI-engine; $PY -m aiengine.data_coverage ..\COE\training\training_data` then
+   `$PY -m aiengine.train_real --data ..\COE\training\training_data --out v4_real` (+ `--include-sim` variant).
+   Report vs IS3/S8 with [MEASURED on rig] tags; held-out bearings frozen in splits.json before fitting; no tuning on test.
+8. Live: stop recorder; `./scripts/run-rig-live.ps1 -Contract v4_real -Baseline AI-engine/models/baseline_v4_real.json`;
+   dashboard http://localhost:5080 (Node (live) panel). User screen-records a bearing swap (Rank 8; Rank 9 live).
+9. End: back up data/logs to Repo/rig_data, commit reports+models+splits, update this file, ask before pushing
+   `fix/rig-new-bearing` (then PR into main for COE review).
+
+$PY = `C:\Users\lenovo\Documents\KFUPM\Term261\ICS414\Repo\DT-up2\AI-engine\.venv\Scripts\python.exe` (AI venv;
+recorder/node_config/rig_session use system `python`). Use 127.0.0.1 not localhost in scripts (2 s DNS delay here).
+
+Known open issues: dashboard "AI RUL Trend" shows -1 h on node source (should be n/a); bearing-1 residual "cage"
+false alarms (~17 % on the fw250 dev file; expected to drop with valid bands, unproven); RUL + physics twin n/a on
+node data; node->laptop Wi-Fi latency unmeasurable (node sends no timestamp).
+
+---
+# History (chronological, appended by agents)
 # RIG_STATE ledger (branch fix/rig-new-bearing) -- AI-engine node-matching work, 2026-11-12
 
 Python: Repo/DT-up2/AI-engine/.venv/Scripts/python.exe, run from DT-main/AI-engine with PYTHONPATH=$PWD,
