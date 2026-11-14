@@ -25,6 +25,8 @@ volatile float live_dsp_load_percent;
 volatile float live_last_rms[COE_CHANNEL_COUNT];
 volatile float live_last_window_latency_ms;
 volatile float live_max_window_latency_ms;
+volatile uint32_t live_rpm = COE_LIVE_START_RPM; /* Speed in use; the laptop can change it. */
+volatile uint32_t live_speed_changes;
 
 #define REPORT_MS 1000U
 #define LATENCY_LIMIT_MS 333.0f /* S2: features within 333 ms of the window's end. */
@@ -113,10 +115,39 @@ static bool on_window(const PipelineWindowResult *result, void *context)
 
 static void restart_stream(void)
 {
-    stream_ok = pipeline_init(&pipeline, COE_LIVE_NOMINAL_RPM, &envelope_buffer, &workspace,
+    stream_ok = pipeline_init(&pipeline, live_rpm, &envelope_buffer, &workspace,
                               &COE_LIVE_BEARING_PROFILE, on_window, NULL);
     if (!stream_ok)
         ++live_pipeline_errors;
+}
+
+/** Apply a new speed from the laptop (via the ESP32) between blocks. The window
+ * in progress is dropped and a new one starts at the new speed, as after a gap.
+ * The ESP32 repeats the command every 2 s, so a speed the pipeline refuses is
+ * remembered and not retried.
+ */
+static void apply_speed_request(void)
+{
+    static uint32_t refused_rpm;
+    const uint32_t wanted = feature_uart_requested_rpm;
+    if (wanted == 0U || wanted == live_rpm || wanted == refused_rpm)
+        return;
+    const uint32_t previous_rpm = live_rpm;
+    live_rpm = wanted;
+    restart_stream();
+    if (!stream_ok)
+    {
+        refused_rpm = wanted;
+        live_rpm = previous_rpm;
+        restart_stream();
+        console_emit("\r\nSpeed %lu RPM refused by the pipeline; staying at %lu RPM.\r\n",
+                     (unsigned long)wanted, (unsigned long)live_rpm);
+        return;
+    }
+    ++live_speed_changes;
+    console_emit("\r\nSpeed changed to %lu RPM (from %lu): window %lu revolutions (%lu samples).\r\n",
+                 (unsigned long)live_rpm, (unsigned long)previous_rpm,
+                 (unsigned long)pipeline.window_revolutions, (unsigned long)pipeline.window_samples);
 }
 
 static void reset_counters(void)
@@ -209,7 +240,7 @@ static void report(void)
     console_emit("[%lus] rate %s Hz | windows %lu sent %lu withheld %lu fail %lu |"
                  " gaps %lu dropped blocks %lu restarts %lu stall %lu\r\n"
                  "  fill max %lu/%u | block max %s ms, DSP %s%% | window latency max %s ms (limit 333)"
-                 " | UART done %lu err %lu max %s ms\r\n",
+                 " | UART done %lu err %lu max %s ms | speed %lu RPM, RX err %lu\r\n",
                  (unsigned long)((HAL_GetTick() - started_tick) / 1000U),
                  console_fixed2(rate, sizeof(rate), rate_hz),
                  (unsigned long)live_windows, (unsigned long)live_packets_queued,
@@ -221,7 +252,8 @@ static void report(void)
                  console_fixed2(load, sizeof(load), live_dsp_load_percent),
                  console_fixed2(window_ms, sizeof(window_ms), live_max_window_latency_ms),
                  (unsigned long)feature_uart_packets_sent, (unsigned long)feature_uart_errors,
-                 console_fixed2(uart_ms, sizeof(uart_ms), feature_uart_max_tx_us / 1000.0));
+                 console_fixed2(uart_ms, sizeof(uart_ms), feature_uart_max_tx_us / 1000.0),
+                 (unsigned long)live_rpm, (unsigned long)feature_uart_rx_errors);
 }
 
 bool live_stream_init(void)
@@ -236,9 +268,9 @@ bool live_stream_init(void)
 
     restart_stream();
     console_banner("LIVE: AD7606 -> DSP -> ESP32");
-    console_emit("Speed %u RPM, window %lu revolutions (%lu samples), bearing profile %lu,"
-                 " channels %s/%s/%s/%s = AIN2/4/6/8.\r\n",
-                 (unsigned)COE_LIVE_NOMINAL_RPM, (unsigned long)pipeline.window_revolutions,
+    console_emit("Speed %lu RPM (start value; the laptop can switch it), window %lu revolutions"
+                 " (%lu samples), bearing profile %lu, channels %s/%s/%s/%s = AIN2/4/6/8.\r\n",
+                 (unsigned long)live_rpm, (unsigned long)pipeline.window_revolutions,
                  (unsigned long)pipeline.window_samples, (unsigned long)COE_LIVE_BEARING_PROFILE.id,
                  channel_names[0], channel_names[1], channel_names[2], channel_names[3]);
     console_emit(live_calibrated
@@ -290,6 +322,7 @@ void live_stream_poll(void)
         console_emit("\r\nAD7606 STALL: no frame for %u ms; stopped and pins held low."
                      " Check ADC power/BUSY, then press B1.\r\n", (unsigned)AD7606_STALL_MS);
 
+    apply_speed_request();
     consume_blocks();
 
     if (ad7606_running() && (uint32_t)(HAL_GetTick() - report_tick) >= REPORT_MS)

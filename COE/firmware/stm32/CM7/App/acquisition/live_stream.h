@@ -27,6 +27,8 @@ extern volatile float live_last_rms[COE_CHANNEL_COUNT]; /* Band-pass RMS, latest
 /* S2: ms from the newest sample of the window's last block to features ready. */
 extern volatile float live_last_window_latency_ms;
 extern volatile float live_max_window_latency_ms;
+extern volatile uint32_t live_rpm;             /* Speed in use (start value, then the laptop's choice). */
+extern volatile uint32_t live_speed_changes;   /* Speed switches applied since reset. */
 
 /** Initialize the pipeline and print the banner. feature_uart_init() first. */
 bool live_stream_init(void);

@@ -14,6 +14,11 @@ extern volatile uint32_t feature_uart_errors;
 extern volatile uint32_t feature_uart_queue_full_count;
 extern volatile bool feature_uart_timer_ready;
 extern volatile float feature_uart_last_tx_us, feature_uart_max_tx_us;
+/** Receive errors on PD6 (noise, overrun). Each loses at most one incoming
+ * message; reception restarts and feature packets keep going. */
+extern volatile uint32_t feature_uart_rx_errors;
+/** Last valid speed command from the ESP32 (COR1 frame), 0 until one arrives. */
+extern volatile uint32_t feature_uart_requested_rpm;
 /** Optional timing marker; call from main while no other producer is active. */
 bool feature_uart_send_timing_request(uint32_t id);
 

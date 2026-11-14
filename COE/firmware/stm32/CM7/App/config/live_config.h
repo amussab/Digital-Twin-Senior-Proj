@@ -5,10 +5,15 @@
 #ifndef COE_LIVE_CONFIG_H
 #define COE_LIVE_CONFIG_H
 
-/* Settled shaft speed of the machine, any value 60..3600 RPM (pipeline_config.h).
- * Change it here, rebuild and flash. 11 Nov 2026: the lab machine runs at 250 RPM.
+/* Machine speed. The node starts at COE_LIVE_START_RPM after every power-up or
+ * reset. The laptop then chooses the speed (training page 1750/3600 buttons, or
+ * inference_receiver.py --rpm): it sends the speed in its beacon, the ESP32
+ * passes it on over the UART return wire (COR1 frame), and LIVE restarts the
+ * window at the new speed. Any 60..3600 RPM is accepted (pipeline_config.h).
+ * 14 Nov 2026: the lab machine runs at a set speed again (1750 or 3600); a
+ * measured speed input from the machine's tachometer comes later.
  */
-#define COE_LIVE_NOMINAL_RPM 250U
+#define COE_LIVE_START_RPM 1750U
 
 /* 1: start acquiring on power-up (first try after the delay, so the ADC has
  * power) and retry while stopped, so the node runs with no one at the board.

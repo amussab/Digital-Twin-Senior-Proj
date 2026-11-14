@@ -113,9 +113,19 @@ the mode as an option instead.
 | `LIVE` | AD7606 → DSP → packets → ESP32, one status line per second | The real system |
 
 Live-mode settings are in [CM7/App/config/live_config.h](CM7/App/config/live_config.h):
-speed (`COE_LIVE_NOMINAL_RPM`, any value 60–3600 RPM; now 250 for the lab machine), bearing profile, and **`COE_LIVE_VOLTS_PER_G`** for the
+start speed (`COE_LIVE_START_RPM`, 1750), bearing profile, and **`COE_LIVE_VOLTS_PER_G`** for the
 four channels. While these are 0 (unknown), LIVE computes everything from volts
 but sends **no packets**, because every packet declares g.
+
+**Machine speed (14 Nov 2026).** LIVE starts at `COE_LIVE_START_RPM` (1750) after every reset.
+The laptop then picks the speed: the training page's 1750/3600 buttons, or
+`inference_receiver.py --rpm 3600`. The laptop's beacon carries it (`COE-HOST <port> RPM <rpm>`),
+the ESP32 passes it to the STM32 every 2 s as a 12-byte `COR1` frame (`"COR1"`, RPM, CRC-32) on
+the return wire GPIO19 → PD6, and LIVE restarts the window at the new speed (the window in
+progress is dropped). Each packet carries the RPM it was computed for. Any 60–3600 RPM is
+accepted; the laptop scripts offer 1750 and 3600. A receive error on PD6 (noise, overrun) now
+only restarts reception and is counted (`RX err` in the status line); it no longer stops the
+feature packets. Later, a measured speed from the machine's tachometer replaces the manual choice.
 
 ### 2.2 Tools
 
@@ -211,7 +221,8 @@ packets appear in the ESP monitor and at the host; pressing **B1** once runs the
 timed delivery batch (section 7). Wi-Fi: the laptop joins the ESP's own Wi-Fi
 **COE-NODE** (or the same hotspot as the ESP, set in the ESP's
 `main/config/connection_settings.local.h`). The ESP finds the receiver by itself
-(UDP beacon on port 8001), so no laptop IP needs to be set.
+(UDP beacon on port 8001), so no laptop IP needs to be set. The beacon also carries the
+machine speed chosen on the laptop (section 2.1).
 
 ### 2.7 Quick ADC check (standalone, minimum wires)
 
@@ -335,7 +346,7 @@ its first resistor) → filter output → ADC input. AIN1/3/5/7 are unused.
 | STM32 | Physical | ESP32-C6 | Function |
 | --- | --- | --- | --- |
 | PD5, USART2 TX | CN9 pin 6 (across from A2) | GPIO18 (RX) | Feature packets |
-| PD6, USART2 RX | CN9 pin 4 (across from A1) | GPIO19 (TX) | Delivery acknowledgment |
+| PD6, USART2 RX | CN9 pin 4 (across from A1) | GPIO19 (TX) | Delivery acknowledgment and speed commands (needed for the speed switch) |
 | GND | CN9 pin 12 (across from A5) | GND | Common 0 V |
 
 Use ESP pins 18/19, not its TX/RX pins. Each board has its own USB cable; do

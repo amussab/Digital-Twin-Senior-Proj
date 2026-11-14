@@ -73,7 +73,7 @@ with tempfile.TemporaryDirectory() as temporary:
                 assert not accepted(damaged, kind)
                 assert accepted(damaged + valid, kind) == [result]
                 count += 2
-    for index, wrong in ((0, 0), (1, 0), (2, 1000), (3, 3), (4, 123455), (5, 3457), (6, 0xFFFFFFFF)):
+    for index, wrong in ((0, 0), (1, 0), (2, 3601), (3, 3), (4, 123455), (5, 3457), (6, 0xFFFFFFFF)):
         values = list(fields)
         values[index] = wrong
         assert not accepted(frame(b'COA1', values), 'ack')
@@ -129,4 +129,41 @@ with tempfile.TemporaryDirectory() as temporary:
     lib.latency_feature_reset(c.byref(state))
     assert state.measurement_id == 0 and state.request_bytes_left == 0 and state.features.rejected_packets == 10
     count += 1
-    print(f'PASS {count} independent timing-frame checks (CRC, corruption, metadata, boundaries, recovery).')
+
+    # Speed command COR1 (ESP32 -> STM32): laptop-chosen machine speed.
+    lib.speed_command_push.argtypes = [c.POINTER(Stream), c.c_uint8, c.POINTER(c.c_uint32)]
+    lib.speed_command_push.restype = c.c_bool
+    lib.speed_command_encode.argtypes = [c.c_uint32, c.c_void_p]
+
+    def speeds(data):
+        stream, rpm, results = Stream(), c.c_uint32(), []
+        for byte in data:
+            if lib.speed_command_push(c.byref(stream), byte, c.byref(rpm)):
+                results.append(rpm.value)
+            assert stream.count <= 12
+        return results
+
+    for rpm in (60, 1750, 3600):
+        command = frame(b'COR1', [rpm])
+        buffer = c.create_string_buffer(12)
+        lib.speed_command_encode(rpm, buffer)
+        assert buffer.raw == command
+        assert speeds(b'noiseCOR' + command + command) == [rpm, rpm]
+        count += 2
+    for rpm in (0, 59, 3601, 0xFFFFFFFF):
+        assert not speeds(frame(b'COR1', [rpm]))
+        count += 1
+    command = frame(b'COR1', [3600])
+    for index in range(len(command)):
+        for bit in range(8):
+            damaged = bytearray(command)
+            damaged[index] ^= 1 << bit
+            assert not speeds(damaged)
+            assert speeds(damaged + command) == [3600]
+            count += 2
+    # Other frames on the same wire are not speed commands, and vice versa.
+    assert not speeds(ack + frame(b'COT1', [3600]))
+    assert not accepted(command, 'ack') and not accepted(command, 'request')
+    assert speeds(ack + command + ack) == [3600]
+    count += 3
+    print(f'PASS {count} independent timing/speed-frame checks (CRC, corruption, metadata, boundaries, recovery).')

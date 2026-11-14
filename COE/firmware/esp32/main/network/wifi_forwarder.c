@@ -40,7 +40,10 @@ static uint32_t next_sequence;
 
 /* Host discovery: the training recorder broadcasts "COE-HOST <port>" on UDP 8001.
  * The ESP sends to the laptop that last announced itself, so no laptop IP is
- * fixed in the firmware. Until a beacon arrives, COE_HTTP_URL is used. */
+ * fixed in the firmware. Until a beacon arrives, COE_HTTP_URL is used.
+ * Machine speed: "COE-HOST <port> RPM <rpm>" also carries the speed chosen on the
+ * laptop. Each such beacon (every 2 s) is passed to the STM32 as a COR1 frame on
+ * the UART return wire (GPIO19 -> PD6); the STM32 switches when it differs. */
 #define DISCOVERY_PORT 8001
 static char target_url[96] = COE_HTTP_URL;
 static SemaphoreHandle_t target_lock;
@@ -50,6 +53,27 @@ static void copy_target(char *out, size_t size)
     xSemaphoreTake(target_lock, portMAX_DELAY);
     strlcpy(out, target_url, size);
     xSemaphoreGive(target_lock);
+}
+
+/** Send the laptop's chosen speed to the STM32 (repeated with every beacon). */
+static void pass_speed_to_stm32(unsigned rpm)
+{
+    static unsigned last_rpm;
+    if (rpm < SPEED_COMMAND_MIN_RPM || rpm > SPEED_COMMAND_MAX_RPM)
+    {
+        ESP_LOGW(tag, "Beacon speed %u RPM ignored (allowed %u..%u)", rpm,
+                 SPEED_COMMAND_MIN_RPM, SPEED_COMMAND_MAX_RPM);
+        return;
+    }
+    if (!uart_is_driver_installed(UART_NUM_1)) /* UART starts right after Wi-Fi. */
+        return;
+    uint8_t bytes[SPEED_COMMAND_BYTES];
+    speed_command_encode(rpm, bytes);
+    if (uart_write_bytes(UART_NUM_1, bytes, sizeof(bytes)) != (int)sizeof(bytes))
+        ESP_LOGW(tag, "Could not send speed %u RPM to the STM32", rpm);
+    else if (rpm != last_rpm)
+        ESP_LOGI(tag, "Speed from the laptop: %u RPM, sent to the STM32", rpm);
+    last_rpm = rpm;
 }
 
 /** Listen for recorder beacons and follow the announcing laptop. */
@@ -73,12 +97,15 @@ static void discovery_task(void *argument)
         socklen_t from_length = sizeof(from);
         const int length = recvfrom(sock, text, sizeof(text) - 1U, 0,
                                     (struct sockaddr *)&from, &from_length);
-        unsigned port = 0U;
+        unsigned port = 0U, rpm = 0U;
         if (length <= 0)
             continue;
         text[length] = '\0';
-        if (sscanf(text, "COE-HOST %u", &port) != 1 || port == 0U || port > 65535U)
+        const int fields = sscanf(text, "COE-HOST %u RPM %u", &port, &rpm);
+        if (fields < 1 || port == 0U || port > 65535U)
             continue;
+        if (fields == 2)
+            pass_speed_to_stm32(rpm);
         char address[16], url[sizeof(target_url)];
         inet_ntoa_r(from.sin_addr, address, sizeof(address));
         snprintf(url, sizeof(url), "http://%s:%u/features", address, port);

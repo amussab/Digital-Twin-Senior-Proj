@@ -73,6 +73,21 @@ bool latency_ack_push(LatencyStream *stream, uint8_t byte, LatencyAck *ack)
     stream->count = 0U;
     return true;
 }
+void speed_command_encode(uint32_t rpm, uint8_t bytes[SPEED_COMMAND_BYTES])
+{
+    memcpy(bytes, "COR1", 4U);
+    write_u32(bytes + 4U, rpm);
+    write_u32(bytes + 8U, crc32(bytes, 8U));
+}
+bool speed_command_push(LatencyStream *stream, uint8_t byte, uint32_t *rpm)
+{
+    if (!push_frame(stream, byte, "COR1", SPEED_COMMAND_BYTES)) return false;
+    const uint32_t value = read_u32(stream->bytes + 4U);
+    if (value < SPEED_COMMAND_MIN_RPM || value > SPEED_COMMAND_MAX_RPM) return false;
+    *rpm = value;
+    stream->count = 0U;
+    return true;
+}
 
 /** Demultiplex only outside a feature frame, even if an ID contains COE1 bytes. */
 bool latency_feature_push(FeatureTimingStream *stream, uint8_t byte,

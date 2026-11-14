@@ -15,8 +15,13 @@ volatile uint32_t feature_uart_errors;
 volatile uint32_t feature_uart_queue_full_count;
 volatile bool feature_uart_timer_ready;
 volatile float feature_uart_last_tx_us, feature_uart_max_tx_us;
+volatile uint32_t feature_uart_rx_errors;
+volatile uint32_t feature_uart_requested_rpm;
 static uint32_t tx_start_cycles;
 static uint8_t rx_byte;
+static LatencyStream speed_stream;
+/* HAL error codes that only concern received bytes. */
+#define RX_ONLY_ERRORS (HAL_UART_ERROR_PE | HAL_UART_ERROR_NE | HAL_UART_ERROR_FE | HAL_UART_ERROR_ORE)
 
 static UART_HandleTypeDef uart;
 static DMA_HandleTypeDef dma;
@@ -188,18 +193,34 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *handle)
     }
 }
 
-/** Defer USART2 error cleanup to main rather than aborting inside an ISR. */
+/** Defer USART2 error cleanup to main rather than aborting inside an ISR.
+ * A receive-only error (noise or an overrun on PD6) loses at most one speed
+ * command or ACK, which the ESP32 repeats: re-arm reception and keep sending
+ * feature packets. Any other error stops the transmitter as before.
+ */
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *handle)
 {
-    if (handle == &uart)
-        transmission_failed = true;
+    if (handle != &uart)
+        return;
+    const uint32_t code = handle->ErrorCode;
+    if (code != 0U && (code & ~(uint32_t)RX_ONLY_ERRORS) == 0U)
+    {
+        ++feature_uart_rx_errors;
+        if (handle->RxState == HAL_UART_STATE_READY) /* HAL aborted reception (overrun). */
+            (void)HAL_UART_Receive_IT(&uart, &rx_byte, 1U);
+        return;
+    }
+    transmission_failed = true;
 }
 
-/** Arm the next ACK byte after bounded parsing; GPIO19->PD6 is optional. */
+/** Arm the next ACK/speed byte after bounded parsing; GPIO19->PD6 is optional. */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *handle)
 {
     if (handle != &uart) return;
     delivery_timing_receive_byte(rx_byte);
+    uint32_t rpm;
+    if (speed_command_push(&speed_stream, rx_byte, &rpm))
+        feature_uart_requested_rpm = rpm;
     if (HAL_UART_Receive_IT(&uart, &rx_byte, 1U) != HAL_OK)
         transmission_failed = true;
 }

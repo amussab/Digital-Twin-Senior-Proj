@@ -83,8 +83,9 @@ void run_communication_demo(void)
     /* Wrong magic, schema, count, window, RPM, profile, mask, unit, NaN, infinity,
      * negative acceleration, and a nonzero value on a channel marked invalid.
      */
-    const size_t offsets[] = {0U, 4U, 6U, 8U, 12U, 16U, 20U, 24U, 31U, 31U, 31U, 20U};
-    const uint8_t values[] = {'X', 2U, 31U, 0U, 0U, 3U, 31U, 2U, 0x7FU, 0x7FU, 0xBFU, 14U};
+    const size_t offsets[] = {0U, 4U, 6U, 8U, 13U, 16U, 20U, 24U, 31U, 31U, 31U, 20U};
+    const uint8_t values[] = {'X', 2U, 31U, 0U, 0x10U, 3U, 31U, 2U, 0x7FU, 0x7FU, 0xBFU, 14U};
+    /* Offset 13 = 0x10: RPM 1750 becomes 4310, above the 3600 limit (any 60..3600 is valid). */
     for (size_t test = 0U; test < sizeof(offsets) / sizeof(offsets[0]); ++test)
     {
         memcpy(packet, final_payload_expected, sizeof(packet));

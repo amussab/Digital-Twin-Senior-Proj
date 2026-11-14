@@ -32,7 +32,8 @@ for include in includes:
 command += [str(source) for source in sources] + ['-o', str(binary)]
 subprocess.run(command, check=True)
 results = {}
-for case in ('decoder', 'queue', 'timeout', 'start_failure', 'uart_error', 'init_failure', 'resynchronization', 'delivery', 'uart_timing'):
+for case in ('decoder', 'queue', 'timeout', 'start_failure', 'uart_error', 'init_failure', 'resynchronization', 'delivery', 'uart_timing',
+             'speed_command', 'rx_error'):
     result = subprocess.run([str(binary), case], text=True, capture_output=True)
     print(result.stdout, end='')
     if result.returncode != 0:
