@@ -2,6 +2,9 @@
 
 This folder holds everything from the COE side. The AI code lives in `AI-engine/`, and it doesn't depend on anything here.
 
+**ICS team, start here: [ICS_START_HERE.md](ICS_START_HERE.md)** (update the node's firmware once, then record
+training data). For your AI assistant: [AI_HELPER_PROMPT.md](AI_HELPER_PROMPT.md).
+
 The **node** (sensors → filter → AD7606 ADC → STM32 → ESP32) measures the two bearings and
 sends **one window of 32 features** over its own Wi-Fi: every 0.69 s at 1750 RPM, every 0.33 s at 3600 RPM.
 The two scripts below receive those windows on a laptop:

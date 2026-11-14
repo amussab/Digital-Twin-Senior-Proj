@@ -14,6 +14,9 @@ The two folders must stay **side by side**: the STM32 build uses two files from 
 
 ## Build and flash
 
+Ready-made files (no build tools needed): [`prebuilt/`](prebuilt/README.md); steps in
+[`../ICS_START_HERE.md`](../ICS_START_HERE.md). After a firmware change, rebuild them (see `prebuilt/README.md`).
+
 - **STM32** (STM32CubeCLT, the board on USB): in `stm32/`,
   `powershell -ExecutionPolicy Bypass -File .\tools\flash.ps1 -Mode LIVE`
   (`tools\build.ps1 -Mode LIVE` builds without flashing). LIVE is the mode the node runs.
