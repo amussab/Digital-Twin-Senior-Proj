@@ -4571,6 +4571,24 @@
     "xjtu_sy:Bearing3_4": "test",
     "xjtu_sy:Bearing3_5": "val"
    }
+  },
+  "rig_real": {
+   "units": {
+    "run_20261115_002457": "train",
+    "run_20261115_003233": "train",
+    "run_20261115_004354": "train",
+    "run_20261115_005124": "train",
+    "run_20261115_010018": "train",
+    "run_20261115_010524": "train",
+    "run_20261115_011243": "train"
+   },
+   "counts": {
+    "train": 7,
+    "heldout": 0
+   },
+   "policy": "train_real.choose_holdout (hash of run/bearing, frozen once registered)",
+   "created_utc": "2026-11-14T22:34:47+00:00",
+   "note": "[MEASURED on rig] registered before fitting by train_real; data ../COE/training/training_data"
   }
  },
  "seed": 20261004,

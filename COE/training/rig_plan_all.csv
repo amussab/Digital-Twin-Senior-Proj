@@ -1,0 +1,15 @@
+step,mount,rpm,label,severity,bearing_id,position,is_baseline,minutes,note
+1,1,1800,healthy,0,H-01,b1,1,4.0,commissioning baseline
+2,1,3600,healthy,0,H-01,b1,1,4.0,commissioning baseline
+3,2,1800,healthy,0,H-01,b1,0,4.0,healthy remount
+4,2,3600,healthy,0,H-01,b1,0,4.0,healthy remount
+5,3,1800,healthy,0,H-01,b1,0,4.0,healthy remount 2
+6,3,3600,healthy,0,H-01,b1,0,4.0,healthy remount 2
+7,4,1800,outer_race,1,OR-1,b1,0,4.0,severity UNVERIFIED (assumed level 1); single bearing
+8,4,3600,outer_race,1,OR-1,b1,0,4.0,severity UNVERIFIED (assumed level 1); single bearing
+9,5,1800,inner_race,1,IR-1,b1,0,4.0,severity UNVERIFIED (assumed level 1); single bearing
+10,5,3600,inner_race,1,IR-1,b1,0,4.0,severity UNVERIFIED (assumed level 1); single bearing
+11,6,1800,ball,1,BA-1,b1,0,4.0,severity UNVERIFIED (assumed level 1); single bearing
+12,6,3600,ball,1,BA-1,b1,0,4.0,severity UNVERIFIED (assumed level 1); single bearing
+13,7,1800,cage,1,CA-1,b1,0,4.0,severity UNVERIFIED (assumed level 1); single bearing
+14,7,3600,cage,1,CA-1,b1,0,4.0,severity UNVERIFIED (assumed level 1); single bearing

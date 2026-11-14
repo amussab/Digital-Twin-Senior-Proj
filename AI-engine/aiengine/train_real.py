@@ -96,17 +96,20 @@ def bearing_samples(raw16: np.ndarray, rpm: np.ndarray, base16) -> tuple[np.ndar
     return uw.compute(Bf, True), uw.compute(Bf[:, 1:], False)
 
 
-def build_samples(df: pd.DataFrame, rt: pd.DataFrame, baselines: dict, settle_s: float):
+def build_samples(df: pd.DataFrame, rt: pd.DataFrame, baselines: dict, settle_s: float, baseline_s: float = R.BASELINE_S):
+    """Baseline runs contribute only the windows AFTER settle + the baseline period (healthy, both bearings), so truly healthy
+    bearings (features near the baseline) are in the training data and the baseline windows themselves are never trained on."""
     parts, notes = [], []
-    for r in rt[~rt["is_baseline"]].itertuples():
+    for r in rt.itertuples():
         base = baselines.get(int(r.rpm_key))
         if base is None:
             notes.append(f"run {r.run_id}: no baseline at {r.rpm_key} rpm: dropped")
             continue
         g = df[df["run_id"] == r.run_id].sort_values("order")
-        g = g.iloc[R.settle_windows(r.rpm_key, settle_s):]
+        skip = R.settle_windows(r.rpm_key, settle_s) + (R.baseline_windows(r.rpm_key, baseline_s) if r.is_baseline else 0)
+        g = g.iloc[skip:]
         if len(g) < T + 5:
-            notes.append(f"run {r.run_id}: only {len(g)} windows after the settle drop (< {T + 5}): dropped")
+            notes.append(f"run {r.run_id}: only {len(g)} windows after the settle{' + baseline' if r.is_baseline else ''} drop (< {T + 5}): dropped")
             continue
         raw, rpm = g[R.FEATURE_COLUMNS].to_numpy(float), g["rpm"].to_numpy(float)
         sev_run = np.nan if pd.isna(r.severity) else float(r.severity)
@@ -461,7 +464,7 @@ def main(argv=None) -> int:
         raise SystemExit(2)
     baselines, bn = build_baselines(df, rt, a.settle_s, a.baseline_s)
     notes += bn
-    parts, sn = build_samples(df, rt, baselines, a.settle_s)
+    parts, sn = build_samples(df, rt, baselines, a.settle_s, a.baseline_s)
     notes += sn
     if not parts:
         print("ERROR no usable windows after settle drop / baseline:\n  " + "\n  ".join(notes))
