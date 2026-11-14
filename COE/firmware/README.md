@@ -28,6 +28,6 @@ In those READMEs, `coe_firmware` means `stm32/` and `coe_esp32` means `esp32/` (
 
 ## Settings you might change
 
-- Machine speed: `stm32/CM7/App/config/live_config.h`, `COE_LIVE_NOMINAL_RPM` (60–3600, now 250).
-  Rebuild and flash the STM32.
+- Machine speed: chosen on the laptop (training page or `inference_receiver.py --rpm`), no reflash.
+  The start speed after power-up is `COE_LIVE_START_RPM` (1750) in `stm32/CM7/App/config/live_config.h`.
 - Auto-start on power-up: same file, `COE_LIVE_AUTOSTART` (1 = on).

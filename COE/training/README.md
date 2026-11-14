@@ -16,8 +16,11 @@ Conditions: **Healthy, Inner race, Outer race, Ball, Cage**.
    python training_recorder.py
    ```
 3. Open **http://localhost:8000**. The top pill turns green, showing **"Data arriving"**.
-4. Choose the condition, add a note if useful, and press **Start**. Press **Stop** when the run is done.
-5. Download the CSV for one run or for all runs.
+4. **Machine speed:** click **1750 RPM** or **3600 RPM** and set the machine's speed controller to
+   the same value. Wait for the green line **"Node confirmed"** (a few seconds). Start is refused
+   while the node is still at the other speed, and the speed can't change during a run.
+5. Choose the condition, add a note if useful, and press **Start**. Press **Stop** when the run is done.
+6. Download the CSV for one run or for all runs.
 
 ## The data
 
@@ -28,3 +31,5 @@ Conditions: **Healthy, Inner race, Outer race, Ball, Cage**.
   device_id, valid_channels`, then the 32 features `B1X_rms` … `B2Y_bpfi`
   (order and units: [../README.md](../README.md)).
 - The labels are whatever you select. Record one condition per run, and record healthy runs too.
+- The `rpm` column is the speed the node used for that window (1750 or 3600). Record each
+  condition at both speeds if the model must work at both.

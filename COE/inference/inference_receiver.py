@@ -1,12 +1,15 @@
 """Receive live feature windows from the COE node and run the AI model on each one.
 
 Run:
-    python inference_receiver.py [--port 8000]
+    python inference_receiver.py [--rpm 1750|3600] [--port 8000]
+--rpm is the machine speed (default 1750): set the machine's speed controller to the
+same value. The node computes the features for this speed.
 Put the model in model_hook.py (setup() and predict()). Nothing else needs editing.
 
 How it works:
-- Every 2 s it announces this laptop on the network (UDP broadcast "COE-HOST <port>"
-  to port 8001). The node's ESP32 hears it and sends every window here.
+- Every 2 s it announces this laptop on the network (UDP broadcast
+  "COE-HOST <port> RPM <rpm>" to port 8001). The node's ESP32 hears it, sends every
+  window here and passes the speed to the STM32, which switches within a few seconds.
 - Each window arrives as an HTTP POST /features (JSON). host_receiver.py checks it
   (same rules as the training recorder) and the reply goes back at once.
 - A separate worker thread calls model_hook.predict() for each window, so a slow
@@ -44,7 +47,8 @@ model_hook = load_module('model_hook')
 
 BEACON_PORT = 8001
 BEACON_PERIOD_S = 2.0
-QUEUE_LIMIT = 50  # windows waiting for the model (about 35 s at 250 RPM)
+QUEUE_LIMIT = 50  # windows waiting for the model (about 34 s at 1750 RPM, 17 s at 3600 RPM)
+SPEEDS = (1750, 3600)  # machine speed modes; the node starts at 1750 after power-up
 
 
 class WindowSink:
@@ -107,8 +111,9 @@ class InferenceServer(ThreadingHTTPServer):
     daemon_threads = True
 
 
-def run_model(windows, stats, stop):
+def run_model(windows, stats, stop, rpm):
     model = model_hook.setup()
+    at_speed = False
     print('Model ready (model_hook.setup() done). Waiting for windows...', flush=True)
     while not stop.is_set():
         try:
@@ -122,8 +127,12 @@ def run_model(windows, stats, stop):
             result = f'MODEL ERROR: {type(error).__name__}: {error}'
         stats['done'] += 1
         took_ms = (time.perf_counter() - started) * 1000
+        if window['rpm'] == rpm and not at_speed:
+            print(f'Node is at {rpm} RPM.', flush=True)
+        at_speed = window['rpm'] == rpm
+        note = '' if at_speed else f'   [node still switching to {rpm} RPM]'
         print(f"{window['received_at'][11:23]}  window {window['window_id']:>6}  "
-              f"{window['rpm']} RPM  ->  {result}   ({took_ms:.0f} ms)", flush=True)
+              f"{window['rpm']} RPM  ->  {result}   ({took_ms:.0f} ms){note}", flush=True)
 
 
 def local_ipv4s():
@@ -143,9 +152,9 @@ def local_ipv4s():
     return sorted(ip for ip in ips if not ip.startswith('127.') and ip != '0.0.0.0')
 
 
-def run_beacon(http_port, stop):
-    """Every 2 s: 'COE-HOST <port>' to UDP 8001, broadcast on every network."""
-    payload = f'COE-HOST {http_port}'.encode('ascii')
+def run_beacon(http_port, rpm, stop):
+    """Every 2 s: 'COE-HOST <port> RPM <rpm>' to UDP 8001, broadcast on every network."""
+    payload = f'COE-HOST {http_port} RPM {rpm}'.encode('ascii')
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         while not stop.is_set():
@@ -178,6 +187,8 @@ def watch_feed(stats, stop):
 
 def main():
     parser = argparse.ArgumentParser(description='Live COE windows -> model_hook.predict().')
+    parser.add_argument('--rpm', type=int, choices=SPEEDS, default=SPEEDS[0],
+                        help='machine speed: 1750 (default) or 3600')
     parser.add_argument('--port', type=int, default=8000)
     args = parser.parse_args()
 
@@ -195,11 +206,12 @@ def main():
     server.feature_lock = threading.Lock()
 
     stop = threading.Event()
-    threading.Thread(target=run_model, args=(windows, stats, stop), daemon=True).start()
-    threading.Thread(target=run_beacon, args=(server.server_port, stop), daemon=True).start()
+    threading.Thread(target=run_model, args=(windows, stats, stop, args.rpm), daemon=True).start()
+    threading.Thread(target=run_beacon, args=(server.server_port, args.rpm, stop), daemon=True).start()
     threading.Thread(target=watch_feed, args=(stats, stop), daemon=True).start()
-    print(f'COE inference receiver on port {server.server_port}. Connect this laptop to the '
-          f'Wi-Fi COE-NODE. Ctrl+C stops.', flush=True)
+    print(f'COE inference receiver on port {server.server_port}, machine speed {args.rpm} RPM '
+          f'(set the machine to the same speed). Connect this laptop to the Wi-Fi COE-NODE. '
+          f'Ctrl+C stops.', flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -3,7 +3,7 @@
 This folder holds everything from the COE side. The AI code lives in `AI-engine/`, and it doesn't depend on anything here.
 
 The **node** (sensors → filter → AD7606 ADC → STM32 → ESP32) measures the two bearings and
-sends **one window of 32 features about every 0.72 s** (250 RPM) over its own Wi-Fi.
+sends **one window of 32 features** over its own Wi-Fi: every 0.69 s at 1750 RPM, every 0.33 s at 3600 RPM.
 The two scripts below receive those windows on a laptop:
 
 | Folder | Use it to | Run |
@@ -43,7 +43,10 @@ Design documents for the node: `Project architecture/COE/`.
   `rms, kurtosis, crest, envelope_rms, ftf, bsf, bpfo, bpfi`. Names: `B1X_rms` … `B2Y_bpfi`.
 - rms, envelope_rms and the four band values are in **g**; kurtosis and crest are ratios.
 - **B2X is a copy of B1Y**: the 4th sensor has no cable, so don't treat B2X as independent.
-- The speed is set in the firmware: **250 RPM**, the lab machine's speed. Changing it needs a COE reflash.
+- **Machine speed: 1750 or 3600 RPM.** Choose it in the training page ("Machine speed") or with
+  `python inference_receiver.py --rpm 3600`, and set the machine's speed controller to the same value.
+  The node starts at 1750 after power-up and switches within a few seconds; each window's `rpm`
+  says which speed its features were computed for. Later the node will measure the speed itself.
 
 `host_receiver.py` (in both folders, same file) is the node's protocol: the node sends an
 HTTP POST of JSON to `/features` and waits for `200 {"accepted": true}`.

@@ -12,8 +12,10 @@ the current run only while recording is on.
 Files in the data folder, one pair per run:
     run_YYYYMMDD_HHMMSS.json   label, note, start and stop time
     run_YYYYMMDD_HHMMSS.jsonl  one line per window: {"received_at": ..., "message": {...}}
-While running it also broadcasts a UDP beacon "COE-HOST <http_port>" to port 8001
-every 2 s, so the ESP32 can find this laptop without a fixed IP.
+While running it also broadcasts a UDP beacon "COE-HOST <http_port> RPM <speed>" to
+port 8001 every 2 s, so the ESP32 can find this laptop without a fixed IP. The RPM
+part is the machine speed chosen on the page (1750 or 3600); the ESP32 passes it to
+the STM32, which computes the features for that speed.
 Standard library only.
 """
 import argparse
@@ -60,6 +62,12 @@ CSV_COLUMNS = ['run_id', 'label', 'note', 'received_at', 'rpm', 'window_id', 'se
 
 BEACON_PORT = 8001
 BEACON_PERIOD_S = 2.0
+
+# Machine speed modes. The node starts at 1750 after power-up; the page can switch it.
+# Later the node will measure the speed from the machine itself.
+SPEEDS = (1750, 3600)
+DEFAULT_SPEED = 1750
+FRESH_S = 5.0  # a packet younger than this counts as "data arriving"
 RUN_ID = re.compile(r'run_\d{8}_\d{6}(_\d{1,3})?')
 
 
@@ -82,6 +90,7 @@ class Recorder:
         self.active = None        # run_id being recorded, or None
         self.last_packet = None   # (time.monotonic(), message) of the last new valid window
         self.beacon_ips = []      # laptop IPv4 addresses the beacon currently announces
+        self.speed = DEFAULT_SPEED  # machine speed sent to the node in the beacon
         self._load()
 
     def _meta_path(self, run_id):
@@ -92,6 +101,8 @@ class Recorder:
 
     def _write_meta(self, meta):
         data = {key: meta[key] for key in ('run_id', 'label', 'note', 'started_at', 'stopped_at')}
+        if meta.get('speed'):
+            data['speed'] = meta['speed']  # speed chosen on the page for this run
         path = self._meta_path(meta['run_id'])
         temp = path.with_suffix('.json.tmp')
         temp.write_text(json.dumps(data, indent=2), encoding='utf-8')
@@ -136,6 +147,22 @@ class Recorder:
             except (OSError, ValueError, KeyError, TypeError) as error:
                 print(f'Skipping {meta_path.name}: {error}', flush=True)
 
+    def set_speed(self, rpm):
+        if rpm not in SPEEDS:
+            raise ValueError(f'Speed must be one of {", ".join(map(str, SPEEDS))} RPM')
+        with self.lock:
+            if self.active:
+                raise RuntimeError('Stop recording before changing the speed.')
+            if rpm != self.speed:
+                print(f'Speed set to {rpm} RPM (sent to the node in the beacon)', flush=True)
+            self.speed = rpm
+
+    def node_rpm(self):
+        """RPM of the latest window if it is recent, else None. Call with self.lock held."""
+        if self.last_packet and time.monotonic() - self.last_packet[0] <= FRESH_S:
+            return self.last_packet[1].get('rpm')
+        return None
+
     def start(self, label, note):
         if label not in LABEL_NAMES:
             raise ValueError('Unknown label')
@@ -143,19 +170,24 @@ class Recorder:
         with self.lock:
             if self.active:
                 raise RuntimeError('Already recording. Stop first.')
+            node = self.node_rpm()
+            if node is not None and node != self.speed:
+                # Windows at the old speed would be saved under the new run otherwise.
+                raise RuntimeError(f'The node is still at {node} RPM. Wait until it shows '
+                                   f'{self.speed} RPM (a few seconds after choosing the speed).')
             base = 'run_' + datetime.now().strftime('%Y%m%d_%H%M%S')
             run_id, number = base, 1
             while run_id in self.runs or self._meta_path(run_id).exists():
                 number += 1
                 run_id = f'{base}_{number}'
             meta = {'run_id': run_id, 'label': label, 'note': note,
-                    'started_at': now_iso(), 'stopped_at': None}
+                    'started_at': now_iso(), 'stopped_at': None, 'speed': self.speed}
             self._write_meta(meta)
             self._rows_path(run_id).touch()
             meta['windows'], meta['rpms'] = 0, set()
             self.runs[run_id] = meta
             self.active = run_id
-            print(f'Recording started: {run_id} label={label}', flush=True)
+            print(f'Recording started: {run_id} label={label} speed={self.speed} RPM', flush=True)
             return run_id
 
     def stop(self):
@@ -219,7 +251,8 @@ class Recorder:
                         'device_id': message.get('device_id')}
             active = next((run for run in runs if run['recording']), None)
             return {'recording': active, 'last_packet': last, 'runs': runs, 'summary': summary,
-                    'beacon_ips': list(self.beacon_ips)}
+                    'beacon_ips': list(self.beacon_ips), 'speed': self.speed, 'speeds': list(SPEEDS),
+                    'node_rpm': self.node_rpm()}
 
     def csv_bytes(self, run_ids):
         with self.lock:
@@ -289,6 +322,10 @@ class RecorderHandler(host_receiver.FeatureHandler):
             elif self.path == '/api/delete':
                 recorder.delete(str(body.get('run_id', '')))
                 self.reply(200, {'ok': True})
+            elif self.path == '/api/speed':
+                rpm = body.get('rpm')
+                recorder.set_speed(rpm if isinstance(rpm, int) and not isinstance(rpm, bool) else None)
+                self.reply(200, {'ok': True, 'speed': recorder.speed})
             else:
                 self.reply(404, {'ok': False, 'error': 'Not found'})
         except RuntimeError as error:
@@ -358,11 +395,12 @@ def local_ipv4s():
 
 
 def run_beacon(http_port, recorder, stop):
-    """Every 2 s send b'COE-HOST <port>' to 255.255.255.255 and each x.y.z.255, UDP port 8001."""
-    payload = f'COE-HOST {http_port}'.encode('ascii')
+    """Every 2 s send b'COE-HOST <port> RPM <speed>' to 255.255.255.255 and each x.y.z.255,
+    UDP port 8001. The speed is read each time, so a change on the page goes out within 2 s."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         while not stop.is_set():
+            payload = f'COE-HOST {http_port} RPM {recorder.speed}'.encode('ascii')
             ips = local_ipv4s()
             recorder.beacon_ips = ips
             targets = ['255.255.255.255'] + sorted({ip.rsplit('.', 1)[0] + '.255' for ip in ips})
@@ -409,6 +447,16 @@ h2 { margin:0 0 14px; font-size:17px; font-weight:600; color:var(--muted); }
 .mode.sel { background:var(--c); border-color:var(--c); color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.18); }
 .mode:disabled { cursor:not-allowed; }
 .mode:disabled:not(.sel) { opacity:.35; }
+.speeds { display:grid; grid-template-columns:repeat(2, minmax(0, 260px)); gap:12px; }
+.speed { min-height:70px; border:3px solid var(--line); border-radius:12px; background:#fff; color:var(--text);
+         font:700 22px "Segoe UI", system-ui, sans-serif; cursor:pointer; }
+.speed:hover:not(:disabled) { border-color:#1f5fa8; }
+.speed.sel { background:#1f5fa8; border-color:#1f5fa8; color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.18); }
+.speed:disabled { cursor:not-allowed; }
+.speed:disabled:not(.sel) { opacity:.35; }
+.speedstate { margin-top:14px; padding:10px 14px; border-radius:10px; font-weight:600; background:#e9edf1; color:var(--muted); }
+.speedstate.ok { background:#e3f4ea; color:var(--go); }
+.speedstate.wait { background:#fdf0e1; color:#a8590b; }
 .selected { margin-top:14px; font-size:18px; }
 .selected b { color:var(--c); }
 .hint { color:var(--muted); font-size:14px; margin-left:8px; }
@@ -449,7 +497,7 @@ td.num { text-align:right; font-variant-numeric:tabular-nums; }
 td a { color:#1f5fa8; font-weight:600; }
 .del { padding:5px 12px; border:1px solid var(--stop); border-radius:8px; background:#fff; color:var(--stop); font-weight:600; cursor:pointer; }
 .empty { color:var(--muted); padding:16px 4px; }
-@media (max-width:900px) { .modes, .summary { grid-template-columns:repeat(2, 1fr); } .rec-row { flex-direction:column; align-items:stretch; } }
+@media (max-width:900px) { .modes, .summary, .speeds { grid-template-columns:repeat(2, 1fr); } .rec-row { flex-direction:column; align-items:stretch; } }
 </style>
 </head>
 <body>
@@ -465,13 +513,20 @@ td a { color:#1f5fa8; font-weight:600; }
   </section>
 
   <section class="card">
-    <h2>1. Choose the bearing condition</h2>
+    <h2>1. Machine speed</h2>
+    <div class="hint" style="margin:0 0 12px">Set the machine's speed controller to this speed too. The node computes the features for the speed chosen here.</div>
+    <div id="speeds" class="speeds"></div>
+    <div id="speedstate" class="speedstate"></div>
+  </section>
+
+  <section class="card">
+    <h2>2. Choose the bearing condition</h2>
     <div id="modes" class="modes"></div>
     <div id="selected" class="selected"></div>
   </section>
 
   <section class="card">
-    <h2>2. Record</h2>
+    <h2>3. Record</h2>
     <div class="rec-row">
       <div class="note">
         <label for="note">Note for this run (optional)</label>
@@ -490,7 +545,7 @@ td a { color:#1f5fa8; font-weight:600; }
 
   <section class="card">
     <div class="head">
-      <h2>3. Recorded runs</h2>
+      <h2>4. Recorded runs</h2>
       <a id="all" class="btn" href="/export/all.csv">Download all runs (CSV)</a>
     </div>
     <div class="hint" style="margin:0 0 8px">Windows saved per label (check the classes are balanced)</div>
@@ -526,6 +581,42 @@ for (const [key, name] of LABELS) {
   $('modes').appendChild(b);
 }
 
+async function chooseSpeed(rpm) {
+  if (!state || busy || state.recording || rpm === state.speed) return;
+  busy = true; $('msg').textContent = '';
+  try { await post('/api/speed', {rpm}); } catch (e) { $('msg').textContent = e.message; }
+  busy = false;
+  refresh();
+}
+
+function renderSpeed() {
+  const box = $('speeds');
+  if (!box.children.length) {
+    for (const rpm of state.speeds) {
+      const b = document.createElement('button');
+      b.className = 'speed'; b.textContent = rpm + ' RPM'; b.dataset.rpm = rpm;
+      b.onclick = () => chooseSpeed(rpm);
+      box.appendChild(b);
+    }
+  }
+  const rec = state.recording;
+  for (const b of box.children) {
+    b.classList.toggle('sel', Number(b.dataset.rpm) === state.speed);
+    b.disabled = !!rec;
+  }
+  const s = $('speedstate'), node = state.node_rpm;
+  if (node == null) {
+    s.className = 'speedstate';
+    s.textContent = 'Node speed: no data yet. The node switches to ' + state.speed + ' RPM when it hears this laptop.';
+  } else if (node === state.speed) {
+    s.className = 'speedstate ok';
+    s.textContent = 'Node confirmed: computing features for ' + node + ' RPM.' + (rec ? ' Stop recording to change the speed.' : '');
+  } else {
+    s.className = 'speedstate wait';
+    s.textContent = 'Switching the node to ' + state.speed + ' RPM (it is still at ' + node + ' RPM)... this takes a few seconds.';
+  }
+}
+
 $('toggle').onclick = async () => {
   if (!state || busy) return;
   busy = true; $('toggle').disabled = true; $('msg').textContent = '';
@@ -554,6 +645,7 @@ function render() {
   $('selected').innerHTML = 'Selected: <b>' + esc(NAME[shown]) + '</b>' +
     (rec ? '<span class="hint">Stop recording to change the condition.</span>' : '');
   if (!state) return;
+  renderSpeed();
 
   $('beacon').textContent = state.beacon_ips.length
     ? 'Announcing this laptop as ' + state.beacon_ips.map(ip => ip + ':' + (location.port || '80')).join(', ')
@@ -639,7 +731,7 @@ def main():
     print(f'Open the UI:  http://localhost:{server.server_port}/', flush=True)
     print(f'ESP endpoint: POST http://<this laptop>:{server.server_port}/features', flush=True)
     print(f'Data folder:  {recorder.dir}  ({len(recorder.runs)} runs loaded)', flush=True)
-    print(f'Beacon:       UDP {BEACON_PORT} "COE-HOST {server.server_port}" every {BEACON_PERIOD_S:g} s '
+    print(f'Beacon:       UDP {BEACON_PORT} "COE-HOST {server.server_port} RPM {recorder.speed}" every {BEACON_PERIOD_S:g} s '
           f'from {", ".join(local_ipv4s()) or "no address"}', flush=True)
     stop_beacon = threading.Event()
     threading.Thread(target=run_beacon, args=(server.server_port, recorder, stop_beacon),
