@@ -177,3 +177,16 @@ def rpm_key(rpm: float, keys=SPEEDS) -> int:
     """Nearest nominal speed within 5 %, else the rounded rpm itself (a run at an unusual speed gets its own key)."""
     k = min(keys, key=lambda s: abs(s - rpm))
     return int(k) if abs(k - rpm) <= RPM_TOL * k else int(round(rpm))
+
+
+# ---- channel policy: B2X := B2Y ---------------------------------------------------------------------------------------------
+# On the real node B2X is a COPY of B1Y (the 4th sensor has no cable), i.e. the signal of the OTHER housing. For bearing 2 the
+# classifier would see housing 1's fault in its X channel. Policy "b2x_copy_of_b2y": bearing 2 uses its own Y sensor for both axes.
+B2X_POLICY = "b2x_copy_of_b2y"
+
+
+def apply_b2x_policy(raw):
+    """raw [..., 32] (B1X,B1Y,B2X,B2Y x 8 features) -> copy with B2X features := B2Y features. Works on 1-D or 2-D arrays."""
+    out = np.array(raw, copy=True)
+    out[..., 16:24] = out[..., 24:32]
+    return out

@@ -1,6 +1,6 @@
 {
   "contract_version": "4-real.1:v4_real",
-  "generated_utc": "2026-11-14T22:54:54+00:00",
+  "generated_utc": "2026-11-14T23:39:26+00:00",
   "generated_by": "AI-engine/aiengine/train_real.py (copy of model_contract_v3e_node.json; heads + inputs replaced)",
   "provenance": {
     "synthetic": true,
@@ -297,7 +297,7 @@
         }
       },
       "warmup_windows": 25,
-      "size_kb": 1169.3,
+      "size_kb": 1129.4,
       "onnx_inputs": [
         "encoder_cont",
         "decoder_cont"
@@ -437,7 +437,7 @@
         "hi_levels": [],
         "reference_impl": "aiengine/up2_window.py"
       },
-      "size_kb": 178.4,
+      "size_kb": 179.2,
       "onnx_inputs": [
         "encoder_cont"
       ],
@@ -537,5 +537,9 @@
       "1800": "is_baseline run(s)",
       "3600": "is_baseline run(s)"
     }
+  },
+  "channel_policy": {
+    "b2x": "b2x_copy_of_b2y",
+    "note": "bearing 2 features: B2X := B2Y (B2X is a copy of B1Y on the node = the other housing); applied in training and in NodeEngine"
   }
 }

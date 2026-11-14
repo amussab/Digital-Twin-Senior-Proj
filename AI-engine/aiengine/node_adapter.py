@@ -26,6 +26,7 @@ from typing import Iterable, Iterator, Optional
 
 import numpy as np
 
+from .real_data import apply_b2x_policy
 from .config import MODELS_DIR
 from .engine import HybridEngine
 
@@ -171,6 +172,8 @@ class NodeEngine:
         t0 = time.perf_counter()
         msg = _as_dict(message)
         raw = node_json_to_raw(msg, self.require_all_channels)
+        if (self.contract.get("channel_policy") or {}).get("b2x") == "b2x_copy_of_b2y":
+            raw = apply_b2x_policy(raw).astype(np.float32)
         rpm = float(msg.get("rpm", 0.0))
         if not np.isfinite(rpm) or rpm <= 0:
             raise ValueError("rpm missing or invalid")

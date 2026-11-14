@@ -45,6 +45,7 @@ STAGE_OF_SEV = {0: 1, 1: 3, 2: 4, 3: 6}
 Z_OF_SEV = {0: -0.1, 1: 0.3, 2: 0.5, 3: 0.9}      # stage_from_z(z, 0) -> 1, 3, 4, 6
 GRID = [dict(max_depth=3, n_estimators=150, learning_rate=0.1), dict(max_depth=5, n_estimators=250, learning_rate=0.06)]
 SPLIT_SECTION = "rig_real"
+B2X_POLICY = R.B2X_POLICY
 
 
 class Insufficient(SystemExit):
@@ -59,7 +60,7 @@ def build_baselines(df: pd.DataFrame, rt: pd.DataFrame, settle_s: float, baselin
         sw, bw = R.settle_windows(key, settle_s), R.baseline_windows(key, baseline_s)
         slices, src = [], None
         for rid in rt[(rt["rpm_key"] == key) & rt["is_baseline"]]["run_id"]:
-            g = df[df["run_id"] == rid].sort_values("order")[R.FEATURE_COLUMNS].to_numpy()
+            g = R.apply_b2x_policy(df[df["run_id"] == rid].sort_values("order")[R.FEATURE_COLUMNS].to_numpy())
             seg = g[sw:sw + bw]
             if len(seg) < max(10, bw // 3):
                 notes.append(f"baseline run {rid} @ {key} rpm too short ({len(g)} windows; needs settle {sw} + >= {max(10, bw // 3)}): ignored")
@@ -70,7 +71,7 @@ def build_baselines(df: pd.DataFrame, rt: pd.DataFrame, settle_s: float, baselin
             src = "is_baseline run(s)"
         if not slices:
             for rid in rt[(rt["rpm_key"] == key) & (rt["label"] == "healthy") & ~rt["is_baseline"]]["run_id"]:
-                g = df[df["run_id"] == rid].sort_values("order")[R.FEATURE_COLUMNS].to_numpy()
+                g = R.apply_b2x_policy(df[df["run_id"] == rid].sort_values("order")[R.FEATURE_COLUMNS].to_numpy())
                 if len(g) > sw:
                     slices.append(g[sw:])
             if slices:
@@ -111,7 +112,7 @@ def build_samples(df: pd.DataFrame, rt: pd.DataFrame, baselines: dict, settle_s:
         if len(g) < T + 5:
             notes.append(f"run {r.run_id}: only {len(g)} windows after the settle{' + baseline' if r.is_baseline else ''} drop (< {T + 5}): dropped")
             continue
-        raw, rpm = g[R.FEATURE_COLUMNS].to_numpy(float), g["rpm"].to_numpy(float)
+        raw, rpm = R.apply_b2x_policy(g[R.FEATURE_COLUMNS].to_numpy(float)), g["rpm"].to_numpy(float)
         sev_run = np.nan if pd.isna(r.severity) else float(r.severity)
         for k in (1, 2):
             faulty = r.label != "healthy" and r.position in ("both", f"b{k}")
@@ -134,7 +135,11 @@ def sim_samples(max_per_class: int = 4000) -> dict:
     from . import coe_adapt as A
     from . import coe_dataset as D
     df = D.generate()
-    df = df[df["split"] == "train"]
+    df = df[df["split"] == "train"].copy()
+    xc = [c for c in df.columns if c.startswith("x_")]
+    b2 = df["bearing"].to_numpy() == 2
+    for c in xc:                                    # same policy as the rig: bearing 2 uses its own Y sensor for X too
+        df.loc[b2, c] = df.loc[b2, "y_" + c[2:]].to_numpy()
     eng = feat.engineer_table(df, extended=True)
     eng["observable_class"] = eng["observable_class"].astype(str)
     Bk, idx = A.blocks_for(eng, columns=V3E)
@@ -377,6 +382,7 @@ def export(out: str, clf: Clf, zm, baselines: dict, summary: dict, models_dir: P
     con["rul"]["procedure"] = "RUL is NOT estimated by this contract (rul_head[0] = 0); only health_stage / z are meaningful."
     con["disclosures"]["provenance"] = prov["note"]
     con["real_data"] = summary.get("data_summary", {})
+    con["channel_policy"] = {"b2x": B2X_POLICY, "note": "bearing 2 features: B2X := B2Y (B2X is a copy of B1Y on the node = the other housing); applied in training and in NodeEngine"}
     (models_dir / f"model_contract_{out}.json").write_text(json.dumps(con, indent=2, default=float))
     from .node_adapter import NodeEngine
     ne = NodeEngine(contract_file=f"model_contract_{out}.json", model_dir=models_dir)
