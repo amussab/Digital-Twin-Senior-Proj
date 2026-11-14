@@ -21,7 +21,7 @@ All commands run in PowerShell from the repo root:
 
 ## 1. Flash the STM32 (only once, about 5 min; the ESP32 is not touched)
 
-1. Switch the **24 V supply OFF**. The pins float during reset, so never flash with it on.
+1. Switch the **24 V supply ON** (the STM32 is powered from it; with it off the programmer sees 0.02 V and finds no target). Keep ST-LINK USB plugged in. Verified 2026-11-14.
 2. Plug the Nucleo's **ST-LINK USB** into this laptop. Leave it plugged in all day: speed changes use it.
 3. Run `COE\firmware\stm32\tools\flash_release.ps1`. It checks the SHA-256 hashes, flashes both cores and resets.
    It ends with `Flashed ... and reset the board`.

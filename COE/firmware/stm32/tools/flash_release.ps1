@@ -13,7 +13,7 @@ Afterwards: switch 24 V on, wait for the green LED, then  python training\node_c
 param([string]$Folder = (Join-Path (Split-Path -Parent $PSScriptRoot) 'release\rig_runtime_config'))
 
 . "$PSScriptRoot\common.ps1"
-Write-Host 'REMINDER: switch the 24 V supply OFF before flashing.' -ForegroundColor Yellow
+Write-Host 'REMINDER: 24 V supply ON + ST-LINK USB (verified 14 Nov: with 24 V off the target reads 0.02 V and is not found).' -ForegroundColor Yellow
 
 # Check the files against the hash list first, so a damaged copy is never flashed.
 $sums = Join-Path $Folder 'SHA256SUMS.txt'

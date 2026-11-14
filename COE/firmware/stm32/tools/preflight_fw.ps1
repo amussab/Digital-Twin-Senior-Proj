@@ -24,5 +24,5 @@ $stlink = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-
 Report ([bool]$stlink) 'ST-LINK (USB VID_0483) detected'
 $com = $stlink | Where-Object { $_.Name -match '\(COM\d+\)' } | Select-Object -First 1
 if ($com) { Write-Host "       virtual COM port: $($com.Name)" }
-Write-Host 'Reminder: 24 V OFF before flashing. This script flashed nothing.'
+Write-Host 'Reminder: 24 V ON before flashing (board is powered by it). This script flashed nothing.'
 if ($fail) { Write-Host "$fail check(s) failed." -ForegroundColor Yellow; exit 1 } else { exit 0 }
