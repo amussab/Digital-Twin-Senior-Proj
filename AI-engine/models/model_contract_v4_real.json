@@ -1,6 +1,6 @@
 {
   "contract_version": "4-real.1:v4_real",
-  "generated_utc": "2026-11-14T22:44:20+00:00",
+  "generated_utc": "2026-11-14T22:54:54+00:00",
   "generated_by": "AI-engine/aiengine/train_real.py (copy of model_contract_v3e_node.json; heads + inputs replaced)",
   "provenance": {
     "synthetic": true,
@@ -297,7 +297,7 @@
         }
       },
       "warmup_windows": 25,
-      "size_kb": 1175.1,
+      "size_kb": 1169.3,
       "onnx_inputs": [
         "encoder_cont",
         "decoder_cont"
@@ -437,7 +437,7 @@
         "hi_levels": [],
         "reference_impl": "aiengine/up2_window.py"
       },
-      "size_kb": 177.3,
+      "size_kb": 178.4,
       "onnx_inputs": [
         "encoder_cont"
       ],
@@ -517,17 +517,19 @@
     "classifier": "contract 3e-node: baseline-relative classifier on synth_coe_node only; selected on val; test scored once (reports/node_v3e_*.json)"
   },
   "real_data": {
-    "runs": 9,
-    "windows": 4703,
+    "runs": 10,
+    "windows": 5076,
     "runs_per_class": {
       "ball": 1,
       "cage": 2,
+      "healthy": 1,
       "inner_race": 2,
       "outer_race": 2
     },
     "mounts_per_class": {
       "ball": 1,
       "cage": 1,
+      "healthy": 1,
       "inner_race": 1,
       "outer_race": 1
     },

@@ -10,7 +10,7 @@
   "legacy": "policy absent => median of first 24 windows (sim scoring, golden vectors)",
   "rationale": "procedure-based (2 min thermal/mechanical run-in, 1 min capture); NOT tuned on rig data"
  },
- "timestamp_utc": "2026-11-14T22:44:29+00:00",
+ "timestamp_utc": "2026-11-14T22:55:03+00:00",
  "baselines": {
   "1800": {
    "rpm": 1800,

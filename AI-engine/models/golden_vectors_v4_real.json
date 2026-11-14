@@ -1355,13 +1355,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.0006219473670949098,
-     "cage": 0.0055451807044858146,
-     "healthy": 0.9933322630601269,
-     "inner_race": 0.00028264928825211667,
-     "outer_race": 0.0002179595800401095
+     "ball": 0.0002836546252125578,
+     "cage": 0.0017666794467337999,
+     "healthy": 0.997779718488695,
+     "inner_race": 7.77664445407867e-05,
+     "outer_race": 9.218099481774622e-05
     },
-    "confidence": 0.9933322630601269,
+    "confidence": 0.997779718488695,
     "health_index": 0.04818167164200868,
     "health_stage": 1,
     "onset_detected": false,
@@ -1375,29 +1375,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.11914226412773132,
+     -0.13625311851501465,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -1907,13 +1907,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.00016454147188007804,
-     "cage": 0.0017565783916259098,
-     "healthy": 0.9979329843709683,
-     "inner_race": 9.321424439832969e-05,
-     "outer_race": 5.2681521127290584e-05
+     "ball": 0.0001219666814548083,
+     "cage": 0.0009093287783463309,
+     "healthy": 0.9988949550975033,
+     "inner_race": 4.0595952445056966e-05,
+     "outer_race": 3.315349025057232e-05
     },
-    "confidence": 0.9979329843709683,
+    "confidence": 0.9988949550975033,
     "health_index": 0.03697978144466706,
     "health_stage": 1,
     "onset_detected": false,
@@ -1927,29 +1927,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.12453475594520569,
+     -0.13649001717567444,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -2459,13 +2459,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.00011842992456162817,
-     "cage": 0.0017432044705975693,
-     "healthy": 0.997978814101196,
-     "inner_race": 8.988338405275781e-05,
-     "outer_race": 6.966811959187099e-05
+     "ball": 7.58809958086781e-05,
+     "cage": 0.0010900494666710079,
+     "healthy": 0.9987300517408314,
+     "inner_race": 4.8803404402347994e-05,
+     "outer_race": 5.521439228634351e-05
     },
-    "confidence": 0.997978814101196,
+    "confidence": 0.9987300517408314,
     "health_index": 0.016358580517533455,
     "health_stage": 1,
     "onset_detected": false,
@@ -2479,29 +2479,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.13868853449821472,
+     -0.15061497688293457,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -3011,13 +3011,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.00035215982234788055,
-     "cage": 0.002063293998619923,
-     "healthy": 0.9974182725386563,
-     "inner_race": 9.80631108092495e-05,
-     "outer_race": 6.821052956672441e-05
+     "ball": 0.00021237537467449707,
+     "cage": 0.001000736902761916,
+     "healthy": 0.9986959239273997,
+     "inner_race": 4.828968942971471e-05,
+     "outer_race": 4.267410573409243e-05
     },
-    "confidence": 0.9974182725386563,
+    "confidence": 0.9986959239273997,
     "health_index": 0.0437803290391857,
     "health_stage": 1,
     "onset_detected": false,
@@ -3031,29 +3031,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.13116031885147095,
+     -0.13735511898994446,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -3563,13 +3563,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.00029273781072242593,
-     "cage": 0.0018725805801208064,
-     "healthy": 0.9977144171912623,
-     "inner_race": 7.047523458445773e-05,
-     "outer_race": 4.978918330988879e-05
+     "ball": 0.0002503164313993604,
+     "cage": 0.0013876038694305628,
+     "healthy": 0.9982496856540478,
+     "inner_race": 6.118609733214458e-05,
+     "outer_race": 5.1207947789893816e-05
     },
-    "confidence": 0.9977144171912623,
+    "confidence": 0.9982496856540478,
     "health_index": 0.01736907874573078,
     "health_stage": 1,
     "onset_detected": false,
@@ -3583,29 +3583,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.1366252899169922,
+     -0.1495572030544281,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -4115,13 +4115,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.0005021313855253102,
-     "cage": 0.0023835777172363064,
-     "healthy": 0.9969398423460752,
-     "inner_race": 0.00010048754021192229,
-     "outer_race": 7.396101095132548e-05
+     "ball": 0.0002547685337887151,
+     "cage": 0.0016746909663566275,
+     "healthy": 0.9979226503269853,
+     "inner_race": 8.379361944064114e-05,
+     "outer_race": 6.409655342856852e-05
     },
-    "confidence": 0.9969398423460752,
+    "confidence": 0.9979226503269853,
     "health_index": 0.04746064464892485,
     "health_stage": 1,
     "onset_detected": false,
@@ -4135,29 +4135,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.13940885663032532,
+     -0.1371312141418457,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -4667,13 +4667,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.03545175012927174,
-     "cage": 0.008503258571479266,
-     "healthy": 0.9553856451806575,
-     "inner_race": 0.0003711800742123423,
-     "outer_race": 0.0002881660443791789
+     "ball": 0.01671236247351738,
+     "cage": 0.004338274985352726,
+     "healthy": 0.978657235845843,
+     "inner_race": 0.0001498382876027345,
+     "outer_race": 0.00014228840768422014
     },
-    "confidence": 0.9553856451806575,
+    "confidence": 0.978657235845843,
     "health_index": 0.09411267719023197,
     "health_stage": 1,
     "onset_detected": false,
@@ -4687,29 +4687,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.060041993856430054,
+     -0.10388854146003723,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -5219,13 +5219,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.005157843712881691,
-     "cage": 0.008780438077193739,
-     "healthy": 0.9852553979386509,
-     "inner_race": 0.00046620502704788,
-     "outer_race": 0.000340115244225707
+     "ball": 0.0025563927408752845,
+     "cage": 0.0033221337647297232,
+     "healthy": 0.9938923842239215,
+     "inner_race": 0.00012387699388106686,
+     "outer_race": 0.0001052122765925009
     },
-    "confidence": 0.9852553979386509,
+    "confidence": 0.9938923842239215,
     "health_index": 0.020993031300676104,
     "health_stage": 1,
     "onset_detected": false,
@@ -5239,29 +5239,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.05706578493118286,
+     -0.10061398148536682,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -5771,13 +5771,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.0038567419498353695,
-     "cage": 0.010235916015129154,
-     "healthy": 0.9852286491595185,
-     "inner_race": 0.0003645844055912609,
-     "outer_race": 0.0003141084699259008
+     "ball": 0.001933852133422053,
+     "cage": 0.0044064060109510915,
+     "healthy": 0.9933855766408587,
+     "inner_race": 0.00014999785025306142,
+     "outer_race": 0.00012416736451500152
     },
-    "confidence": 0.9852286491595185,
+    "confidence": 0.9933855766408587,
     "health_index": 0.017742633703209297,
     "health_stage": 1,
     "onset_detected": false,
@@ -5791,29 +5791,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.06528979539871216,
+     -0.07985860109329224,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -6323,13 +6323,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.003915020246680828,
-     "cage": 0.008160353838253146,
-     "healthy": 0.9872576549051572,
-     "inner_race": 0.0003587950698999525,
-     "outer_race": 0.00030817594000910956
+     "ball": 0.0017265404727768816,
+     "cage": 0.0024003112593972307,
+     "healthy": 0.9956966297655573,
+     "inner_race": 8.945435824800628e-05,
+     "outer_race": 8.706414402054201e-05
     },
-    "confidence": 0.9872576549051572,
+    "confidence": 0.9956966297655573,
     "health_index": 0.052173701550990756,
     "health_stage": 1,
     "onset_detected": false,
@@ -6343,29 +6343,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.0718628466129303,
+     -0.09334057569503784,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -6875,13 +6875,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.004647884320905389,
-     "cage": 0.019108412554290206,
-     "healthy": 0.9748289463687487,
-     "inner_race": 0.0008019412548906127,
-     "outer_race": 0.0006128155011650903
+     "ball": 0.0018805846347247595,
+     "cage": 0.005890445371132764,
+     "healthy": 0.9919166598404523,
+     "inner_race": 0.0001442062668780984,
+     "outer_race": 0.00016810388681209054
     },
-    "confidence": 0.9748289463687487,
+    "confidence": 0.9919166598404523,
     "health_index": 0.040077068471991634,
     "health_stage": 1,
     "onset_detected": false,
@@ -6895,29 +6895,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.056851476430892944,
+     -0.0803573727607727,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }
@@ -7427,13 +7427,13 @@
     "status": "ok",
     "fault_class": "healthy",
     "class_probs": {
-     "ball": 0.001863571307121152,
-     "cage": 0.008510499913015428,
-     "healthy": 0.989091855166118,
-     "inner_race": 0.0002998291009698971,
-     "outer_race": 0.00023424451277539356
+     "ball": 0.0012122545343625248,
+     "cage": 0.005074339720900558,
+     "healthy": 0.9934686210195406,
+     "inner_race": 0.00011151783663646556,
+     "outer_race": 0.00013326688855987967
     },
-    "confidence": 0.989091855166118,
+    "confidence": 0.9934686210195406,
     "health_index": 0.0418948912050266,
     "health_stage": 1,
     "onset_detected": false,
@@ -7447,29 +7447,29 @@
     "rul_threshold_class": "healthy",
     "hi_forecast": [
      -0.0,
-     -0.0739944577217102,
+     -0.09850156307220459,
      1.0
     ],
     "top_features": [
      [
       "bpfo_share",
-      0.1476
+      0.1385
      ],
      [
       "bsf_share",
-      0.1421
+      0.1374
      ],
      [
       "axis_asymmetry",
-      0.1267
-     ],
-     [
-      "hi",
-      0.0956
+      0.1258
      ],
      [
       "bpfi_share",
-      0.0838
+      0.0847
+     ],
+     [
+      "hi",
+      0.0817
      ]
     ]
    }

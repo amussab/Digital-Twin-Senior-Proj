@@ -1,0 +1,152 @@
+{
+ "tag": "[MEASURED on rig]",
+ "utc": "2026-11-14T22:55:05+00:00",
+ "seed": 20261004,
+ "command": "python -m aiengine.train_real --data ../COE/training/training_data --out v4_real --include-sim",
+ "data": {
+  "runs": 10,
+  "windows": 5076,
+  "runs_per_class": {
+   "ball": 1,
+   "cage": 2,
+   "healthy": 1,
+   "inner_race": 2,
+   "outer_race": 2
+  },
+  "mounts_per_class": {
+   "ball": 1,
+   "cage": 1,
+   "healthy": 1,
+   "inner_race": 1,
+   "outer_race": 1
+  },
+  "baseline_rpms": {
+   "1800": "is_baseline run(s)",
+   "3600": "is_baseline run(s)"
+  }
+ },
+ "notes": [
+  "INSUFFICIENT DATA: class 'healthy' has 1 run(s) (< 2): no train/held-out split by run is possible for it; its numbers are not trustworthy",
+  "INSUFFICIENT DATA: class 'ball' has 1 run(s) (< 2): no train/held-out split by run is possible for it; its numbers are not trustworthy"
+ ],
+ "baselines": {
+  "1800": {
+   "windows": 90,
+   "settle_windows": 180,
+   "source": "is_baseline run(s)"
+  },
+  "3600": {
+   "windows": 180,
+   "settle_windows": 360,
+   "source": "is_baseline run(s)"
+  }
+ },
+ "split": {
+  "registered_in": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\DT-main\\AI-engine\\splits.json",
+  "section": "rig_real",
+  "counts": {
+   "train": 8,
+   "heldout": 0
+  },
+  "heldout_runs": []
+ },
+ "cv": [
+  {
+   "hp": {
+    "max_depth": 3,
+    "n_estimators": 150,
+    "learning_rate": 0.1
+   },
+   "sim_weight": 0.0,
+   "macro_f1": 0.15214384508990317,
+   "folds": 5,
+   "scored_windows": 4092
+  },
+  {
+   "hp": {
+    "max_depth": 5,
+    "n_estimators": 250,
+    "learning_rate": 0.06
+   },
+   "sim_weight": 0.0,
+   "macro_f1": 0.15193370165745856,
+   "folds": 5,
+   "scored_windows": 4092
+  },
+  {
+   "hp": {
+    "max_depth": 3,
+    "n_estimators": 150,
+    "learning_rate": 0.1
+   },
+   "sim_weight": 0.3,
+   "macro_f1": 0.4762036921503123,
+   "folds": 5,
+   "scored_windows": 4092
+  },
+  {
+   "hp": {
+    "max_depth": 5,
+    "n_estimators": 250,
+    "learning_rate": 0.06
+   },
+   "sim_weight": 0.3,
+   "macro_f1": 0.5063789382564255,
+   "folds": 5,
+   "scored_windows": 4092
+  }
+ ],
+ "selected": {
+  "hp": {
+   "max_depth": 5,
+   "n_estimators": 250,
+   "learning_rate": 0.06
+  },
+  "sim_weight": 0.3,
+  "cv_macro_f1": 0.5063789382564255
+ },
+ "sim_comparison": null,
+ "heldout": null,
+ "scorecard": {
+  "IS3 (NOT SCORED)": {
+   "value": null,
+   "pass": null,
+   "why": "no held-out run: need >= 3 runs/mounts per condition"
+  },
+  "S8 latency < 200 ms/window (NodeEngine host p95)": {
+   "value": 13.80819499881909,
+   "pass": true
+  }
+ },
+ "onnx_parity": {
+  "windows": 169,
+  "prob_max_abs_diff": 8.331193557253869e-08,
+  "argmax_mismatch": 0,
+  "reference": "native xgboost predict_proba"
+ },
+ "stream_check": {
+  "run_id": "run_20261115_002457",
+  "label": "inner_race",
+  "windows_ok": 158,
+  "class_counts": {
+   "1": {
+    "inner_race": 158
+   },
+   "2": {
+    "healthy": 158
+   }
+  },
+  "latency_ms": {
+   "p50": 7.149850000132574,
+   "p95": 13.80819499881909,
+   "max": 16.458200001579826
+  }
+ },
+ "export": {
+  "contract": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\DT-main\\AI-engine\\models\\model_contract_v4_real.json",
+  "baseline": "C:\\Users\\lenovo\\Documents\\KFUPM\\Term261\\ICS414\\Repo\\DT-main\\AI-engine\\models\\baseline_v4_real.json"
+ },
+ "train_windows": 4092,
+ "heldout_windows": 0,
+ "seconds": 234.2
+}
