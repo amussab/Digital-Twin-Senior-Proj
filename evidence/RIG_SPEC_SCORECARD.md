@@ -36,3 +36,20 @@ fault severities ESTIMATED (not measured), B2X on the node is a copy of B1Y (pol
 - Existing simulation-only model `v3e_node` (trained only on synth_coe_node, 2026-11-12): **[SIMULATION] test macro-F1 0.877 (>= 0.85)** on the same held-out simulated units. That is the model with a simulation IS3 pass; it has no rig-measured evidence of equal strength.
 - A synthetic "held-out bearing" built by jittering the real windows was deliberately NOT made: it would derive from the same real bearings, so it would only look like generalisation.
 - S7 / IS2 [SIMULATION] evidence (RUL and physics twin) exists from the UP2 prototype (v3 contracts, `Repo/DT-up2`, `UP2_Evidence.ipynb`); `v4_real` itself outputs no RUL.
+
+
+## FPR section (2026-11-15, evidence author) - computed by `AI-engine/notebooks/FPR_Evidence.ipynb`; the rows above are kept as history
+
+Counts of the 17 counted items at this run: **13 MET** (3 computed from artifacts here: C5, S8, S9; 10 owner-supplied ME/COE statement 2026-11-15), 1 PARTIAL (IS1), 2 NOT MET (S7, IS3), 1 PENDING (IS2); bar = 13.
+Data tag for S7/IS2/IS3: `[SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed]`; no real run-to-failure data exists for 4 of 5 fault classes; test units are held-out simulated trajectories, not held-out bearings.
+
+| Spec | FPR result (v5_node, scored once; v6_node PENDING) | Rank | Verdict |
+|---|---|---|---|
+| C5 | 19/19 LAN-guard tests live [MEASURED host] | 9 | MET |
+| S8 | NodeEngine p95 ~24 ms/window live [MEASURED host] | 9 | MET |
+| S9 | ~38 Hz live; AI RUL + physics RUL + Miner D together in 100 % of faulted replay windows [SIMULATION]; n/a on the live rig node | 9 (pipeline) | MET [SIMULATION] |
+| S7 | MAPE 23.39 % (> 15 %), baseline 66.52 % [SIMULATION] | 6 | NOT MET (conflicts with the all-met statement) |
+| IS1 | host legs ~56 ms; Wi-Fi hop unmeasurable (no node timestamp) | 6 | PARTIAL |
+| IS2 | val frozen, 4/6 controls pass -> not valid for test; v1 literal FAIL | 3 | PENDING |
+| IS3 | macro-F1 0.838, stage max 2, caught 46/48 [SIMULATION] | 6 | NOT MET |
+| C1, C2, C4, C6, S1-S6 | owner statement 2026-11-15, artifacts with owners | n/a | MET [OWNER-SUPPLIED] |

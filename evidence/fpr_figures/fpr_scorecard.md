@@ -1,0 +1,34 @@
+| ID | Item | Status | Measured | Target | Spec evidence rank | Demonstrated live | Provenance |
+|---|---|---|---|---|---|---|---|
+| C1 | Target machine envelope (OH-2 / Goulds 3196) | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | OH-2 (API 610) pumps, Goulds 3196 STi+MTi class: drivers <=40/~122 HP, 1750/3500 rpm, housing <=10 mm/s RMS | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
+| C2 | Mains power, SELV IEPE excitation | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | Mains-powered node; SELV (<=50 V DC) IEPE excitation 24 V/4 mA over coax, AC-coupled to ADC range | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
+| C4 | Local processing, no cloud | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | All real-time DAQ and signal processing run on local hardware, no cloud reliance | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
+| C5 | Dashboard on the LAN only | MET [MEASURED host] | 19/19 guard tests pass (HTTP 403 for public, UDP dropped) | LAN only, no external exposure | 9 | yes (dotnet test, this run) | [MEASURED host] |
+| C6 | UV-stabilised polymer enclosure | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | Enclosure from UV-stabilized weather-resistant polymer (ABS/PETG) | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
+| S1 | 2x biaxial IEPE accelerometers | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | 2x biaxial IEPE sets (4 ch): 100 mV/g, +-50 g, flat 2-10 kHz (off-the-shelf) | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
+| S2 | FE twin identifies stiffness <= 10 % | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | FE digital twin identifies bearing stiffness K, <=10 % error vs known-stiffness reference | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
+| S3 | Enclosure IP54 / 85 C / UV | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | Enclosure IP54 (IEC 60529), 85 C ambient, UV | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
+| S4 | Sample rate >= 25 kS/s/ch x 4 | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | Sample rate >=25 kS/s per channel, 4 channels | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
+| S5 | Window -> payload <= 333 ms | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | 20-rev window processed, payload available within 333 ms | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
+| S6 | Fixed-dim AI input, 1000-3600 rpm | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | AI-ready representation, fixed dimensionality and ordering, independent of speed over 1000-3600 rpm | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
+| S7 | RUL MAPE <= 15 % | NOT MET | MAPE 23.39 % over 48 simulated units; trivial one-HI baseline 66.52 % | MAPE <= 15 % | 6 | pipeline yes (section 11); score = stored report re-read | [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed] |
+| S8 | Classification < 200 ms/window | MET [MEASURED host] | p95 23.55 ms (max 1161.12) per window, n=1301 | < 200 ms/window | 9 | yes (NodeEngine timed live) | [MEASURED host] |
+| S9 | Dashboard >= 10 Hz | MET [SIMULATION] | 38.0 Hz (live); fields together in 100.0 % of faulted windows | >= 10 Hz; physics RUL + AI RUL + fault ID together | 9 | yes | [SIMULATION] [MEASURED host] |
+| IS1 | Sensor -> dashboard < 500 ms | PARTIAL | host legs 55.6 ms; Wi-Fi hop unmeasured (444 ms headroom) | < 500 ms end to end | 6 | host leg yes; Wi-Fi hop no | [MEASURED host] |
+| IS2 | Physics-AI RUL agreement | PENDING (validation frozen, test not scored) | v5_node: val MED 0.287 / P95 0.723 vs frozen T 0.54/1.23; valid_for_test=False (wrong-AI controls all fail on val: False) | MED <= T_MED, P95 <= T_P95 (x L_ref, frozen on val); v1 max <= 5 % | 3 | pipeline yes (physics + AI RUL in section 11); score = stored report | [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed] |
+| IS3 | macro-F1 >= 0.85, stage err <= 1, caught by stage 3 | NOT MET | macro-F1 0.838; stage max err 2; caught 46/48  [v5_node] | macro-F1 >= 0.85; stage err <= 1; caught by stage 3 | 6 | pipeline yes; score = stored report | [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed] |
+
+**Result, computed from the artifacts on disk.** 13 of 17 counted items are MET (3 computed from artifacts in this repo, 10 on the ME/COE owners' statement); the rubric bar is more than 75 % = 13.
+**Note:** the bar is reached only with the owner-supplied items; the 3 items computed from artifacts here are not enough on their own.
+
+- **MET:** C1, C2, C4, C5, C6, S1, S2, S3, S4, S5, S6, S8, S9.
+- **Partial:** IS1.
+- **Not met:** S7, IS3.
+- **Pending (evidence not final):** IS2.
+
+**What was done.** The node-feature AI (`v5_node`, then `v6_node`) was trained and scored on simulated degradation trajectories whose healthy/fault endpoints are resampled from real rig windows; a feature-only physics twin was added; both run live in the real stack (replay -> receiver -> NodeEngine -> backend -> dashboard), which is the Rank 9 demo of the PIPELINE.
+
+**Honest limits, in one line.** No real run-to-failure data exists for 4 of 5 fault classes. Anchors = 5 physical bearings (healthy + one per fault); test units are held-out simulated trajectories, not held-out bearings; the damage-curve family is assumed.
+
+**v5 test (scored once, FAIL):** S7 23.39 %, macro-F1 0.838, stage error max 2, caught 46/48.
+**v6:** PENDING (no `v6_node_<utc>.json` report yet; re-execute the notebook when it lands).
