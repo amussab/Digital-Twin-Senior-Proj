@@ -110,13 +110,13 @@ through and note what replaced it.
   packet on the wire to the laptop (the 160-byte packet is STM32->ESP32 UART only). Schema in `COE/README.md`.
 - Channels B1X, B1Y, B2X, B2Y; **B2X is a copy of B1Y** (4th sensor has no cable). Features in **g**.
 - **The node has no tachometer.** RPM is a setting; at boot = 1800. Since build `release/rig_runtime_config`
-  (built 2026-11-13, not yet flashed/tested on hardware) RPM and bearing orders are set at runtime over the
+  (built 2026-11-13, flashed + verified on hardware 2026-11-14) RPM and bearing orders are set at runtime over the
   ST-LINK USB COM port: `python COE/training/node_config.py --rpm N | --bearing ftf bsf bpfo bpfi [hw] | --query`
   (also the recorder page's speed buttons). Not persisted across power cycles. Typed RPM must match the VFD.
 - Old firmware said 250 rpm while the rig ran 1800 → the 4 order bands of that capture are invalid.
 - Rig speeds: **1800 and 3600 rpm** (VFD). Envelope band limit 400 Hz (BPFI at 3600 = 362 Hz).
 - Models for node features: `v3e_node` (default; baseline-relative classifier on node-matched sim, macro-F1 0.877
-  [SIMULATION]); `v4_real` = to be trained on rig data with `aiengine.train_real`. RUL/physics twin are NOT valid on
+  [SIMULATION]); `v4_real` = TRAINED 2026-11-15 on rig data (1 bearing/fault, estimated severities; B2X:=B2Y policy; see RIG_STATE + evidence/RIG_SPEC_SCORECARD.md; IS3 not scorable on rig). RUL/physics twin are NOT valid on
   node data (features only, no raw waveform/prox) → dashboard shows n/a.
 - Commissioning baseline policy: drop 120 s settle, median over next 60 s, per rpm (contract `3e-node.1`).
 - Only HEALTHY real data exists so far: `Repo/rig_data/probe_1800rpm_fw250_healthy.jsonl` (931 windows, dev file).

@@ -1,5 +1,24 @@
 # RIG_STATE — resume ledger for the real-rig integration
 
+## RIG DAY RESULT (2026-11-14/15) — newest; supersedes the START HERE block below
+DONE: flashed our `release/rig_runtime_config` (24 V ON + ST-LINK; 24 V OFF fails: target reads 0.02 V); runtime RPM/BEARING commands WORK on hardware
+(`node_config.py --query` -> rpm 1800 + new bearing orders). ESP32 NOT reflashed (subagent verdict: COE's new ESP32 firmware is only a speed relay
+we don't use; COE's prebuilt STM32 hex has OLD bearing orders -> do not use). Open COE items: port his PD6 RX-error fix; STM32 rebooted twice
+(once at 3600 rpm, once during the bearing failure) -> node reverts to 1800 rpm default after any reboot, check `window_id` resets.
+Data (`COE/training/training_data`, backup `Repo/rig_data/2026-11-14_training_data`): healthy H-01 (1800 baseline + first 1800 run as healthy + 3600 baseline),
+inner (green, IR-1), outer (white, OR-1), cage (black, CA-1) at 1800+3600, ball (gold, BA-1) at 1800 only. ONE bearing per fault; severities ESTIMATED
+(inner/outer 3, cage/ball 2), notes say so. Housing 1 = swapped bearing, housing 2 = always-healthy bearing. B2X = copy of B1Y (other housing) ->
+policy B2X:=B2Y (`real_data.apply_b2x_policy`, contract `channel_policy`, applied in train_real, sim rows, NodeEngine).
+Excluded/special: `Repo/rig_data/excluded/` (run 232516: STM32 reboot), `Repo/rig_data/run_to_failure/run_20261115_012341` (+CONTEXT.md; ball bearing broke at 3600,
+rpm column invalid after reboots; NOT training data), `rig_data/old_b2x_copy/`.
+Model `v4_real` (commit 7bb6a78): 10 runs/5,076 windows. [MEASURED on rig] CV macro-F1 0.45 (structurally pessimistic), within-mount time-blocked 1.00 (optimistic),
+cross-speed 0.36-0.79 (fails 0.85). [SIMULATION] held-out sim units 0.80. IS3 NOT scorable on rig (1 bearing/fault). v3e_node [SIMULATION] 0.877 is the only IS3 pass.
+S8 p95 13.6 ms MET; S9 21 Hz but RUL/physics empty (partial); IS1 partial; S7/IS2 not met (v4_real has no RUL). Full table: `evidence/RIG_SPEC_SCORECARD.md`.
+Live stack with v4_real verified via replay (`run-rig-live.ps1 -Contract v4_real -Baseline AI-engine/models/baseline_v4_real.json -NoBrowser`; stop with stop-rig-live.ps1).
+Not done: real-time demo with the node + screen recording; push (ask first, then PR into main). Offered: sim-trained RUL head on node features [SIMULATION].
+Rule from user session: never fabricate evidence; synthetic data only as tagged [SIMULATION]; no jittered-real "held-out bearings". New tools: `rig_within_mount_eval`, `v4_sim_test`.
+Gotchas: `cube stlink-server-start` (VS Code STM32 ext) can lock COM7 -> kill it; Wi-Fi drifts to KFUPM-WiFi; recorder jsonl rows are {message, received_at}.
+
 ## START HERE (updated 2026-11-13 night, for the rig-day session on 2026-11-14)
 Goal of rig day: flash once -> record labelled real data at several bearing health levels (1800 + 3600 rpm)
 -> train `v4_real` on it -> show the full system live (node -> AI -> dashboard). User only swaps bearings,
