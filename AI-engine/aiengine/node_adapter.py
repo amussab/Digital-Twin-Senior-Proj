@@ -101,9 +101,23 @@ class NodeEngine:
     def __init__(self, contract_file: str = "model_contract_v3e_node.json", model_dir: Path = MODELS_DIR,
                  threads: int = 1, baselines: Optional[dict] = None, require_all_channels: bool = True,
                  policy="contract", settle_windows: Optional[int] = None,
-                 baseline_windows: Optional[int] = None):
+                 baseline_windows: Optional[int] = None, time_base: str = "realtime",
+                 physics: Optional[bool] = None):
         self.engine = HybridEngine(model_dir, threads=threads, baselines=baselines, contract_file=contract_file)
         self.contract = self.engine.c
+        if time_base not in ("realtime", "table"):
+            raise ValueError("time_base must be 'realtime' or 'table'")
+        # time_base 'table': one window == one snapshot of the contract's table cadence (rul.table_cadence_hours, 10 min for
+        # v5/v6), the clock a simulated-trajectory replay (rig_anchor) is generated on; AI RUL and physics RUL are then in
+        # simulated hours. 'realtime' (live node): window time = real seconds; no RUL model is valid on live windows -> n/a.
+        self.time_base = time_base
+        self.cad_h = self.contract.get("rul", {}).get("table_cadence_hours")
+        # physics twin only for contracts that declare a RUL table cadence (v5/v6); v3e/v4_real output is unchanged.
+        self.physics = bool(self.cad_h) if physics is None else bool(physics)
+        if self.physics and not self.cad_h:
+            raise ValueError("physics twin needs a contract with rul.table_cadence_hours")
+        if time_base == "table" and not self.cad_h:
+            raise ValueError("time_base 'table' needs a contract with rul.table_cadence_hours")
         self.require_all_channels = require_all_channels
         if policy == "contract":
             policy = self.contract.get("feature_engineering", {}).get("baseline", {}).get("policy")
@@ -121,6 +135,18 @@ class NodeEngine:
         self.seen = 0                             # windows since (re)start at this rpm
         self.collect: list = []                   # [(msg, raw)] baseline windows (replayed once the baseline exists)
         self.need = (0, 0)
+        self.tick = 0                             # windows fed to the engine since reset (table time base)
+        self.rt_h = 0.0                           # accumulated real time of fed windows [h] (realtime time base)
+        self._reset_twins()
+
+    def _reset_twins(self) -> None:
+        self.twins = {}
+        if self.physics:
+            from .rig_anchor import constants as K
+            from .twin.feature_physics import FeaturePhysicsParams, FeaturePhysicsTwin, LifeRef
+            # L_ref = ISO 281 L10h at the simulation-equivalent duty P/C = K.RIG_PC_SIM (reports/rig_anchor_scale_check.md) [ASSUMED duty]
+            life = LifeRef(c_over_p=1.0 / K.RIG_PC_SIM, provenance="ASSUMED: simulation-equivalent duty P/C=%.2f (scale check)" % K.RIG_PC_SIM)
+            self.twins = {k: FeaturePhysicsTwin(FeaturePhysicsParams(life=life)) for k in (1, 2)}
 
     def reset(self) -> None:
         self.engine.reset()
@@ -155,6 +181,7 @@ class NodeEngine:
         sv = self.saved[key]
         self.engine.baselines = {1: np.asarray(sv["b1"]), 2: np.asarray(sv["b2"])}
         self.engine.reset()
+        self._reset_twins()
         self.key, self.phase = key, "run"
 
     def _warm(self, msg, rpm, why):
@@ -181,6 +208,7 @@ class NodeEngine:
             if self.key is not None and abs(rpm - self.key) > RPM_TOL * self.key:
                 self.engine.baselines, self.key, self.phase = {}, None, "idle"      # rpm change: new baseline / buffers
                 self.engine.reset()
+                self._reset_twins()
                 self.seen, self.collect = 0, []
             if self.phase == "idle":
                 k = self._lookup(rpm)
@@ -210,8 +238,8 @@ class NodeEngine:
                 buf, self.collect = self.collect, []
                 self._activate(self.key)
                 for m, r in buf[:-1]:            # fill classifier buffer with the (healthy-by-procedure) baseline windows
-                    self.engine.process(rpm, r, window_time_ms(m, rpm))
-        out = self.engine.process(rpm, raw, window_time_ms(msg, rpm))
+                    self._process(rpm, r, m)
+        out = self._process(rpm, raw, msg)
         if "error" in out:
             raise ValueError(out["error"])
         for b in out["bearings"]:
@@ -221,6 +249,56 @@ class NodeEngine:
         lat = (time.perf_counter() - t0) * 1000.0
         return {"window_id": msg.get("window_id"), "sequence": msg.get("sequence"), "rpm": rpm,
                 "bearings": out["bearings"], "latency_ms": lat}
+
+    # ---- one engine step + physics twin + RUL display gate ---------------------------------------------------------
+    def _process(self, rpm: float, raw: np.ndarray, msg: dict) -> dict:
+        if self.time_base == "table":
+            t_ms = int(round(self.tick * self.cad_h * 3.6e6)) & 0xFFFFFFFF       # snapshot clock, NOT the replay clock
+            t_h = self.tick * self.cad_h
+        else:
+            t_ms = window_time_ms(msg, rpm)
+            self.rt_h += REV_PER_WINDOW * 60.0 / max(rpm, 1.0) / 3600.0
+            t_h = self.rt_h
+        self.tick += 1
+        out = self.engine.process(rpm, raw, t_ms)
+        if "error" in out or not self.physics:
+            return out
+        for b in out["bearings"]:
+            k = b["bearing"]
+            tw = self.twins[k]
+            base = self.engine.b[k].baseline
+            if base is None:                          # AI baseline not available yet (legacy 24-window commissioning)
+                self._annotate(b, None)
+                continue
+            if tw.base is None:
+                tw.set_baseline(base)
+            u = tw.update(raw[16 * (k - 1):16 * k], rpm, t_h)
+            self._annotate(b, u)
+        return out
+
+    def _annotate(self, b: dict, u) -> None:
+        """Adds the S9 fields to one bearing dict. ai_rul_hours / physics_rul_hours are reported only when rul_valid (table time base,
+        faulted bearing, health stage >= 2); `ai_rul_head_hours` / `physics_rul_head_hours` are the ungated values (IS2 harness)."""
+        table = self.time_base == "table"
+        ok = b.get("status") == "ok"
+        head = float(b["rul_hours"]) if (table and ok and "rul_hours" in b) else None
+        valid = bool(table and ok and b.get("fault_class") not in (None, "healthy", "warming_up") and int(b.get("health_stage", 1)) >= 2)
+        b["time_base"] = self.time_base
+        b["ai_rul_head_hours"] = head
+        b["ai_rul_hours"] = head if valid else None
+        phys = float(u.rul_hours) if (u is not None and table) else None
+        b["physics_rul_head_hours"] = phys
+        b["physics_rul_hours"] = phys if valid else None
+        b["physics_source"] = u.source if u is not None else "commissioning"
+        b["miner_d"] = float(u.miner_d) if (u is not None and table) else None
+        b["physics_health_index"] = float(u.health_index) if u is not None else None
+        b["rul_valid"] = valid
+        if valid:
+            b["rul_note"] = "[SIMULATION; rig-anchored replay] RUL in simulated hours (10-min snapshot clock)"
+        elif not table:
+            b["rul_note"] = "n/a: live node time base is real seconds; no RUL model is validated on live node windows"
+        else:
+            b["rul_note"] = "n/a: RUL shown only for a bearing classified faulted at health stage >= 2"
 
     def predict_many(self, messages: Iterable) -> Iterator[dict]:
         for m in messages:
