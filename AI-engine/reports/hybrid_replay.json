@@ -1,0 +1,653 @@
+{
+ "tag": "[MEASURED host, replay of rig data]; same-bearing recordings, not independent; sim-trained RUL/stage heads",
+ "runs": [
+  {
+   "run_id": "run_20261114_230240",
+   "label": "healthy",
+   "severity": 0,
+   "windows": 373,
+   "windows_ok": 349,
+   "B1": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 349
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": 0.0,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 349
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 27.077018737792873,
+     "median": 42.887702687581395,
+     "max": 53.39058609008789,
+     "n": 349
+    },
+    "miner_d": null
+   },
+   "B2": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 349
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": 0.0,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 349
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 26.96751543680846,
+     "median": 43.70224711100292,
+     "max": 77.29856974283744,
+     "n": 349
+    },
+    "miner_d": null
+   }
+  },
+  {
+   "run_id": "run_20261114_233020",
+   "label": "healthy",
+   "severity": 0,
+   "windows": 723,
+   "windows_ok": 699,
+   "B1": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 699
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": 0.0,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 699
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 19.229352060954323,
+     "median": 24.504336420695683,
+     "max": 37.60208079020209,
+     "n": 699
+    },
+    "miner_d": null
+   },
+   "B2": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 699
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": 0.0,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 699
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 15.879390207926884,
+     "median": 23.913707733154975,
+     "max": 36.720753987630225,
+     "n": 699
+    },
+    "miner_d": null
+   }
+  },
+  {
+   "run_id": "run_20261114_234701",
+   "label": "healthy",
+   "severity": 0,
+   "windows": 362,
+   "windows_ok": 338,
+   "B1": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 338
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": 0.0,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 338
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 36.231440226236465,
+     "median": 41.85387496948205,
+     "max": 52.95166066487668,
+     "n": 338
+    },
+    "miner_d": null
+   },
+   "B2": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 335,
+     "cage": 3
+    },
+    "class_accuracy": 0.9911242603550295,
+    "false_alarm_pct": 0.8875739644970414,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 335,
+     "1": 3
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 25.433980687459492,
+     "median": 44.86464831034303,
+     "max": 53.62114461263002,
+     "n": 338
+    },
+    "miner_d": {
+     "min": 0.6229092067278559,
+     "median": 0.6274206752853184,
+     "max": 0.6319523413205377,
+     "n": 3
+    }
+   }
+  },
+  {
+   "run_id": "run_20261115_002457",
+   "label": "inner_race",
+   "severity": 3,
+   "windows": 362,
+   "windows_ok": 338,
+   "B1": {
+    "expected": "inner_race",
+    "class_counts": {
+     "inner_race": 338
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": null,
+    "rul_issued_pct": 100.0,
+    "stage_counts": {
+     "6": 272,
+     "5": 66
+    },
+    "ai_rul_h": {
+     "min": 13.204453786214192,
+     "median": 17.89983431498213,
+     "max": 20.19897588094047,
+     "n": 338
+    },
+    "physics_rul_h": {
+     "min": 4.943365618772438,
+     "median": 32.97502889021454,
+     "max": 61.26017991087696,
+     "n": 338
+    },
+    "ai_rul_head_h_ungated": {
+     "min": 13.204453786214192,
+     "median": 17.89983431498213,
+     "max": 20.19897588094047,
+     "n": 338
+    },
+    "miner_d": {
+     "min": 0.05850795351468732,
+     "median": 0.46855694965018746,
+     "max": 0.8777109194677343,
+     "n": 338
+    }
+   },
+   "B2": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 338
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": 0.0,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 338
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 26.83617719014486,
+     "median": 34.825167910257846,
+     "max": 41.56263427734316,
+     "n": 338
+    },
+    "miner_d": null
+   }
+  },
+  {
+   "run_id": "run_20261115_003233",
+   "label": "inner_race",
+   "severity": 3,
+   "windows": 725,
+   "windows_ok": 701,
+   "B1": {
+    "expected": "inner_race",
+    "class_counts": {
+     "inner_race": 701
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": null,
+    "rul_issued_pct": 100.0,
+    "stage_counts": {
+     "6": 697,
+     "5": 4
+    },
+    "ai_rul_h": {
+     "min": 6.906955718994337,
+     "median": 13.031848907471074,
+     "max": 19.51408259073893,
+     "n": 701
+    },
+    "physics_rul_h": {
+     "min": 0.0,
+     "median": 0.0,
+     "max": 28.388994912249334,
+     "n": 701
+    },
+    "ai_rul_head_h_ungated": {
+     "min": 6.906955718994337,
+     "median": 13.031848907471074,
+     "max": 19.51408259073893,
+     "n": 701
+    },
+    "miner_d": {
+     "min": 0.11742588868572056,
+     "median": 1.8344306963542016,
+     "max": 3.551386738794872,
+     "n": 701
+    }
+   },
+   "B2": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 701
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": 0.0,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 701
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 11.7277231216434,
+     "median": 18.314854558308657,
+     "max": 30.211679077148005,
+     "n": 701
+    },
+    "miner_d": null
+   }
+  },
+  {
+   "run_id": "run_20261115_004354",
+   "label": "outer_race",
+   "severity": 3,
+   "windows": 362,
+   "windows_ok": 338,
+   "B1": {
+    "expected": "outer_race",
+    "class_counts": {
+     "inner_race": 11,
+     "outer_race": 327
+    },
+    "class_accuracy": 0.9674556213017751,
+    "false_alarm_pct": null,
+    "rul_issued_pct": 100.0,
+    "stage_counts": {
+     "6": 338
+    },
+    "ai_rul_h": {
+     "min": 11.536393483479818,
+     "median": 15.64577102661119,
+     "max": 19.663031260172456,
+     "n": 338
+    },
+    "physics_rul_h": {
+     "min": 0.0,
+     "median": 0.0,
+     "max": 60.06501193198202,
+     "n": 338
+    },
+    "ai_rul_head_h_ungated": {
+     "min": 11.536393483479818,
+     "median": 15.64577102661119,
+     "max": 19.663031260172456,
+     "n": 338
+    },
+    "miner_d": {
+     "min": 0.05933843364847083,
+     "median": 0.4790793807834181,
+     "max": 0.9021210629899016,
+     "n": 338
+    }
+   },
+   "B2": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 338
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": 0.0,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 338
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 27.31399955749473,
+     "median": 34.39818782806384,
+     "max": 41.479968007405006,
+     "n": 338
+    },
+    "miner_d": null
+   }
+  },
+  {
+   "run_id": "run_20261115_005124",
+   "label": "outer_race",
+   "severity": 3,
+   "windows": 725,
+   "windows_ok": 701,
+   "B1": {
+    "expected": "outer_race",
+    "class_counts": {
+     "outer_race": 700,
+     "inner_race": 1
+    },
+    "class_accuracy": 0.9985734664764622,
+    "false_alarm_pct": null,
+    "rul_issued_pct": 100.0,
+    "stage_counts": {
+     "6": 668,
+     "5": 33
+    },
+    "ai_rul_h": {
+     "min": 6.010548909505123,
+     "median": 14.70566431681357,
+     "max": 18.08928171793671,
+     "n": 701
+    },
+    "physics_rul_h": {
+     "min": 0.0,
+     "median": 0.0,
+     "max": 27.245555817928125,
+     "n": 701
+    },
+    "ai_rul_head_h_ungated": {
+     "min": 6.010548909505123,
+     "median": 14.70566431681357,
+     "max": 18.08928171793671,
+     "n": 701
+    },
+    "miner_d": {
+     "min": 0.12140453332185419,
+     "median": 1.8877665696424892,
+     "max": 3.653300857450361,
+     "n": 701
+    }
+   },
+   "B2": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 692,
+     "outer_race": 9
+    },
+    "class_accuracy": 0.9871611982881597,
+    "false_alarm_pct": 1.2838801711840229,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 692,
+     "1": 9
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 10.074557685851907,
+     "median": 24.21199760437029,
+     "max": 29.751141357422718,
+     "n": 701
+    },
+    "miner_d": {
+     "min": 1.2073969362075707,
+     "median": 1.2267107705374252,
+     "max": 1.2459078578655567,
+     "n": 9
+    }
+   }
+  },
+  {
+   "run_id": "run_20261115_010018",
+   "label": "cage",
+   "severity": 2,
+   "windows": 362,
+   "windows_ok": 338,
+   "B1": {
+    "expected": "cage",
+    "class_counts": {
+     "inner_race": 20,
+     "ball": 2,
+     "cage": 316
+    },
+    "class_accuracy": 0.9349112426035503,
+    "false_alarm_pct": null,
+    "rul_issued_pct": 100.0,
+    "stage_counts": {
+     "6": 22,
+     "5": 243,
+     "4": 73
+    },
+    "ai_rul_h": {
+     "min": 1.4228006998697913,
+     "median": 32.39083989461234,
+     "max": 49.074147542317014,
+     "n": 338
+    },
+    "physics_rul_h": {
+     "min": 4.7417506094528346,
+     "median": 32.74018107041463,
+     "max": 60.282736457525075,
+     "n": 338
+    },
+    "ai_rul_head_h_ungated": {
+     "min": 1.4228006998697913,
+     "median": 32.39083989461234,
+     "max": 49.074147542317014,
+     "n": 338
+    },
+    "miner_d": {
+     "min": 0.059800962401480515,
+     "median": 0.4711917981405756,
+     "max": 0.8806818457438086,
+     "n": 338
+    }
+   },
+   "B2": {
+    "expected": "healthy",
+    "class_counts": {
+     "outer_race": 15,
+     "healthy": 321,
+     "inner_race": 2
+    },
+    "class_accuracy": 0.9497041420118343,
+    "false_alarm_pct": 5.029585798816568,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "1": 17,
+     "null": 321
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 7.814046351114912,
+     "median": 33.836475690205404,
+     "max": 45.16130828857358,
+     "n": 338
+    },
+    "miner_d": {
+     "min": 0.05892605429947925,
+     "median": 0.0806941648067588,
+     "max": 0.11923038727167329,
+     "n": 17
+    }
+   }
+  },
+  {
+   "run_id": "run_20261115_010524",
+   "label": "cage",
+   "severity": 2,
+   "windows": 721,
+   "windows_ok": 697,
+   "B1": {
+    "expected": "cage",
+    "class_counts": {
+     "cage": 697
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": null,
+    "rul_issued_pct": 100.0,
+    "stage_counts": {
+     "4": 87,
+     "5": 610
+    },
+    "ai_rul_h": {
+     "min": 9.428541819254557,
+     "median": 18.458689371745315,
+     "max": 25.639935811360314,
+     "n": 697
+    },
+    "physics_rul_h": {
+     "min": 0.0,
+     "median": 0.0,
+     "max": 28.721287764419515,
+     "n": 697
+    },
+    "ai_rul_head_h_ungated": {
+     "min": 9.428541819254557,
+     "median": 18.458689371745315,
+     "max": 25.639935811360314,
+     "n": 697
+    },
+    "miner_d": {
+     "min": 0.11587826344163649,
+     "median": 1.788553295431419,
+     "max": 3.4449267165367554,
+     "n": 697
+    }
+   },
+   "B2": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 640,
+     "cage": 57
+    },
+    "class_accuracy": 0.9182209469153515,
+    "false_alarm_pct": 8.17790530846485,
+    "rul_issued_pct": 4.591104734576757,
+    "stage_counts": {
+     "null": 640,
+     "2": 32,
+     "1": 25
+    },
+    "ai_rul_h": {
+     "min": 13.955357742309522,
+     "median": 16.041130606333315,
+     "max": 19.2498510996502,
+     "n": 32
+    },
+    "physics_rul_h": {
+     "min": 0.0,
+     "median": 15.619861891352851,
+     "max": 22.61437518024144,
+     "n": 32
+    },
+    "ai_rul_head_h_ungated": {
+     "min": 9.328604952494171,
+     "median": 18.197746531169138,
+     "max": 33.06165288289482,
+     "n": 697
+    },
+    "miner_d": {
+     "min": 0.13506236164127156,
+     "median": 0.5216060556952791,
+     "max": 1.2748832665556935,
+     "n": 57
+    }
+   }
+  },
+  {
+   "run_id": "run_20261115_011243",
+   "label": "ball",
+   "severity": 2,
+   "windows": 361,
+   "windows_ok": 337,
+   "B1": {
+    "expected": "ball",
+    "class_counts": {
+     "inner_race": 6,
+     "ball": 331
+    },
+    "class_accuracy": 0.9821958456973294,
+    "false_alarm_pct": null,
+    "rul_issued_pct": 100.0,
+    "stage_counts": {
+     "6": 10,
+     "5": 290,
+     "4": 37
+    },
+    "ai_rul_h": {
+     "min": 17.772933959960938,
+     "median": 28.248575846353766,
+     "max": 45.43900553385352,
+     "n": 337
+    },
+    "physics_rul_h": {
+     "min": 6.163806483808919,
+     "median": 34.34682752169961,
+     "max": 61.57395741531039,
+     "n": 337
+    },
+    "ai_rul_head_h_ungated": {
+     "min": 17.772933959960938,
+     "median": 28.248575846353766,
+     "max": 45.43900553385352,
+     "n": 337
+    },
+    "miner_d": {
+     "min": 0.057936915661038806,
+     "median": 0.45980784366425176,
+     "max": 0.8613496629679547,
+     "n": 337
+    }
+   },
+   "B2": {
+    "expected": "healthy",
+    "class_counts": {
+     "healthy": 337
+    },
+    "class_accuracy": 1.0,
+    "false_alarm_pct": 0.0,
+    "rul_issued_pct": 0.0,
+    "stage_counts": {
+     "null": 337
+    },
+    "ai_rul_h": null,
+    "physics_rul_h": null,
+    "ai_rul_head_h_ungated": {
+     "min": 19.342984135945773,
+     "median": 33.13292719523135,
+     "max": 50.40022532145164,
+     "n": 337
+    },
+    "miner_d": null
+   }
+  }
+ ]
+}

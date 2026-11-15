@@ -102,7 +102,7 @@ class NodeEngine:
                  threads: int = 1, baselines: Optional[dict] = None, require_all_channels: bool = True,
                  policy="contract", settle_windows: Optional[int] = None,
                  baseline_windows: Optional[int] = None, time_base: str = "realtime",
-                 physics: Optional[bool] = None):
+                 physics: Optional[bool] = None, table_step: float = 1.0):
         self.engine = HybridEngine(model_dir, threads=threads, baselines=baselines, contract_file=contract_file)
         self.contract = self.engine.c
         if time_base not in ("realtime", "table"):
@@ -111,6 +111,10 @@ class NodeEngine:
         # v5/v6), the clock a simulated-trajectory replay (rig_anchor) is generated on; AI RUL and physics RUL are then in
         # simulated hours. 'realtime' (live node): window time = real seconds; no RUL model is valid on live windows -> n/a.
         self.time_base = time_base
+        # table_step: table snapshots advanced per fed window (demo time-scale, default 1 = one 10-min snapshot per window)
+        if not table_step > 0:
+            raise ValueError("table_step must be > 0")
+        self.table_step = float(table_step)
         self.cad_h = self.contract.get("rul", {}).get("table_cadence_hours")
         # physics twin only for contracts that declare a RUL table cadence (v5/v6); v3e/v4_real output is unchanged.
         self.physics = bool(self.cad_h) if physics is None else bool(physics)
@@ -135,7 +139,7 @@ class NodeEngine:
         self.seen = 0                             # windows since (re)start at this rpm
         self.collect: list = []                   # [(msg, raw)] baseline windows (replayed once the baseline exists)
         self.need = (0, 0)
-        self.tick = 0                             # windows fed to the engine since reset (table time base)
+        self.tick = 0.0                           # windows fed to the engine since reset (table time base)
         self.rt_h = 0.0                           # accumulated real time of fed windows [h] (realtime time base)
         self._reset_twins()
 
@@ -259,7 +263,7 @@ class NodeEngine:
             t_ms = window_time_ms(msg, rpm)
             self.rt_h += REV_PER_WINDOW * 60.0 / max(rpm, 1.0) / 3600.0
             t_h = self.rt_h
-        self.tick += 1
+        self.tick += self.table_step
         out = self.engine.process(rpm, raw, t_ms)
         if "error" in out or not self.physics:
             return out
