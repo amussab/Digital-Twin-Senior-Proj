@@ -1,7 +1,7 @@
 """FPR demo assets: render rig_anchor VAL units to node-format jsonl (commissioning windows prepended) for the live replay.
 
     python -m aiengine.fpr_demo render            # writes AI-engine/demo/fpr_<class>_<unit>.jsonl (committed, small) + demo_manifest.json
-    python -m aiengine.fpr_demo check [--contract v5_node] [file]   # offline NodeEngine(policy, table time base) run -> class/stage/RUL/physics per window
+    python -m aiengine.fpr_demo check [--contract v7_node] [file]   # offline NodeEngine(policy, table time base) run -> class/stage/RUL/physics per window
 
 Provenance: [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed]. The units are VALIDATION units
 (never test). The replay clock is the node cadence (1200/rpm s per window); the RUL clock is the 10-minute snapshot clock.
@@ -54,7 +54,7 @@ def main(argv=None) -> int:
     sub.add_parser("render")
     c = sub.add_parser("check")
     c.add_argument("file", nargs="?")
-    c.add_argument("--contract", default="v5_node")
+    c.add_argument("--contract", default="v7_node")
     c.add_argument("--every", type=int, default=40)
     a = ap.parse_args(argv)
     return {"render": cmd_render, "check": cmd_check}[a.cmd](a)

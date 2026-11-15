@@ -6,7 +6,7 @@
 .EXAMPLE   ./scripts/run-rig-live.ps1 -Contract v4_real        # classification only (RUL / stage / physics n/a)
 
 HYBRID RIG DEMO (default, -Contract hybrid_rig): fault class + baseline policy from v4_real (trained on REAL node windows);
-stage, AI RUL, physics RUL and Miner D from the SIMULATION-trained heads (NODE_RUL_CONTRACT, default v6_node) on a table clock:
+stage, AI RUL, physics RUL and Miner D from the SIMULATION-trained heads (NODE_RUL_CONTRACT, default v7_node) on a table clock:
 each live window = NODE_RUL_TIMESCALE (default 1) simulated 10-minute snapshots, RUL in TABLE hours. Issued only for a bearing v4_real
 calls faulted, after the baseline policy, stage >= 2; otherwise n/a. The dashboard shows NO label on these tiles; provenance is in the
 payload (rulSource), logs/receiver.log and logs/live_*.jsonl. PRESENTER SAYS (exact wording):
@@ -17,7 +17,7 @@ Stop with ./scripts/stop-rig-live.ps1. Logs: logs/backend.log, logs/receiver.log
 #>
 param(
   [string]$Contract = 'hybrid_rig',        # NODE_CONTRACT: hybrid_rig = v4_real class + sim-head stage/RUL/physics; v4_real = classification only
-  [string]$RulContract = 'v6_node',        # NODE_RUL_CONTRACT (hybrid_rig only; v7_node can replace it)
+  [string]$RulContract = 'v7_node',        # NODE_RUL_CONTRACT (hybrid_rig only)
   [string]$RulTimescale = '1',             # NODE_RUL_TIMESCALE: table snapshots (10 min each) per live window
   [string]$Baseline = 'AI-engine/models/baseline_v4_real.json',  # NODE_BASELINE json (loaded if present, saved when captured)
   [int]$BackendPort = 5080,

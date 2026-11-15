@@ -1,7 +1,7 @@
 """HYBRID RIG DEMO engine (`NODE_CONTRACT=hybrid_rig`): fault class from the real-data model, stage + RUL from the simulation-anchored heads.
 
     class / baseline policy / onset / health index  <- v4_real  (trained on real node windows; realtime NodeEngine)
-    stage, AI RUL, physics RUL, Miner D             <- NODE_RUL_CONTRACT (default v6_node; v7_node swaps in by name) on a TABLE clock
+    stage, AI RUL, physics RUL, Miner D             <- NODE_RUL_CONTRACT (default v7_node) on a TABLE clock
 
 The RUL heads were trained on 10-minute simulated snapshots, live windows arrive every 1200/rpm s. Each live window is therefore mapped to
 `NODE_RUL_TIMESCALE` table snapshots (DEMO time-scale, default 1.0 = one 10-minute snapshot per live window), so the heads see the
@@ -22,7 +22,7 @@ from .node_adapter import NodeEngine, _as_dict
 
 RUL_SOURCE = "sim-trained head (hybrid_rig), not validated on rig"
 CLS_CONTRACT = "v4_real"
-DEFAULT_RUL_CONTRACT = "v6_node"
+DEFAULT_RUL_CONTRACT = "v7_node"
 
 
 class HybridNodeEngine:

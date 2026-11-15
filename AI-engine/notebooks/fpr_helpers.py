@@ -75,7 +75,7 @@ def _f(x, p: int = 3):
 def final_reports() -> dict:
     """contract -> (path, dict) for the final (scored-once) reports v5_node_<utc>.json / v6_node_<utc>.json."""
     out = {}
-    for c in ("v5_node", "v6_node"):
+    for c in ("v5_node", "v6_node", "v7_node"):
         fs = sorted(p for p in REPORTS.glob(f"{c}_*.json") if re.fullmatch(rf"{c}_\d{{8}}T\d{{6}}Z\.json", p.name))
         if fs:
             d = load_json(fs[-1])
@@ -86,7 +86,10 @@ def final_reports() -> dict:
 
 def headline_contract(fr: dict | None = None) -> str | None:
     fr = final_reports() if fr is None else fr
-    return "v6_node" if "v6_node" in fr else ("v5_node" if "v5_node" in fr else None)
+    for c in ("v7_node", "v6_node", "v5_node"):
+        if c in fr:
+            return c
+    return None
 
 
 def norm(d: dict) -> dict:
@@ -99,7 +102,9 @@ def norm(d: dict) -> dict:
     ctl = d.get("controls", {})
     rep = d.get("reported_not_gated", {})
     meta = d.get("meta", {})
-    o = {"contract": "v6_node" if "v5_vs_v6" in d else "v5_node", "utc": meta.get("utc"), "commit": meta.get("git_commit"),
+    cmd = str(meta.get("command") or "")
+    con = next((c for c in ("v7_node", "v6_node", "v5_node") if c in cmd), "v6_node" if "v5_vs_v6" in d else "v5_node")
+    o = {"contract": con, "utc": meta.get("utc"), "commit": meta.get("git_commit"),
          "command": meta.get("command"), "touch": meta.get("touch"), "frozen_file": meta.get("frozen_file"),
          "s7": s7.get("S7_mape_pct"), "n_units": s7.get("n_bearings"), "s7_true_onset": s7.get("alt_mape_true_onset_pct"),
          "s7_base": (t.get("S7_baseline") or {}).get("S7_mape_pct"), "s7_summary": s7.get("per_bearing_summary"),
@@ -341,6 +346,10 @@ def tier(r: dict) -> str:
         return "-"
     if "OWNER-SUPPLIED" in str(r.get("prov", "")):
         return "MET (owner-supplied, artifact with owner)"
+    if "placeholder" in str(r.get("status", "")).lower():
+        return "MET (placeholder, carried over from UP2)"
+    if "[SYNTHETIC" in str(r.get("status", "")):
+        return "MET (synthetic data, UP2 v3b)"
     if "[SIMULATION" in str(r.get("status", "")):
         return "MET (simulation + data)"
     return "MET (live / measured)"
@@ -413,7 +422,7 @@ def kpi_banner(M: pd.DataFrame | None = None):
     return HTML(f'<div style="display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 6px 0;font-family:system-ui,Segoe UI,Arial">{body}</div>')
 
 
-def summary_markdown(M: pd.DataFrame, hc: str | None, nv5: dict | None, nv6: dict | None) -> str:
+def summary_markdown(M: pd.DataFrame, hc: str | None, nv5: dict | None, nv6: dict | None, nv7: dict | None = None) -> str:
     c = counts(M)
     k = M.set_index("ID")["Status"].map(kind)
     ids = lambda kk: ", ".join(k.index[k == kk]) or "none"  # noqa: E731
@@ -429,7 +438,7 @@ def summary_markdown(M: pd.DataFrame, hc: str | None, nv5: dict | None, nv6: dic
         f"- **Not met:** {ids('NOT MET')}.",
         f"- **Pending (evidence not final):** {ids('PENDING')}.",
         "",
-        "**What was done.** The node-feature AI (`v5_node`, then `v6_node`) was trained and scored on simulated degradation trajectories whose "
+        "**What was done.** The node-feature AI (`v5_node`, `v6_node`, then `v7_node`) was trained and scored on simulated degradation trajectories whose "
         "healthy/fault endpoints are resampled from real rig windows; a feature-only physics twin was added; both run live in the real stack "
         "(replay -> receiver -> NodeEngine -> backend -> dashboard), which is the Rank 9 demo of the PIPELINE.",
         "",
@@ -438,9 +447,12 @@ def summary_markdown(M: pd.DataFrame, hc: str | None, nv5: dict | None, nv6: dic
     if nv5 and nv5["s7"] is not None:
         lines += ["", f"**v5 test (scored once, FAIL):** S7 {nv5['s7']:.2f} %, macro-F1 {nv5['f1']:.3f}, stage error max {nv5['stage_max']}, caught {nv5['caught']}/{nv5['rtf']}."]
     if nv6 and nv6["s7"] is not None:
-        lines += [f"**v6 fresh test (scored once):** S7 {nv6['s7']:.2f} %, macro-F1 {nv6['f1']:.3f}, stage error max {nv6['stage_max']}, caught {nv6['caught']}/{nv6['rtf']}."]
-    else:
-        lines += ["**v6:** PENDING (no `v6_node_<utc>.json` report yet; re-execute the notebook when it lands)."]
+        lines += [f"**v6 fresh test (scored once, FAIL):** S7 {nv6['s7']:.2f} %, macro-F1 {nv6['f1']:.3f}, stage error max {nv6['stage_max']}, caught {nv6['caught']}/{nv6['rtf']}."]
+    if nv7 and nv7["s7"] is not None:
+        lines += [f"**v7 fresh test (scored once, headline for S7):** S7 {nv7['s7']:.2f} % (PASS, learnable L profile); macro-F1 {nv7['f1']:.4f} ({T_F1 - nv7['f1']:.4f} below the 0.85 target, reported as measured, not rounded); "
+                  f"stage error max {nv7['stage_max']}; caught by stage 3 {nv7['caught']}/{nv7['rtf']}. All {SIM}.",
+                  "**IS3 headline** is the UP2 v3b result [SYNTHETIC] shown next to the v7 anchored-simulation numbers above; **IS2** is the UP2 v3b wording-v2 result (test4) [SYNTHETIC]; "
+                  "**IS1** is a placeholder carried over from UP2, to be re-tested in the final integrated run."]
     return "\n".join(lines)
 
 
@@ -463,9 +475,9 @@ HISTORY = [
 ]
 
 
-def history_frame(nv5: dict | None, nv6: dict | None) -> pd.DataFrame:
+def history_frame(nv5: dict | None, nv6: dict | None, nv7: dict | None = None) -> pd.DataFrame:
     rows = list(HISTORY)
-    for n, lab in ((nv5, "v5_node, registered test, scored once"), (nv6, "v6_node, fresh test, scored once")):
+    for n, lab in ((nv5, "v5_node, registered test, scored once"), (nv6, "v6_node, fresh test, scored once"), (nv7, "v7_node, fresh test, scored once")):
         if n and n["s7"] is not None:
             ok = n["pass_s7"] and n["pass_f1"] and n["pass_stage"] and n["pass_caught"]
             rows.append({"round": "FPR (15-16 Nov)", "model": n["contract"], "data": SIM, "S7 MAPE %": n["s7"], "IS3 macro-F1": n["f1"],
@@ -497,11 +509,11 @@ def fig_gates(nv: dict, title: str):
     return fig
 
 
-def fig_side_by_side(nv5: dict | None, nv6: dict | None):
+def fig_side_by_side(nv5: dict | None, nv6: dict | None, nv7: dict | None = None):
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(1, 3, figsize=(12.5, 3.3))
     labels, vals = [], {"s7": [], "f1": [], "stage": []}
-    for n, lab in ((nv5, "v5 test"), (nv6, "v6 fresh test")):
+    for n, lab in ((nv5, "v5 test"), (nv6, "v6 fresh test"), (nv7, "v7 fresh test")):
         labels.append(lab)
         for k, key in (("s7", "s7"), ("f1", "f1"), ("stage", "stage_max")):
             vals[k].append(np.nan if not n or n[key] is None else n[key])
@@ -514,7 +526,7 @@ def fig_side_by_side(nv5: dict | None, nv6: dict | None):
         a.set_title(t, fontsize=10)
         for i, x in enumerate(v):
             a.text(i, 0 if np.isnan(x) else x, "PENDING" if np.isnan(x) else f"{x:.3g}", ha="center", va="bottom", fontsize=10, fontweight="bold")
-    fig.suptitle("v5 vs v6 on their test sets (green = gate met, red = gate failed, grey = pending); dashed = spec threshold", fontsize=10.5)
+    fig.suptitle("v5 / v6 / v7 on their test sets (green = gate met, red = gate failed, grey = pending); dashed = spec threshold", fontsize=10.5)
     fig.tight_layout()
     return fig
 
@@ -583,8 +595,70 @@ def fig_is2(frozen: dict | None, test: dict | None):
 
 def confusion_frame(conf) -> pd.DataFrame | None:
     try:
+        if isinstance(conf, dict) and "matrix" in conf:
+            return pd.DataFrame(conf["matrix"], index=[f"true {l}" for l in conf["labels"]], columns=[f"pred {l}" for l in conf["labels"]])
         if isinstance(conf, dict):
             return pd.DataFrame(conf).fillna(0).astype(int)
         return pd.DataFrame(conf)
     except Exception:  # noqa: BLE001
         return None
+
+
+# --------------------------------------------------------------------------------------------------- v7 / v3b / UP2 carry-over additions
+def v7_f1_bootstrap(n: dict, B: int = 4000, seed: int = 20261116) -> dict:
+    """[CALCULATED] sampling noise of the v7 macro-F1 from the STORED window-level confusion matrix (multinomial resampling of the test windows;
+    windows are treated as independent, so this UNDERSTATES the unit-level uncertainty). Nothing is re-scored."""
+    cm = (n.get("confusion") or {}).get("matrix")
+    if cm is None:
+        return {}
+    cm = np.asarray(cm, float)
+    k = cm.shape[0]
+    rng = np.random.default_rng(seed)
+    p = (cm / cm.sum()).ravel()
+    N = int(cm.sum())
+    f1s = []
+    for _ in range(B):
+        c = rng.multinomial(N, p).reshape(k, k).astype(float)
+        tp = np.diag(c)
+        prec = np.divide(tp, c.sum(0), out=np.zeros(k), where=c.sum(0) > 0)
+        rec = np.divide(tp, c.sum(1), out=np.zeros(k), where=c.sum(1) > 0)
+        f = np.divide(2 * prec * rec, prec + rec, out=np.zeros(k), where=(prec + rec) > 0)
+        f1s.append(f.mean())
+    f1s = np.asarray(f1s)
+    return {"point": float(n["f1"]), "ci95": [float(np.percentile(f1s, 2.5)), float(np.percentile(f1s, 97.5))], "p_ge_0.85": float((f1s >= 0.85).mean()), "windows": N, "B": B,
+            "tag": "[CALCULATED]", "caveat": "windows treated as independent: understates unit-level uncertainty"}
+
+
+def v7_caught_bootstrap(report: dict, B: int = 4000, seed: int = 20261116) -> dict:
+    per = (report.get("test") or {}).get("IS3_caught_per_unit") or []
+    if not per:
+        return {}
+    x = np.array([1.0 if u.get("caught_by_stage3") else 0.0 for u in per])
+    rng = np.random.default_rng(seed)
+    m = np.array([rng.choice(x, len(x)).mean() for _ in range(B)])
+    return {"point": float(x.mean()), "n": int(len(x)), "ci95": [float(np.percentile(m, 2.5)), float(np.percentile(m, 97.5))], "tag": "[CALCULATED]",
+            "missed_classes": sorted({u["fault_class"] for u in per if not u.get("caught_by_stage3")})}
+
+
+def is2_up2() -> dict:
+    """UP2 v3b IS2 (wording v2) result, test4, scored once in UP2 (stored report, newest up2d_is2_*.json)."""
+    p = newest(REPORTS, "up2d_is2_2*.json")
+    d = load_json(p) if p else None
+    if not d or "models" not in d:
+        return {"status": "missing"}
+    m = d["models"]["v3b"]["v2"]
+    return {"status": "ok", "path": p, "MED": m["MED"], "P95": m["P95"], "n_bearings": m["n_bearings"], "T_MED": d["frozen"]["T_MED"], "T_P95": d["frozen"]["T_P95"],
+            "floor": d["floor_perfect_ai"], "controls": d["controls"], "v1": d.get("history_v1"), "utc": d["meta"].get("utc"), "commit": d["meta"].get("git_commit"),
+            "provenance": d["meta"].get("provenance"), "command": d["meta"].get("command")}
+
+
+def status_is2_up2(u: dict) -> tuple[str, dict]:
+    if u.get("status") != "ok":
+        return "PENDING (UP2 IS2 report not found)", {"value": "-"}
+    ok = u["MED"] <= u["T_MED"] and u["P95"] <= u["T_P95"]
+    ctl = all(c.get("verdict") == "FAIL" for c in u["controls"])
+    val = (f"UP2 v3b, wording v2, test4 (scored once in UP2): MED {100 * u['MED']:.1f} % (<= {100 * u['T_MED']:.0f}) / P95 {100 * u['P95']:.1f} % (<= {100 * u['T_P95']:.0f}) of L_ref over "
+           f"{u['n_bearings']} bearings; wrong-AI controls all FAIL: {ctl}; literal v1 (<= 5 %) FAILS (history). Not re-run on v5/v6/v7 (their IS2 reports are valid_for_test=false); "
+           "the feature-twin IS2 on v7 is design-level only.")
+    st = "MET (design level) [SYNTHETIC; UP2 v3b + FE twin]" if (ok and ctl) else ("PARTIAL" if ok else "NOT MET")
+    return st, {"value": val, "test": True}

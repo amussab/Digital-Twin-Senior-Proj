@@ -53,3 +53,12 @@ Data tag for S7/IS2/IS3: `[SIMULATION; endpoints resampled from rig windows, 1 b
 | IS2 | val frozen, 4/6 controls pass -> not valid for test; v1 literal FAIL | 3 | PENDING |
 | IS3 | macro-F1 0.838, stage max 2, caught 46/48 [SIMULATION] | 6 | NOT MET |
 | C1, C2, C4, C6, S1-S6 | owner statement 2026-11-15, artifacts with owners | n/a | MET [OWNER-SUPPLIED] |
+
+
+### FPR update 2026-11-16 (v7_node fresh test, scored once; full table in `evidence/FPR_Evidence.md`)
+| Spec | Result | Tag | Rank | Verdict |
+|---|---|---|---|---|
+| S7 | v7_node MAPE 11.47 % (80 units; hard profile 21.1 %; baseline 63.7 %; real BA-1 trace 83 %, n=1) | [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed] | 6 | MET, conditional on the learnable profile |
+| IS3 | headline UP2 v3b F1 0.9587, stage max 1, 80/80; v7 anchored-sim F1 0.8486 (0.0014 below 0.85, reported as measured), stage max 1, caught 76/80 | [SYNTHETIC] headline + [SIMULATION] v7 | 6 | MET via v3b; v7 alone does not meet the strict threshold |
+| IS2 | UP2 v3b wording v2: median 16.3 %, p95 49.2 % of L_ref; v1 5 % literal fails | [SYNTHETIC] | 3 | MET (design level) |
+| IS1 | UP2 placeholder; host legs 41.4 ms measured here | [CARRIED OVER from UP2] | 6 | placeholder until the final integrated run |

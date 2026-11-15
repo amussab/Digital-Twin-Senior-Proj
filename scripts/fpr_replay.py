@@ -1,7 +1,7 @@
 """FPR demo driver: for each rendered rig_anchor unit, start a FRESH inference receiver (NodeEngine, table time base),
 replay the unit through it (replay_node.py), stop it. Receiver -> NodeEngine -> POST /api/live/prediction -> dashboard.
 
-    python scripts/fpr_replay.py [--contract v5_node] [--speed 12] [--loop | --once] [--backend http://127.0.0.1:5080] [files...]
+    python scripts/fpr_replay.py [--contract v7_node] [--speed 12] [--loop | --once] [--backend http://127.0.0.1:5080] [files...]
 
 Fresh receiver per unit because the commissioning baseline is keyed by rpm and a new unit must be re-commissioned.
 Stdlib only (runs in the python image and natively). Provenance of everything it streams: [SIMULATION; rig-anchored replay].
@@ -33,7 +33,7 @@ def wait_port(port: int, timeout: float = 90.0) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="*")
-    ap.add_argument("--contract", default=os.environ.get("NODE_CONTRACT", "v5_node"))
+    ap.add_argument("--contract", default=os.environ.get("NODE_CONTRACT", "v7_node"))
     ap.add_argument("--speed", type=float, default=float(os.environ.get("FPR_SPEED", 12)))
     ap.add_argument("--backend", default=os.environ.get("BACKEND_URL", "http://127.0.0.1:5080"))
     ap.add_argument("--port", type=int, default=8000)

@@ -199,3 +199,7 @@ Status: [ ] generator rig_anchor (agent) [ ] feature twin (agent) [ ] v5 RUL hea
   recordings; it has not been validated on real run-to-failure data, and the time unit is simulated hours." (user will disclose verbally)
   [MEASURED host, replay of rig data] reports/hybrid_replay.json (same-bearing recordings, not independent): class acc B1 0.935-1.00 on fault runs, healthy runs 1.00 (B2 false alarm 0-8.2 %),
   RUL issued 100 % of faulted windows, stage 4-6, RUL 1.4-49 table-hours (saturated near end-of-life on every real fault: real faults are severe, heads read them as late stage). Not accuracy.
+
+
+## FPR 2026-11-16 (v7 result, final)
+v7_node fresh test (scored once): S7 11.47 % PASS (learnable L profile; hard 21.1 %), IS3 F1 0.8486 / stage max 1 / caught 76 of 80 (strict threshold missed by 0.0014; reported as measured). IS3 headline = UP2 v3b [SYNTHETIC] 0.9587; IS2 = UP2 v3b wording v2; IS1 = UP2 placeholder. Demo defaults: hybrid_rig, class v4_real, RUL v7_node. Docker fpr-demo rebuilt and live API verified (v7_node, class, stage, AI+physics RUL). Runbook: evidence/FPR_DEMO_RUNBOOK.md. Not run: live rig dry run (scripts/rig_dryrun.py).

@@ -1,13 +1,13 @@
 <#
 .SYNOPSIS  FPR demo, native (dotnet + python, no Docker): backend + dashboard, then the rig-anchored simulated trajectories are replayed through
            receiver -> NodeEngine (table time base) -> POST /api/live/prediction -> dashboard (class, stage, AI RUL, physics RUL).
-.EXAMPLE   ./scripts/run-fpr-demo.ps1                      # contract v5_node, loops the three demo units
-.EXAMPLE   ./scripts/run-fpr-demo.ps1 -Contract v6_node -Speed 8 -Once
+.EXAMPLE   ./scripts/run-fpr-demo.ps1                      # contract v7_node, loops the three demo units
+.EXAMPLE   ./scripts/run-fpr-demo.ps1 -Contract v7_node -Speed 8 -Once
 Everything streamed is [SIMULATION; rig-anchored replay] and is labelled so on the dashboard. Stop: ./scripts/stop-rig-live.ps1 (same pid file).
 Docker equivalent: docker compose --profile fpr-demo up --build backend-fpr fpr-replay
 #>
 param(
-  [string]$Contract = 'v5_node',
+  [string]$Contract = 'v7_node',
   [double]$Speed = 12,
   [int]$BackendPort = 5080,
   [switch]$Once,

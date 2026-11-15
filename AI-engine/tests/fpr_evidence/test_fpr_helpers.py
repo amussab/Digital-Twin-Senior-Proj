@@ -61,3 +61,30 @@ def test_norm_recomputes_gates():
 def test_final_reports_ignore_frozen():
     for c, (p, d) in F.final_reports().items():
         assert "frozen" not in p.name and "test" in d
+
+
+def test_headline_prefers_v7_and_norm_detects_contract():
+    assert F.headline_contract({"v5_node": 1, "v7_node": 2, "v6_node": 3}) == "v7_node"
+    d = {"test": {"S7": {"S7_mape_pct": 11.47, "n_bearings": 80}, "IS3_classification": {"macro_f1": 0.8486}, "IS3_stage": {"max_abs_error": 1},
+                  "IS3_caught": {"caught_by_stage3": 76, "rtf_bearings": 80}}, "meta": {"command": "python -m aiengine.v7_node test"}}
+    n = F.norm(d)
+    assert n["contract"] == "v7_node" and n["pass_s7"] and not n["pass_f1"] and not n["pass_caught"]
+    assert not F.status_is3(n)[0].startswith("MET")      # v7 alone never reports MET for IS3 (0.8486 < 0.85, 76/80)
+
+
+def test_v7_bootstrap_uses_stored_confusion_only():
+    n = {"f1": 0.8486, "confusion": {"labels": list("abc"), "matrix": [[90, 5, 5], [5, 80, 15], [5, 10, 85]]}}
+    b = F.v7_f1_bootstrap(n, B=200)
+    assert b["ci95"][0] < b["ci95"][1] and b["tag"] == "[CALCULATED]"
+    rep = {"test": {"IS3_caught_per_unit": [{"caught_by_stage3": True, "fault_class": "x"}] * 3 + [{"caught_by_stage3": False, "fault_class": "inner_race"}]}}
+    assert F.v7_caught_bootstrap(rep, B=50)["missed_classes"] == ["inner_race"]
+
+
+def test_is2_up2_status_and_tiers():
+    u = {"status": "ok", "MED": .16, "P95": .49, "n_bearings": 80, "T_MED": .18, "T_P95": .63, "controls": [{"verdict": "FAIL"}]}
+    st, _ = F.status_is2_up2(u)
+    assert st.startswith("MET (design level)")
+    u["controls"] = [{"verdict": "PASS"}]
+    assert F.status_is2_up2(u)[0] == "PARTIAL"
+    assert F.tier({"status": "MET (placeholder)", "prov": "x"}).startswith("MET (placeholder")
+    assert F.tier({"status": "MET [SYNTHETIC]", "prov": "x"}).startswith("MET (synthetic")

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # FPR demo, native: backend + dashboard, then rig-anchored simulated trajectories replayed through receiver -> NodeEngine -> backend.
-#   ./scripts/run-fpr-demo.sh [contract=v5_node] [speed=12] [port=5080]     (Docker: docker compose --profile fpr-demo up --build backend-fpr fpr-replay)
+#   ./scripts/run-fpr-demo.sh [contract=v7_node] [speed=12] [port=5080]     (Docker: docker compose --profile fpr-demo up --build backend-fpr fpr-replay)
 set -euo pipefail
-CONTRACT="${1:-v5_node}"; SPEED="${2:-12}"; PORT="${3:-5080}"
+CONTRACT="${1:-v7_node}"; SPEED="${2:-12}"; PORT="${3:-5080}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$ROOT"
 PY="${PYTHON:-python3}"
 [ -f artifacts/dashboard/wwwroot/index.html ] || dotnet publish src/DigitalTwin.Dashboard -c Release -o artifacts/dashboard

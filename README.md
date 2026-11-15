@@ -157,7 +157,7 @@ Branches: `feature/*` -> `dev` -> `stage` -> `main`. UP2 work is on `feature/up2
 
 One documented command (Docker): `docker compose --profile fpr-demo up --build backend-fpr fpr-replay` -> http://localhost:5080/
 (name both services: a plain `up` would also start the default `backend` on the same port). Native (no Docker): `./scripts/run-fpr-demo.ps1`
-(or `./scripts/run-fpr-demo.sh`); options `-Contract v6_node`, `-Speed 12`, `-Once`. Docker: `FPR_CONTRACT=v6_node docker compose ...`.
+(or `./scripts/run-fpr-demo.sh`); options `-Contract v7_node`, `-Speed 12`, `-Once`. Docker: `FPR_CONTRACT=v7_node docker compose ...`.
 
 What runs: the committed units `AI-engine/demo/fpr_{inner_race,outer_race,cage}_*.jsonl` (rendered by `python -m aiengine.fpr_demo render` from
 `rig_anchor` VALIDATION units; commissioning windows prepended) -> `COE/inference/replay_node.py` -> receiver -> `NodeEngine`
@@ -173,19 +173,19 @@ Presenter checklist
    No real run-to-failure data exists for 4 of 5 fault classes." Point at the `[SIMULATION; rig-anchored replay]` badge.
 2. Open the dashboard. After about 15 s of commissioning the Live block shows class, stage, AI RUL and physics RUL for bearing 1; bearing 2 stays healthy (RUL n/a).
 3. Show the pipeline is the real one: receiver log (`logs/fpr_replay.log`), `/api/metrics` (live_* stages), the same code path as the live rig.
-4. Honest limits to state (numbers: reports/v5_node_*.md; update with the final contract before presenting): v5_node on its single test pass FAILED its gates
-   (S7 MAPE 23.39 % vs <= 15 %, macro-F1 0.838 vs >= 0.85, stage error 2 vs <= 1, caught by stage 3 in 46/48); v6 results as per the final report.
-   S7/IS3 are simulation-based (Rank 6 at most); the live demo is Rank 9 for the PIPELINE only.
-5. IS2 (physics-AI residual): `python -m aiengine.fpr_is2 select` on validation. With the current feature twin the exact-AI floor is MED 0.48 / P95 1.11 x L_ref,
-   the thresholds that follow (0.54 / 1.23) are loose, and 4 of 6 wrong-AI controls PASS, so IS2 is NOT scoreable as a meaningful test yet
-   (frozen file `valid_for_test: false`). Say it as a limit, do not claim IS2. The twin's Miner damage saturates at stage 3+ (physics RUL 0.0 h), see the report.
-6. Evidence notebook (when written): `docker compose --profile evidence run --rm evidence-fpr` -> `artifacts/evidence/`.
+4. Honest limits to state (default contract `v7_node`, report `AI-engine/reports/v7_node_20261115T205452Z.md`, all [SIMULATION; anchored], scored once on a fresh test):
+   S7 MAPE 11.47 % (PASS, conditional on the learnable life-variance profile; hard profile 21.1 %; trivial baseline 63.7 %; real BA-1 failure trace 83 % MAPE, n=1);
+   IS3 macro-F1 0.8486 (0.0014 below 0.85, reported as measured), stage error max 1, caught by stage 3 76/80. v5 and v6 FAILED their gates (history).
+   The RUL head is simulation-trained, one physical bearing per fault. S7/IS3 are simulation-based (Rank 6 at most); the live demo is Rank 9 for the PIPELINE only.
+5. IS2: the headline is the UP2 v3b wording-v2 result (test4, MED 16.3 % / P95 49.2 % of L_ref, common-mode caveat, [SYNTHETIC]). IS2 was not re-run on v5/v6/v7
+   (`python -m aiengine.fpr_is2 select` gave `valid_for_test: false`: wrong-AI controls pass on validation). The feature twin is design-level. IS1 is a placeholder carried over from UP2.
+6. Evidence notebook: `AI-engine/notebooks/FPR_Evidence.ipynb` / `.html` (re-execute per `evidence/FPR_DEMO_RUNBOOK.md`).
 7. Tests: `docker compose --profile test run --rm test` (+ `test-dotnet`), or natively `pytest AI-engine/tests/fpr_integration` and `dotnet test tests/DigitalTwin.Backend.Tests -c Release`.
 
 ### Live rig: hybrid_rig demo (default of `scripts/run-rig-live.ps1`)
 
 `NODE_CONTRACT=hybrid_rig`: fault class, baseline policy, onset and health index from **v4_real** (trained on real node windows);
-stage, AI RUL, physics RUL and Miner D from the **simulation-anchored heads** named by `NODE_RUL_CONTRACT` (default `v6_node`; `v7_node` swaps in by name).
+stage, AI RUL, physics RUL and Miner D from the **simulation-anchored heads** named by `NODE_RUL_CONTRACT` (default `v7_node`).
 The heads were trained on 10-minute simulated snapshots, live windows arrive every 1200/rpm s, so each live window advances the head's table clock by
 `NODE_RUL_TIMESCALE` snapshots (default 1 = one 10-minute snapshot per live window); RUL is in **table hours**, not wall-clock hours. Stage/RUL/physics are issued
 only for a bearing v4_real calls faulted, after the baseline policy, at stage >= 2; otherwise n/a. `-Contract v4_real` = classification only.
@@ -195,6 +195,10 @@ The live dashboard carries no label on these tiles; provenance is non-visual: pa
 anchored on our rig recordings; it has not been validated on real run-to-failure data, and the time unit is simulated hours."
 [MEASURED host, replay of rig data] `python -m aiengine.hybrid_replay` (reports/hybrid_replay.json): same-bearing recordings, not independent bearings.
 Simulation replay sources keep the `[SIMULATION; rig-anchored replay]` badge unchanged.
+
+Limits of the live hybrid_rig demo (say them): the RUL head is simulation-trained (v7_node), one physical bearing per fault; on the one real failure trace (ball BA-1, n=1) it scores 83 % MAPE;
+rig speeds are 1800 and 3600 rpm only (node reverts to 1800 after any STM32 reboot); warm-up is about 3 min (120 s settle + 60 s baseline per rpm), skipped for a bearing when
+`AI-engine/models/baseline_v4_real.json` (holds 1800 + 3600) is loaded; RUL is shown only for a bearing called faulted at stage >= 2. Full steps: `evidence/FPR_DEMO_RUNBOOK.md`; dry run: `python scripts/rig_dryrun.py`.
 
 ## Presenter checklist (UP2)
 

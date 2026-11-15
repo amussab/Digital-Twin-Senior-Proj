@@ -81,7 +81,7 @@ services:
   #        docker compose --profile fpr-demo up --build backend-fpr fpr-replay        -> http://localhost:5080/
   #      (name the two services: a plain `up` would also start the default `backend`, which owns the same port.)
   #      fpr-replay replays the committed AI-engine/demo/fpr_*.jsonl [SIMULATION; rig-anchored replay]
-  #      through the receiver -> NodeEngine (contract FPR_CONTRACT, default v5_node; v6_node when it lands) -> backend.
+  #      through the receiver -> NodeEngine (contract FPR_CONTRACT, default v7_node) -> backend.
   backend-fpr:
     profiles: ["fpr-demo"]
     build:
@@ -109,7 +109,7 @@ services:
         condition: service_healthy
     working_dir: /work
     environment:
-      NODE_CONTRACT: "${FPR_CONTRACT:-v5_node}"
+      NODE_CONTRACT: "${FPR_CONTRACT:-v7_node}"
       BACKEND_URL: "http://backend-fpr:5080"
       FPR_SPEED: "${FPR_SPEED:-12}"
       FPR_LOOP: "1"

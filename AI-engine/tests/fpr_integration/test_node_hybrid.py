@@ -40,7 +40,7 @@ def test_healthy_run_has_no_rul_or_stage_and_provenance_fields():
     s = summarise(m, outs)
     assert s["B1"]["rul_issued_pct"] == 0 and s["B2"]["rul_issued_pct"] == 0
     for o in outs:
-        assert o["rul_source"] == RUL_SOURCE and o["rul_contract"] == "v6_node" and o["rul_timescale"] == 1.0 and o["class_contract"] == "v4_real"
+        assert o["rul_source"] == RUL_SOURCE and o["rul_contract"] == "v7_node" and o["rul_timescale"] == 1.0 and o["class_contract"] == "v4_real"
         for b in o["bearings"]:
             assert b["rul_valid"] is False and b["ai_rul_hours"] is None and b["physics_rul_hours"] is None and b["health_stage"] is None
 

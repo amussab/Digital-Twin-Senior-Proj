@@ -5,7 +5,7 @@
     line  = predict(window, model)        # one-line string per window
 
 `window` = receiver dict: features (32), rpm, window_id, valid_channels, received_at (epoch s or ISO str).
-Env: NODE_CONTRACT=hybrid_rig (v4_real class + sim-trained stage/RUL heads: NODE_RUL_CONTRACT default v6_node, NODE_RUL_TIMESCALE default 1; see node_hybrid.py), NODE_TIME_BASE (realtime|table; table = simulated rig_anchor replay, RUL/physics shown), NODE_CONTRACT (default v3e_node), NODE_BASELINE (JSON saved by NodeEngine.save_baseline; loaded if it exists, and
+Env: NODE_CONTRACT=hybrid_rig (v4_real class + sim-trained stage/RUL heads: NODE_RUL_CONTRACT default v7_node, NODE_RUL_TIMESCALE default 1; see node_hybrid.py), NODE_TIME_BASE (realtime|table; table = simulated rig_anchor replay, RUL/physics shown), NODE_CONTRACT (default v3e_node), NODE_BASELINE (JSON saved by NodeEngine.save_baseline; loaded if it exists, and
 re-saved whenever a new rpm baseline is captured), NODE_SETTLE_S / NODE_BASELINE_S (override 120 / 60 s).
 """
 from __future__ import annotations
@@ -23,7 +23,7 @@ def setup() -> NodeEngine:
     pol = {"settle_seconds": float(os.environ.get("NODE_SETTLE_S", 120)),
            "baseline_seconds": float(os.environ.get("NODE_BASELINE_S", 60))}
     tb = os.environ.get("NODE_TIME_BASE", "realtime")      # "table" ONLY for the simulated-trajectory replay (rig_anchor); live node = realtime
-    if contract == "hybrid_rig":      # class v4_real + stage/RUL from NODE_RUL_CONTRACT (default v6_node), NODE_RUL_TIMESCALE (default 1)
+    if contract == "hybrid_rig":      # class v4_real + stage/RUL from NODE_RUL_CONTRACT (default v7_node), NODE_RUL_TIMESCALE (default 1)
         from .node_hybrid import HybridNodeEngine
         eng = HybridNodeEngine(policy=pol)
     else:

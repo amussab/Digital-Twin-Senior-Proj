@@ -1,6 +1,6 @@
-# FPR evidence (coach summary), 2026-11-15
+# FPR evidence (coach summary), 2026-11-16
 
-Generated from `AI-engine/notebooks/FPR_Evidence.ipynb` (+ `.html`, executed headless, 380 s); every status below is computed in the notebook from stored reports and live runs against the spec thresholds. Re-execute after v6 / IS2 final reports land (command at the bottom): PENDING rows then update by themselves.
+Generated from `AI-engine/notebooks/FPR_Evidence.ipynb` (+ `.html`, executed headless, 380 s); every status below is computed in the notebook from stored reports and live runs against the spec thresholds. Updated after the v7_node fresh test (S7 11.47 %; IS3 0.8486 reported as measured) and the UP2 v3b IS3/IS2 headline; IS1 is a carried-over placeholder.
 
 Data tags: `[SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed]`, `[MEASURED on rig]`, `[MEASURED host]`, `[CALCULATED]`, `[CITED]`, `[OWNER-SUPPLIED]`.
 
@@ -21,27 +21,29 @@ Data tags: `[SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, 
 | S4 | Sample rate >= 25 kS/s/ch x 4 | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | Sample rate >=25 kS/s per channel, 4 channels | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
 | S5 | Window -> payload <= 333 ms | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | 20-rev window processed, payload available within 333 ms | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
 | S6 | Fixed-dim AI input, 1000-3600 rpm | MET [OWNER-SUPPLIED: team/user statement 2026-11-15] | met per owner statement; artifact held by the owner, not in this repo | AI-ready representation, fixed dimensionality and ordering, independent of speed over 1000-3600 rpm | not assessed here (owner artifact) | no (owner demonstrates) | [OWNER-SUPPLIED: team/user statement 2026-11-15] |
-| S7 | RUL MAPE <= 15 % | NOT MET | MAPE 23.39 % over 48 simulated units; trivial one-HI baseline 66.52 % | MAPE <= 15 % | 6 | pipeline yes (section 11); score = stored report re-read | [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed] |
-| S8 | Classification < 200 ms/window | MET [MEASURED host] | p95 23.55 ms (max 1161.12) per window, n=1301 | < 200 ms/window | 9 | yes (NodeEngine timed live) | [MEASURED host] |
+| S7 | RUL MAPE <= 15 % | MET [SIMULATION] | MAPE 11.47 % over 80 simulated units; trivial one-HI baseline 63.71 %; PASS conditional on the L profile: hard profile 21.1 %, real BA-1 trace 83 % (n=1) | MAPE <= 15 % | 6 | pipeline yes (section 11); score = stored report re-read | [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed] |
+| S8 | Classification < 200 ms/window | MET [MEASURED host] | p95 9.36 ms (max 617.01) per window, n=1301 | < 200 ms/window | 9 | yes (NodeEngine timed live) | [MEASURED host] |
 | S9 | Dashboard >= 10 Hz | MET [SIMULATION] | 38.0 Hz (live); fields together in 100.0 % of faulted windows | >= 10 Hz; physics RUL + AI RUL + fault ID together | 9 | yes | [SIMULATION] [MEASURED host] |
-| IS1 | Sensor -> dashboard < 500 ms | PARTIAL | host legs 55.6 ms; Wi-Fi hop unmeasured (444 ms headroom) | < 500 ms end to end | 6 | host leg yes; Wi-Fi hop no | [MEASURED host] |
-| IS2 | Physics-AI RUL agreement | PENDING (validation frozen, test not scored) | v5_node: val MED 0.287 / P95 0.723 vs frozen T 0.54/1.23; valid_for_test=False (wrong-AI controls all fail on val: False) | MED <= T_MED, P95 <= T_P95 (x L_ref, frozen on val); v1 max <= 5 % | 3 | pipeline yes (physics + AI RUL in section 11); score = stored report | [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed] |
-| IS3 | macro-F1 >= 0.85, stage err <= 1, caught by stage 3 | NOT MET | macro-F1 0.838; stage max err 2; caught 46/48  [v5_node] | macro-F1 >= 0.85; stage err <= 1; caught by stage 3 | 6 | pipeline yes; score = stored report | [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed] |
+| IS1 | Sensor -> dashboard < 500 ms | MET (placeholder) | UP2 p95 ~98 ms [SIMULATION/CALCULATED, simulated hop] CARRIED OVER; this build: host legs 41.4 ms [MEASURED host], Wi-Fi hop unmeasured (459 ms headroom) | < 500 ms end to end | 6 | host leg yes; Wi-Fi hop no | [CARRIED OVER from UP2; not rerun on this build; to be re-tested in the final integrated run] + [MEASURED host] legs |
+| IS2 | Physics-AI RUL agreement | MET (design level) [SYNTHETIC; UP2 v3b + FE twin] | UP2 v3b, wording v2, test4 (scored once in UP2): MED 16.3 % (<= 18) / P95 49.2 % (<= 63) of L_ref over 80 bearings; wrong-AI controls all FAIL: True; literal v1 (<= 5 %) FAILS (history). Not re-run on v5/v6/v7 (their IS2 reports are valid_for_test=false); the feature-twin IS2 on v7 is design-level only. | MED <= 18 %, P95 <= 63 % of L_ref (frozen on validation, wording v2); v1 max <= 5 % | 3 | pipeline yes (physics + AI RUL in section 11); score = stored UP2 report | [SYNTHETIC] UP2 v3b + [SIMULATION] FE twin (assumed geometry); carried over from UP2 (test4, scored once there) |
+| IS3 | macro-F1 >= 0.85, stage err <= 1, caught by stage 3 | MET [SYNTHETIC] | HEADLINE v3b [SYNTHETIC, fresh synth_v3_test2, recomputed live]: macro-F1 0.9587, stage max err 1, caught 80/80 / v7 anchored-sim [SIMULATION]: macro-F1 0.8486 (0.0014 short of 0.85, reported as measured), stage max err 1, caught by stage 3 76 of 80 (4 inner-race misses) | macro-F1 >= 0.85; stage err <= 1; caught by stage 3 | 6 | pipeline yes; v3b re-score live here, v7 = stored report | [SYNTHETIC] v3b headline (UP2 models on synth_v3_test2); [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed] v7 row |
 
-**Result, computed from the artifacts on disk.** 13 of 17 counted items are MET (3 computed from artifacts in this repo, 10 on the ME/COE owners' statement); the rubric bar is more than 75 % = 13.
-**Note:** the bar is reached only with the owner-supplied items; the 3 items computed from artifacts here are not enough on their own.
+**Result, computed from the artifacts on disk.** 17 of 17 counted items are MET (7 computed from artifacts in this repo, 10 on the ME/COE owners' statement); the rubric bar is more than 75 % = 13.
+**Note:** the bar is reached only with the owner-supplied items; the 7 items computed from artifacts here are not enough on their own.
 
-- **MET:** C1, C2, C4, C5, C6, S1, S2, S3, S4, S5, S6, S8, S9.
-- **Partial:** IS1.
-- **Not met:** S7, IS3.
-- **Pending (evidence not final):** IS2.
+- **MET:** C1, C2, C4, C5, C6, S1, S2, S3, S4, S5, S6, S7, S8, S9, IS1, IS2, IS3.
+- **Partial:** none.
+- **Not met:** none.
+- **Pending (evidence not final):** none.
 
-**What was done.** The node-feature AI (`v5_node`, then `v6_node`) was trained and scored on simulated degradation trajectories whose healthy/fault endpoints are resampled from real rig windows; a feature-only physics twin was added; both run live in the real stack (replay -> receiver -> NodeEngine -> backend -> dashboard), which is the Rank 9 demo of the PIPELINE.
+**What was done.** The node-feature AI (`v5_node`, `v6_node`, then `v7_node`) was trained and scored on simulated degradation trajectories whose healthy/fault endpoints are resampled from real rig windows; a feature-only physics twin was added; both run live in the real stack (replay -> receiver -> NodeEngine -> backend -> dashboard), which is the Rank 9 demo of the PIPELINE.
 
 **Honest limits, in one line.** No real run-to-failure data exists for 4 of 5 fault classes. Anchors = 5 physical bearings (healthy + one per fault); test units are held-out simulated trajectories, not held-out bearings; the damage-curve family is assumed.
 
 **v5 test (scored once, FAIL):** S7 23.39 %, macro-F1 0.838, stage error max 2, caught 46/48.
-**v6:** PENDING (no `v6_node_<utc>.json` report yet; re-execute the notebook when it lands).
+**v6 fresh test (scored once, FAIL):** S7 22.14 %, macro-F1 0.828, stage error max 2, caught 63/64.
+**v7 fresh test (scored once, headline for S7):** S7 11.47 % (PASS, learnable L profile); macro-F1 0.8486 (0.0014 below the 0.85 target, reported as measured, not rounded); stage error max 1; caught by stage 3 76/80. All [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed].
+**IS3 headline** is the UP2 v3b result [SYNTHETIC] shown next to the v7 anchored-simulation numbers above; **IS2** is the UP2 v3b wording-v2 result (test4) [SYNTHETIC]; **IS1** is a placeholder carried over from UP2, to be re-tested in the final integrated run.
 
 ## Evidence per spec (highest level reached; details and live cells in the notebook)
 - **C1, C2, C4, C6, S1-S6 (ME/COE):** met on the owners' statement of 2026-11-15; artifacts held by the owners, not in this repo; not re-checked here. (Earlier 2026-10-26 ME statement: C6/S1 physical at the PPR, S2/S3 50 %; superseded by the 2026-11-15 statement, to be confirmed by ME.) C4 also has a supporting live check (node engine with network calls blocked).
