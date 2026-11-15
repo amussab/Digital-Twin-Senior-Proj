@@ -172,3 +172,7 @@ AI-engine/data/cache_up2, AI-engine/checkpoints/up2_v3.
 Plan: `.claude/FPR_PLAN.md` (+ REVISION 1 after critique, binding). User decisions: anchored-sim RUL set (tagged), no more rig time, extend twin + re-freeze IS2, no merge of origin/main.
 Honest ceiling: S7/IS3 Rank 6, IS2 Rank 3-6 (sim-anchored, curve assumed); live demo Rank 9 for the pipeline only. Tell the user.
 Status: [ ] generator rig_anchor (agent) [ ] feature twin (agent) [ ] v5 RUL head + baseline [ ] v5 classifier/stage [ ] IS2 eval [ ] integration [ ] evidence + reviewer
+- 2026-11-15 20:50 (coord): v5_node scored ONCE on registered test: ALL GATES FAIL (S7 23.39 %, F1 0.8375, stage max 2, caught 46/48) -> kept in evidence. v6_node (val-only, FRESH test rig_anchor_test2 registered before fit, commit 48c6643) in progress by ML agent.
+  Integration done (f013bac, 47fc966, 1f04307): NodeEngine v5/v6 + FeaturePhysicsTwin, fpr_is2 harness (select/test once), dashboard Live fields, demo units AI-engine/demo, compose `fpr-demo`+`evidence-fpr`. Docker daemon was DOWN -> only `compose config` verified.
+  IS2 on v5 VAL: 4/6 negative controls PASS -> valid_for_test=false (twin Miner r^3 saturates). Twin recalibration on VAL only in progress (twin agent), then `fpr_is2 predict/select --contract v6_node`, `test --split rig_anchor_test2:test` ONCE.
+  Evidence notebook agent building notebooks/FPR_Evidence.ipynb (+html) with computed statuses. After final: re-render demo units for chosen contract, update README limits, re-publish dashboard (header tag fix), run docker if daemon up.
