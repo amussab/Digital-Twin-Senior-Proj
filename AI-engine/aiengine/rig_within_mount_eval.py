@@ -81,6 +81,24 @@ def main(argv=None):
         v = out["variants"][name]
         print(f"{name}: macro-F1 {v['macro_f1']:.3f} acc {v['accuracy']:.3f} per-class "
               f"{ {k: round(x, 3) for k, x in v['f1'].items()} } healthy-false-alarm {v['healthy_false_alarm_rate']} missed {v['missed_fault_rate']}")
+    # ---- held-out OPERATING SPEED (same bearings): train on one speed, test on the other; fixed before fitting ----
+    allp = T_.cat(parts)
+    out["cross_speed"] = {}
+    for tr_rpm, te_rpm in ((1800, 3600), (3600, 1800)):
+        mtr, mte = allp["rpm_key"] == tr_rpm, allp["rpm_key"] == te_rpm
+        trn = {k: (np.asarray(v)[mtr] if not isinstance(v, list) else [x for x, m in zip(v, mtr) if m]) for k, v in allp.items()}
+        tst = {k: (np.asarray(v)[mte] if not isinstance(v, list) else [x for x, m in zip(v, mte) if m]) for k, v in allp.items()}
+        for name, use_sim in (("real_only", False), ("real_plus_sim", True)):
+            X, y, w = trn["Xc"], trn["y"], None
+            if use_sim:
+                X, y = np.concatenate([X, sim["Xc"]]), np.concatenate([y, sim["y"]])
+                w = np.concatenate([np.ones(len(trn["y"])), np.full(len(sim["y"]), a.sim_weight)])
+            P = T_.Clf(hp, a.threads).fit(X, y, w).proba(tst["Xc"]).argmax(1)
+            v = score(tst["y"], P)
+            v["test_classes"] = {T_.CLASS_ORDER[i]: int((tst["y"] == i).sum()) for i in sorted(set(tst["y"]))}
+            out["cross_speed"][f"train{tr_rpm}_test{te_rpm}_{name}"] = v
+            print(f"cross-speed train {tr_rpm} -> test {te_rpm} {name}: macro-F1 {v['macro_f1']:.3f} acc {v['accuracy']:.3f} per-class "
+                  f"{ {k: round(x, 3) for k, x in v['f1'].items()} } test windows {v['test_classes']}")
     out["seconds"] = round(time.perf_counter() - t0, 1)
     f = Path(REPORTS_DIR) / f"rig_within_mount_{time.strftime('%Y%m%dT%H%M%S')}.json"
     f.write_text(json.dumps(out, indent=1))

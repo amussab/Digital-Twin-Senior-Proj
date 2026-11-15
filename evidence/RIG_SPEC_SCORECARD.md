@@ -1,0 +1,29 @@
+# ICS + Integrated spec scorecard on the rig AI (`v4_real`) — 2026-11-15
+
+Every number below is tagged by how it was obtained. Nothing here is invented; where the data cannot support a spec, it says so.
+Data: 10 rig runs / 5,076 windows (healthy, inner, outer, cage at 1800 + 3600 rpm; ball at 1800 rpm only), ONE physical bearing per fault,
+fault severities ESTIMATED (not measured), B2X on the node is a copy of B1Y (policy B2X:=B2Y applied). Commits eca261f..7bb6a78 + this file.
+
+| Spec | Requirement | Result | Tag | Verdict |
+|---|---|---|---|---|
+| C5 (ICS constraint) | Dashboard LAN-only, no external exposure | Local-network guard unchanged; backend tests 37/37 pass (incl. guard) | [MEASURED host tests] | MET (as before; live run on :5080, LAN address shown) |
+| S8 | Classification < 200 ms/window | NodeEngine p95 **13.6 ms** (train_real stream check, 158 windows); live path inference p50 3.5 / p95 5.0 ms (362 windows) | [MEASURED host] | **MET** |
+| S9 | UI refresh >= 10 Hz; physics RUL + AI RUL + fault ID updated together | Client snapshot rate **21.1 Hz** (min 20 / max 22 per s) at real node cadence, 20 s, SignalR client. BUT physics RUL = null and AI RUL = n/a on node data (0/423 snapshots carry physics RUL) | [MEASURED host, replay of rig data] | **PARTIAL**: rate met, "physics RUL + AI RUL" not available from node features |
+| S7 | RUL MAPE <= 15 % on held-out degradation window | No RUL model: the node sends window features only and the rig has no run-to-failure data with ground-truth RUL (the one failure, ball BA-1, has invalid rpm labels, see run_to_failure/) | — | **NOT MET / NOT MEASURABLE** |
+| IS1 | sensor -> classify + RUL -> dashboard < 500 ms | Host leg: receive -> inference p95 5 ms, receive -> backend ack p50 16 / p95 32 ms, node-ACK RTT p95 28 ms (replay, 362 windows); earlier headless-Edge render p95 353 ms (v3e). Wi-Fi node->laptop hop NOT measurable (node sends no timestamp). RUL not produced. | [MEASURED host] | **PARTIAL / CONDITIONAL** (classification path well under 500 ms; RUL and Wi-Fi leg not covered) |
+| IS2 | physics-AI RUL agreement (stages 1->3) | Physics twin and AI RUL are both n/a on node data | — | **NOT MET / NOT MEASURABLE** |
+| IS3 | macro-F1 >= 85 %, stage error <= 1, fault caught by stage 3 | see below | — | **NOT SCORABLE (insufficient bearings); evidence below is NOT an IS3 pass** |
+
+## IS3 evidence that exists (all [MEASURED on rig], all optimistic or pessimistic proxies)
+- Held-out BY BEARING: impossible, 1 bearing per fault (train_real: "need >= 3 runs/mounts per condition"; IS3 NOT SCORED).
+- Leave-one-bearing-out CV: macro-F1 0.45 (best variant). Structurally pessimistic (each fold removes a class).
+- Within-mount time-blocked (same bearing/mount in train and test): macro-F1 1.000 real-only / 0.999 real+sim. OPTIMISTIC upper bound; not IS3.
+- Held-out OPERATING SPEED (train one speed, test the other, same bearings): 1800->3600 macro-F1 0.68 (real-only) / 0.79 (+sim, cage F1 0.30);
+  3600->1800 macro-F1 0.48 (real-only) / 0.36 (+sim; inner 0.0, cage 0.04). All below 0.85: the classifier does NOT yet generalise across speed with this data.
+- Stage error / caught-by-stage-3: severities are estimated, not measured, so no valid stage ground truth exists: not scored.
+
+## What would legitimately close the gaps (needs data, not more tuning)
+1. IS3: >= 3 physical bearings per fault (2 train + 1 held out, frozen in splits.json before fitting), measured severity levels.
+2. S7 / IS2 / S9-RUL: run-to-failure runs with true RUL labels recorded as features-over-time + a physics-twin input that the node does not currently provide.
+3. IS1: a node timestamp (firmware) to measure the Wi-Fi hop.
+4. Cross-speed: more speeds or more bearings; the 4-sensor re-run helps only once B2X is genuinely wired.

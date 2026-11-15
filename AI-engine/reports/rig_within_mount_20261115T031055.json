@@ -1,0 +1,383 @@
+{
+ "tag": "[MEASURED on rig, WITHIN-MOUNT time-blocked: optimistic upper bound, NOT IS3]",
+ "hp": {
+  "max_depth": 5,
+  "n_estimators": 250,
+  "learning_rate": 0.06
+ },
+ "train_windows": 2364,
+ "test_windows": 1142,
+ "split": "first 60% of each run train, gap 25, rest test",
+ "variants": {
+  "real_only": {
+   "macro_f1": 1.0,
+   "f1": {
+    "ball": 1.0,
+    "cage": 1.0,
+    "healthy": 1.0,
+    "inner_race": 1.0,
+    "outer_race": 1.0
+   },
+   "accuracy": 1.0,
+   "healthy_false_alarm_rate": 0.0,
+   "missed_fault_rate": 0.0,
+   "confusion_labels": [
+    "ball",
+    "cage",
+    "healthy",
+    "inner_race",
+    "outer_race"
+   ],
+   "confusion": [
+    [
+     38,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     149,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     653,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     151,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     151
+    ]
+   ]
+  },
+  "real_plus_sim": {
+   "macro_f1": 0.9991866772884185,
+   "f1": {
+    "ball": 1.0,
+    "cage": 1.0,
+    "healthy": 0.9992337164750957,
+    "inner_race": 1.0,
+    "outer_race": 0.9966996699669967
+   },
+   "accuracy": 0.999124343257443,
+   "healthy_false_alarm_rate": 0.0015313935681470138,
+   "missed_fault_rate": 0.0,
+   "confusion_labels": [
+    "ball",
+    "cage",
+    "healthy",
+    "inner_race",
+    "outer_race"
+   ],
+   "confusion": [
+    [
+     38,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     149,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     652,
+     0,
+     1
+    ],
+    [
+     0,
+     0,
+     0,
+     151,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     151
+    ]
+   ]
+  }
+ },
+ "notes": [],
+ "cross_speed": {
+  "train1800_test3600_real_only": {
+   "macro_f1": 0.6782343121764933,
+   "f1": {
+    "cage": 0.0,
+    "healthy": 0.8949129852744311,
+    "inner_race": 0.8180242634315424,
+    "outer_race": 1.0
+   },
+   "accuracy": 0.8123938879456706,
+   "healthy_false_alarm_rate": 0.0,
+   "missed_fault_rate": 0.30814524043179586,
+   "confusion_labels": [
+    "ball",
+    "cage",
+    "healthy",
+    "inner_race",
+    "outer_race"
+   ],
+   "confusion": [
+    [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     23,
+     0,
+     314,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     1337,
+     0,
+     0
+    ],
+    [
+     105,
+     0,
+     0,
+     236,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     341
+    ]
+   ],
+   "test_classes": {
+    "cage": 337,
+    "healthy": 1337,
+    "inner_race": 341,
+    "outer_race": 341
+   }
+  },
+  "train1800_test3600_real_plus_sim": {
+   "macro_f1": 0.7869235396887053,
+   "f1": {
+    "cage": 0.3005366726296959,
+    "healthy": 0.9165316045380876,
+    "inner_race": 0.9393468118195957,
+    "outer_race": 0.9912790697674418
+   },
+   "accuracy": 0.7886247877758913,
+   "healthy_false_alarm_rate": 0.15407629020194466,
+   "missed_fault_rate": 0.0,
+   "confusion_labels": [
+    "ball",
+    "cage",
+    "healthy",
+    "inner_race",
+    "outer_race"
+   ],
+   "confusion": [
+    [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     253,
+     84,
+     0,
+     0,
+     0
+    ],
+    [
+     101,
+     99,
+     1131,
+     0,
+     6
+    ],
+    [
+     0,
+     39,
+     0,
+     302,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     341
+    ]
+   ],
+   "test_classes": {
+    "cage": 337,
+    "healthy": 1337,
+    "inner_race": 341,
+    "outer_race": 341
+   }
+  },
+  "train3600_test1800_real_only": {
+   "macro_f1": 0.47753687821612356,
+   "f1": {
+    "ball": 0.0,
+    "cage": 0.44,
+    "healthy": 0.9476843910806175,
+    "inner_race": 0.0,
+    "outer_race": 1.0
+   },
+   "accuracy": 0.7845622119815668,
+   "healthy_false_alarm_rate": 0.0,
+   "missed_fault_rate": 0.19334389857369255,
+   "confusion_labels": [
+    "ball",
+    "cage",
+    "healthy",
+    "inner_race",
+    "outer_race"
+   ],
+   "confusion": [
+    [
+     0,
+     152,
+     5,
+     0,
+     0
+    ],
+    [
+     0,
+     99,
+     0,
+     59,
+     0
+    ],
+    [
+     0,
+     0,
+     1105,
+     0,
+     0
+    ],
+    [
+     0,
+     41,
+     117,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     158
+    ]
+   ],
+   "test_classes": {
+    "ball": 157,
+    "cage": 158,
+    "healthy": 1105,
+    "inner_race": 158,
+    "outer_race": 158
+   }
+  },
+  "train3600_test1800_real_plus_sim": {
+   "macro_f1": 0.360386779719312,
+   "f1": {
+    "ball": 0.017595307917888565,
+    "cage": 0.044585987261146494,
+    "healthy": 0.9125274725274726,
+    "inner_race": 0.0,
+    "outer_race": 0.8272251308900523
+   },
+   "accuracy": 0.6947004608294931,
+   "healthy_false_alarm_rate": 0.06063348416289593,
+   "missed_fault_rate": 0.2091917591125198,
+   "confusion_labels": [
+    "ball",
+    "cage",
+    "healthy",
+    "inner_race",
+    "outer_race"
+   ],
+   "confusion": [
+    [
+     3,
+     146,
+     8,
+     0,
+     0
+    ],
+    [
+     150,
+     7,
+     0,
+     1,
+     0
+    ],
+    [
+     0,
+     0,
+     1038,
+     1,
+     66
+    ],
+    [
+     31,
+     3,
+     124,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     158
+    ]
+   ],
+   "test_classes": {
+    "ball": 157,
+    "cage": 158,
+    "healthy": 1105,
+    "inner_race": 158,
+    "outer_race": 158
+   }
+  }
+ },
+ "seconds": 76.4
+}
