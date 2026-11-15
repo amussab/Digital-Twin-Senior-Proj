@@ -16,17 +16,19 @@ model. It prints one line per window with the model's answer.
    ```
    git pull
    cd COE/inference
-   python inference_receiver.py --rpm 1750
+   python inference_receiver.py
    ```
-   `--rpm` is the machine speed, **1750** (default) or **3600**. Set the machine's speed controller to
-   the same value. The node switches within a few seconds; until then each line ends with
-   `[node still switching to ... RPM]`.
+   There is no speed to set: the node measures it from the Keyphasor (ADC channel 7).
    Use the Python that has your model's packages installed.
 
 You will see one line per window:
 ```
-21:42:15.011  window    118  1750 RPM  ->  healthy   (3 ms)
+21:42:15.011  window    118  1750.3 RPM, PROX1 gap 1227 um, PROX3 gap 1024 um  ->  healthy   (3 ms)
 ```
+`window` also has `window['measured_rpm']` (the Keyphasor speed, or None), `window['rpm']` (the
+speed the features were computed for, whole RPM) and `window['shaft']` (the probe values by name,
+e.g. `window['shaft']['prox1_gap_um']`). These are for the digital twin; the model needs only
+the 32 features.
 
 ## Good to know
 

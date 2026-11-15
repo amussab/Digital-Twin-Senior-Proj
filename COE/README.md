@@ -49,10 +49,16 @@ Design documents for the node: `Project architecture/COE/`.
 - **Bearing profile 3** (since 16 Nov 2026, new RK4 bearings, S6700): the band features are at
   FTF 0.452, **bsf = 2 × BSF = 10.28**, BPFO 4.970, BPFI 6.030 times the shaft speed. Each packet
   carries `bearing_profile`; never mix profile-1 (old bearing) data with profile-3 data.
-- **Machine speed: 1750 or 3600 RPM.** Choose it in the training page ("Machine speed") or with
-  `python inference_receiver.py --rpm 3600`, and set the machine's speed controller to the same value.
-  The node starts at 1750 after power-up and switches within a few seconds; each window's `rpm`
-  says which speed its features were computed for. Later the node will measure the speed itself.
+- **Machine speed: measured by the node** (since 16 Nov 2026). Nobody sets it: the node reads the
+  Keyphasor on ADC channel 7 and computes the features for the speed it measures (any 60–4000 RPM;
+  the rig runs 1750 and 3600). `rpm` is that speed in whole RPM; `measured_rpm` is the exact mean
+  speed of the window. A window is sent only while the speed is steady (within 1 %).
+- **Shaft values for the digital twin** (same JSON, `schema_version` 2): `measured_rpm`,
+  `revolutions`, `shaft_flags`, and per proximity probe (`prox1` = AIN5, `prox3` = AIN6):
+  `_gap_um` (mean gap), `_pkpk_um` (pk-pk vibration), `_x1_um_pp` and `_x1_phase_deg`
+  (once-per-turn vibration and its phase lag from the Keyphasor notch). `shaft_flags` bits:
+  0 speed measured, 1 PROX 1 valid, 2 PROX 3 valid, 3 PROX 1 1X valid, 4 PROX 3 1X valid; a
+  value whose bit is clear is 0. The AI model uses the 32 features; these are extra.
 
 `host_receiver.py` (in both folders, same file) is the node's protocol: the node sends an
 HTTP POST of JSON to `/features` and waits for `200 {"accepted": true}`.

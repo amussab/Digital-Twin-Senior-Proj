@@ -7,8 +7,9 @@ wire named in Part 2.
 
 Time: about 45 minutes the first time (mostly installing one program).
 
-What's new: the machine's speed is now chosen on the laptop, **1750 RPM or 3600 RPM**.
-The two boards need new firmware for this (Parts 1 and 2). This is done once.
+What's new: the node now **measures the machine's speed itself** (from the Keyphasor) and also
+sends the two proximity probes' values. Nothing to choose on the laptop. The two boards need
+new firmware for this (Parts 1 and 2). This is done once.
 
 ---
 
@@ -96,21 +97,22 @@ That's why the 24 V is off and its 5 V wire is unplugged during this part.
    ```
    The first time, Windows asks about the firewall: click **Allow**.
 3. Open **http://localhost:8000** in the browser. The pill at the top turns green:
-   **"Data arriving: 1750 RPM, 4 of 4 channels OK"**.
-4. **1. Machine speed**: click **1750 RPM** or **3600 RPM**, and set the **machine's speed
-   controller to the same speed**. Wait for the green line **"Node confirmed: computing features
-   for ... RPM"** (a few seconds).
+   **"Data arriving: 1750 RPM, 4 of 4 channels OK"** (the speed the node measures).
+4. **1. Machine speed and shaft**: set the machine to the speed you want (1750 or 3600 RPM). The
+   page shows the speed the node measures, e.g. **"Speed (Keyphasor): 1750.2 RPM"**, and both
+   proximity probes. There is nothing to click here. While the speed is changing, no windows arrive
+   for a few seconds; that is normal.
 5. **2. Choose the bearing condition**: Healthy, Inner race fault, Outer race fault, Ball fault or Cage fault.
    It must match the bearing that is installed in the machine.
 6. **3. Record**: add a note if useful (load, which bearing), press **Start recording**, run the
-   machine, press **Stop recording** when done. Start is refused while the node is still switching
-   speed; just wait for "Node confirmed".
+   machine, press **Stop recording** when done.
 7. Repeat for every condition, **at both speeds** if your model should work at both.
 8. **4. Recorded runs**: **Download all runs (CSV)**. The files are also saved in
    `COE/training/training_data/`. Copy that folder somewhere safe: it's not uploaded to GitHub.
 
 About the data: one row per window, 32 features (`B1X_rms` … `B2Y_bpfi`, units in `COE/README.md`).
-The `rpm` column is the speed the node used for that window. All four channels are independent
+The `rpm` column is the speed the node measured for that window (`measured_rpm` is the exact
+value; the probe columns come after the features). All four channels are independent
 sensors (since 15 Nov 2026). Since 16 Nov 2026 the machine has new bearings (S6700) and the node
 uses **bearing profile 3**: `bsf` is the ball band at 2 × BSF. Don't mix older recordings with these.
 
@@ -129,7 +131,7 @@ When finished: **Ctrl+C** in the terminal, then switch the 24 V supply off.
 | ESP LED off after Part 3 | 24 V off, push the ESP's 5V wire in firmly, 24 V on. |
 | ESP LED keeps flashing red | The 5 V supply dips. Stop and contact Abdullah. |
 | Page says "No data yet" but COE-NODE is connected | Run this once in an **administrator** terminal, then restart the script: `netsh advfirewall firewall add rule name="COE node TCP 8000" dir=in action=allow protocol=TCP localport=8000 profile=any` |
-| Speed stays "Switching the node to 3600 RPM" for more than 30 s | The return wire ESP GPIO19 → STM32 PD6 may be missing. Record at **1750** only and tell Abdullah. |
+| "Speed: the Keyphasor gives no steady speed" or no data while the machine runs | The Keyphasor wire (ADC channel 7) may be loose. Stop and tell Abdullah. |
 | "Cannot use port 8000" | The script is already running in another terminal. Close it first. |
 | Anything else | Stop. Take photos of the boards (LED colours) and a screenshot, and contact Abdullah. Don't change wiring or jumpers. |
 

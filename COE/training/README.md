@@ -16,9 +16,9 @@ Conditions: **Healthy, Inner race, Outer race, Ball, Cage**.
    python training_recorder.py
    ```
 3. Open **http://localhost:8000**. The top pill turns green, showing **"Data arriving"**.
-4. **Machine speed:** click **1750 RPM** or **3600 RPM** and set the machine's speed controller to
-   the same value. Wait for the green line **"Node confirmed"** (a few seconds). Start is refused
-   while the node is still at the other speed, and the speed can't change during a run.
+4. **Machine speed and shaft:** nothing to choose. Set the machine to the speed you want; the node
+   measures it from the Keyphasor and the page shows it (for example **"Speed (Keyphasor):
+   1750.2 RPM"**), with the two proximity probes' gap, pk-pk and 1X vibration.
 5. Choose the condition, add a note if useful, and press **Start**. Press **Stop** when the run is done.
 6. Download the CSV for one run or for all runs.
 
@@ -29,7 +29,10 @@ Conditions: **Healthy, Inner race, Outer race, Ball, Cage**.
   script loses nothing.
 - CSV columns: `run_id, label, note, received_at, rpm, window_id, sequence,
   device_id, valid_channels`, then the 32 features `B1X_rms` … `B2Y_bpfi`
-  (order and units: [../README.md](../README.md)).
+  (order and units: [../README.md](../README.md)), then the shaft columns
+  `schema_version, measured_rpm, revolutions, shaft_flags, prox1_gap_um, prox1_pkpk_um,
+  prox1_x1_um_pp, prox1_x1_phase_deg, prox3_...` (empty for windows from old firmware).
 - The labels are whatever you select. Record one condition per run, and record healthy runs too.
-- The `rpm` column is the speed the node used for that window (1750 or 3600). Record each
-  condition at both speeds if the model must work at both.
+- The `rpm` column is the speed the node computed that window for (measured, whole RPM);
+  `measured_rpm` is the exact measured speed. Record each condition at both machine speeds
+  (1750 and 3600) if the model must work at both.

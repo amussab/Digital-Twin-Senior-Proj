@@ -12,6 +12,51 @@ from pathlib import Path
 import re
 
 
+PROBES = ('prox1', 'prox3')
+PROBE_VALUES = ('gap_um', 'pkpk_um', 'x1_um_pp', 'x1_phase_deg')
+SHAFT_FIELDS = [f'{probe}_{value}' for probe in PROBES for value in PROBE_VALUES]
+
+
+def number(message, name):
+    """A finite JSON number (not a bool)."""
+    value = message.get(name)
+    if type(value) not in (int, float) or not math.isfinite(value):
+        raise ValueError(f'{name} must be a finite number')
+    return value
+
+
+def validate_shaft(message):
+    """Schema 2: Keyphasor speed and RK4 probe values, consistent with shaft_flags.
+
+    shaft_flags bits: 0 speed measured, 1 PROX 1 valid, 2 PROX 3 valid,
+    3 PROX 1 1X valid, 4 PROX 3 1X valid. A value that is not valid is 0.
+    """
+    for name in ('revolutions', 'shaft_flags'):
+        if type(message.get(name)) is not int:
+            raise ValueError(f'{name} must be an integer')
+    flags = message['shaft_flags']
+    if not 0 <= flags <= 0x1F:
+        raise ValueError('Invalid shaft flags')
+    speed = bool(flags & 1)
+    measured = number(message, 'measured_rpm')
+    if speed and not (60 <= measured <= 4000 and message['revolutions'] >= 1):
+        raise ValueError('Invalid measured speed')
+    if not speed and (measured != 0 or message['revolutions'] != 0):
+        raise ValueError('Speed values without a measured speed')
+    for index, probe in enumerate(PROBES):
+        valid, x1 = bool(flags & (2 << index)), bool(flags & (8 << index))
+        if x1 and not (valid and speed):
+            raise ValueError(f'{probe} 1X needs a valid probe and a measured speed')
+        for position, value_name in enumerate(PROBE_VALUES):
+            name = f'{probe}_{value_name}'
+            value = number(message, name)
+            if valid if position < 2 else x1:
+                if value < 0 or (value_name == 'x1_phase_deg' and value >= 360):
+                    raise ValueError(f'Invalid {name}')
+            elif value != 0:
+                raise ValueError(f'{name} must be 0 when not valid')
+
+
 def validate_vector(message):
     """Reject wrong metadata/order length and unusable numeric values."""
     if not isinstance(message, dict):
@@ -19,7 +64,7 @@ def validate_vector(message):
     for name in ('schema_version', 'sequence', 'window_id', 'rpm', 'bearing_profile', 'valid_channels'):
         if type(message.get(name)) is not int:
             raise ValueError(f'{name} must be an integer')
-    if message['schema_version'] != 1 or not 60 <= message['rpm'] <= 3600:
+    if message['schema_version'] not in (1, 2) or not 60 <= message['rpm'] <= 4000:
         raise ValueError('Unsupported schema or speed')
     if message['bearing_profile'] not in (1, 2, 3) or message.get('acceleration_unit') != 'g':
         raise ValueError('Unsupported bearing profile or unit')
@@ -40,6 +85,8 @@ def validate_vector(message):
             raise ValueError(f'Invalid feature {index}')
         if not mask & (1 << (index // 8)) and value != 0:
             raise ValueError('An invalid channel must have zero placeholders')
+    if message['schema_version'] == 2:
+        validate_shaft(message)
     return (message['device_id'], message['session_id'], message['sequence'])
 
 
@@ -95,7 +142,8 @@ class FeatureHandler(BaseHTTPRequestHandler):
         if len(self.server.seen) > 10000:
             self.server.seen.popitem(last=False)
         if not getattr(self.server, 'quiet', False):
-            print(f"Saved window={message['window_id']}, RPM={message['rpm']}, features=32", flush=True)
+            speed = f", Keyphasor {message['measured_rpm']:.2f} RPM" if message.get('shaft_flags', 0) & 1 else ''
+            print(f"Saved window={message['window_id']}, RPM={message['rpm']}{speed}, features=32", flush=True)
         self.reply(200, {'accepted': True, 'duplicate': False})
 
 

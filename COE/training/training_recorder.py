@@ -12,10 +12,13 @@ the current run only while recording is on.
 Files in the data folder, one pair per run:
     run_YYYYMMDD_HHMMSS.json   label, note, start and stop time
     run_YYYYMMDD_HHMMSS.jsonl  one line per window: {"received_at": ..., "message": {...}}
-While running it also broadcasts a UDP beacon "COE-HOST <http_port> RPM <speed>" to
-port 8001 every 2 s, so the ESP32 can find this laptop without a fixed IP. The RPM
-part is the machine speed chosen on the page (1750 or 3600); the ESP32 passes it to
-the STM32, which computes the features for that speed.
+While running it also broadcasts a UDP beacon "COE-HOST <http_port>" to port 8001
+every 2 s, so the ESP32 can find this laptop without a fixed IP.
+
+The machine speed is not chosen here: the node measures it from the Keyphasor
+(ADC channel 7) and computes the features for that speed. Each window also carries
+the measured speed and the two proximity probe values (gap, pk-pk, 1X amplitude and
+phase); the page shows them and the CSV has them as columns.
 Standard library only.
 """
 import argparse
@@ -57,16 +60,15 @@ LABEL_NAMES = dict(LABELS)
 CHANNELS = ('B1X', 'B1Y', 'B2X', 'B2Y')
 FEATURES = ('rms', 'kurtosis', 'crest', 'envelope_rms', 'ftf', 'bsf', 'bpfo', 'bpfi')
 FEATURE_COLUMNS = [f'{channel}_{feature}' for channel in CHANNELS for feature in FEATURES]
+# Shaft columns come after the features, so the feature columns keep their place.
+# They are empty for windows from old firmware (schema 1).
+SHAFT_COLUMNS = ['schema_version', 'measured_rpm', 'revolutions', 'shaft_flags'] + host_receiver.SHAFT_FIELDS
 CSV_COLUMNS = ['run_id', 'label', 'note', 'received_at', 'rpm', 'window_id', 'sequence',
-               'device_id', 'valid_channels'] + FEATURE_COLUMNS
+               'device_id', 'valid_channels'] + FEATURE_COLUMNS + SHAFT_COLUMNS
 
 BEACON_PORT = 8001
 BEACON_PERIOD_S = 2.0
 
-# Machine speed modes. The node starts at 1750 after power-up; the page can switch it.
-# Later the node will measure the speed from the machine itself.
-SPEEDS = (1750, 3600)
-DEFAULT_SPEED = 1750
 FRESH_S = 5.0  # a packet younger than this counts as "data arriving"
 RUN_ID = re.compile(r'run_\d{8}_\d{6}(_\d{1,3})?')
 
@@ -79,6 +81,41 @@ def epoch(iso):
     return datetime.fromisoformat(iso).timestamp()
 
 
+def window_rpm(message):
+    """Speed of a window: the Keyphasor-measured speed, or the header RPM for old firmware."""
+    if message.get('schema_version') == 2 and message.get('shaft_flags', 0) & 1:
+        return message.get('measured_rpm')
+    return message.get('rpm')
+
+
+def add_rpm(meta, message):
+    rpm = window_rpm(message)
+    if isinstance(rpm, (int, float)) and not isinstance(rpm, bool):
+        low, high = meta['rpm_range'] or (rpm, rpm)
+        meta['rpm_range'] = (min(low, rpm), max(high, rpm))
+
+
+def rpm_text(rpm_range):
+    if not rpm_range:
+        return ''
+    low, high = (round(value) for value in rpm_range)
+    return str(low) if low == high else f'{low}-{high}'
+
+
+def shaft_view(message):
+    """Keyphasor speed and probe values of a window for the page (None for old firmware)."""
+    if message.get('schema_version') != 2:
+        return {'measured_rpm': None}
+    flags = message.get('shaft_flags', 0)
+    probes = []
+    for index, probe in enumerate(host_receiver.PROBES):
+        values = {name: message.get(f'{probe}_{name}') for name in host_receiver.PROBE_VALUES}
+        probes.append(dict(values, name=probe.replace('prox', 'PROX '),
+                           valid=bool(flags & (2 << index)), x1=bool(flags & (8 << index))))
+    return {'measured_rpm': message.get('measured_rpm'), 'revolutions': message.get('revolutions'),
+            'speed_measured': bool(flags & 1), 'probes': probes}
+
+
 class Recorder:
     """Owns the runs on disk and the recording state. All changes go through self.lock."""
 
@@ -86,11 +123,10 @@ class Recorder:
         self.dir = Path(data_dir)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.lock = threading.Lock()
-        self.runs = {}            # run_id -> meta dict plus 'windows' and 'rpms'
+        self.runs = {}            # run_id -> meta dict plus 'windows' and 'rpm_range'
         self.active = None        # run_id being recorded, or None
         self.last_packet = None   # (time.monotonic(), message) of the last new valid window
         self.beacon_ips = []      # laptop IPv4 addresses the beacon currently announces
-        self.speed = DEFAULT_SPEED  # machine speed sent to the node in the beacon
         self._load()
 
     def _meta_path(self, run_id):
@@ -101,8 +137,6 @@ class Recorder:
 
     def _write_meta(self, meta):
         data = {key: meta[key] for key in ('run_id', 'label', 'note', 'started_at', 'stopped_at')}
-        if meta.get('speed'):
-            data['speed'] = meta['speed']  # speed chosen on the page for this run
         path = self._meta_path(meta['run_id'])
         temp = path.with_suffix('.json.tmp')
         temp.write_text(json.dumps(data, indent=2), encoding='utf-8')
@@ -133,35 +167,20 @@ class Recorder:
                     raise ValueError('unknown label')
                 meta['run_id'] = run_id
                 meta.setdefault('note', '')
-                windows, rpms, last = 0, set(), None
+                windows, last = 0, None
+                meta['rpm_range'] = None
                 for row in self.rows(run_id):
                     windows += 1
-                    rpms.add(row['message'].get('rpm'))
+                    add_rpm(meta, row['message'])
                     last = row.get('received_at')
                 if not meta.get('stopped_at'):
                     # The script was closed while this run was recording: close it now.
                     meta['stopped_at'] = last or meta['started_at']
                     self._write_meta(meta)
-                meta['windows'], meta['rpms'] = windows, rpms
+                meta['windows'] = windows
                 self.runs[run_id] = meta
             except (OSError, ValueError, KeyError, TypeError) as error:
                 print(f'Skipping {meta_path.name}: {error}', flush=True)
-
-    def set_speed(self, rpm):
-        if rpm not in SPEEDS:
-            raise ValueError(f'Speed must be one of {", ".join(map(str, SPEEDS))} RPM')
-        with self.lock:
-            if self.active:
-                raise RuntimeError('Stop recording before changing the speed.')
-            if rpm != self.speed:
-                print(f'Speed set to {rpm} RPM (sent to the node in the beacon)', flush=True)
-            self.speed = rpm
-
-    def node_rpm(self):
-        """RPM of the latest window if it is recent, else None. Call with self.lock held."""
-        if self.last_packet and time.monotonic() - self.last_packet[0] <= FRESH_S:
-            return self.last_packet[1].get('rpm')
-        return None
 
     def start(self, label, note):
         if label not in LABEL_NAMES:
@@ -170,24 +189,19 @@ class Recorder:
         with self.lock:
             if self.active:
                 raise RuntimeError('Already recording. Stop first.')
-            node = self.node_rpm()
-            if node is not None and node != self.speed:
-                # Windows at the old speed would be saved under the new run otherwise.
-                raise RuntimeError(f'The node is still at {node} RPM. Wait until it shows '
-                                   f'{self.speed} RPM (a few seconds after choosing the speed).')
             base = 'run_' + datetime.now().strftime('%Y%m%d_%H%M%S')
             run_id, number = base, 1
             while run_id in self.runs or self._meta_path(run_id).exists():
                 number += 1
                 run_id = f'{base}_{number}'
             meta = {'run_id': run_id, 'label': label, 'note': note,
-                    'started_at': now_iso(), 'stopped_at': None, 'speed': self.speed}
+                    'started_at': now_iso(), 'stopped_at': None}
             self._write_meta(meta)
             self._rows_path(run_id).touch()
-            meta['windows'], meta['rpms'] = 0, set()
+            meta['windows'], meta['rpm_range'] = 0, None
             self.runs[run_id] = meta
             self.active = run_id
-            print(f'Recording started: {run_id} label={label} speed={self.speed} RPM', flush=True)
+            print(f'Recording started: {run_id} label={label}', flush=True)
             return run_id
 
     def stop(self):
@@ -223,7 +237,7 @@ class Recorder:
                 output.write(row + '\n')
             meta = self.runs[self.active]
             meta['windows'] += 1
-            meta['rpms'].add(message['rpm'])
+            add_rpm(meta, message)
 
     def status(self):
         with self.lock:
@@ -237,7 +251,7 @@ class Recorder:
                     'label_name': LABEL_NAMES[meta['label']], 'note': meta['note'],
                     'started': datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M:%S'),
                     'duration_s': round(max(0.0, end - start), 1), 'windows': meta['windows'],
-                    'rpm': ', '.join(str(r) for r in sorted(r for r in meta['rpms'] if r is not None)),
+                    'rpm': rpm_text(meta['rpm_range']),
                     'recording': meta['run_id'] == self.active,
                 })
             summary = {key: 0 for key, _ in LABELS}
@@ -249,10 +263,10 @@ class Recorder:
                 last = {'age_s': round(time.monotonic() - seen, 1), 'rpm': message.get('rpm'),
                         'valid_channels': message.get('valid_channels'),
                         'device_id': message.get('device_id')}
+                last.update(shaft_view(message))
             active = next((run for run in runs if run['recording']), None)
             return {'recording': active, 'last_packet': last, 'runs': runs, 'summary': summary,
-                    'beacon_ips': list(self.beacon_ips), 'speed': self.speed, 'speeds': list(SPEEDS),
-                    'node_rpm': self.node_rpm()}
+                    'beacon_ips': list(self.beacon_ips)}
 
     def csv_bytes(self, run_ids):
         with self.lock:
@@ -267,7 +281,8 @@ class Recorder:
                 writer.writerow([meta['run_id'], meta['label'], meta['note'], row.get('received_at'),
                                  message.get('rpm'), message.get('window_id'), message.get('sequence'),
                                  message.get('device_id'), message.get('valid_channels')]
-                                + list(message.get('features', [])))
+                                + list(message.get('features', []))
+                                + [message.get(name) for name in SHAFT_COLUMNS])
         return text.getvalue().encode('utf-8')
 
 
@@ -322,10 +337,6 @@ class RecorderHandler(host_receiver.FeatureHandler):
             elif self.path == '/api/delete':
                 recorder.delete(str(body.get('run_id', '')))
                 self.reply(200, {'ok': True})
-            elif self.path == '/api/speed':
-                rpm = body.get('rpm')
-                recorder.set_speed(rpm if isinstance(rpm, int) and not isinstance(rpm, bool) else None)
-                self.reply(200, {'ok': True, 'speed': recorder.speed})
             else:
                 self.reply(404, {'ok': False, 'error': 'Not found'})
         except RuntimeError as error:
@@ -395,12 +406,11 @@ def local_ipv4s():
 
 
 def run_beacon(http_port, recorder, stop):
-    """Every 2 s send b'COE-HOST <port> RPM <speed>' to 255.255.255.255 and each x.y.z.255,
-    UDP port 8001. The speed is read each time, so a change on the page goes out within 2 s."""
+    """Every 2 s send b'COE-HOST <port>' to 255.255.255.255 and each x.y.z.255, UDP port 8001."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         while not stop.is_set():
-            payload = f'COE-HOST {http_port} RPM {recorder.speed}'.encode('ascii')
+            payload = f'COE-HOST {http_port}'.encode('ascii')
             ips = local_ipv4s()
             recorder.beacon_ips = ips
             targets = ['255.255.255.255'] + sorted({ip.rsplit('.', 1)[0] + '.255' for ip in ips})
@@ -447,13 +457,12 @@ h2 { margin:0 0 14px; font-size:17px; font-weight:600; color:var(--muted); }
 .mode.sel { background:var(--c); border-color:var(--c); color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.18); }
 .mode:disabled { cursor:not-allowed; }
 .mode:disabled:not(.sel) { opacity:.35; }
-.speeds { display:grid; grid-template-columns:repeat(2, minmax(0, 260px)); gap:12px; }
-.speed { min-height:70px; border:3px solid var(--line); border-radius:12px; background:#fff; color:var(--text);
-         font:700 22px "Segoe UI", system-ui, sans-serif; cursor:pointer; }
-.speed:hover:not(:disabled) { border-color:#1f5fa8; }
-.speed.sel { background:#1f5fa8; border-color:#1f5fa8; color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.18); }
-.speed:disabled { cursor:not-allowed; }
-.speed:disabled:not(.sel) { opacity:.35; }
+.shaft { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; margin-top:12px; }
+.probe { border:1px solid var(--line); border-radius:10px; padding:10px 14px; }
+.probe h3 { margin:0 0 6px; font-size:15px; }
+.probe div { display:flex; justify-content:space-between; gap:12px; font-size:15px; }
+.probe div span { color:var(--muted); }
+.probe.off { opacity:.55; }
 .speedstate { margin-top:14px; padding:10px 14px; border-radius:10px; font-weight:600; background:#e9edf1; color:var(--muted); }
 .speedstate.ok { background:#e3f4ea; color:var(--go); }
 .speedstate.wait { background:#fdf0e1; color:#a8590b; }
@@ -497,7 +506,7 @@ td.num { text-align:right; font-variant-numeric:tabular-nums; }
 td a { color:#1f5fa8; font-weight:600; }
 .del { padding:5px 12px; border:1px solid var(--stop); border-radius:8px; background:#fff; color:var(--stop); font-weight:600; cursor:pointer; }
 .empty { color:var(--muted); padding:16px 4px; }
-@media (max-width:900px) { .modes, .summary, .speeds { grid-template-columns:repeat(2, 1fr); } .rec-row { flex-direction:column; align-items:stretch; } }
+@media (max-width:900px) { .modes, .summary, .shaft { grid-template-columns:repeat(2, 1fr); } .rec-row { flex-direction:column; align-items:stretch; } }
 </style>
 </head>
 <body>
@@ -513,10 +522,11 @@ td a { color:#1f5fa8; font-weight:600; }
   </section>
 
   <section class="card">
-    <h2>1. Machine speed</h2>
-    <div class="hint" style="margin:0 0 12px">Set the machine's speed controller to this speed too. The node computes the features for the speed chosen here.</div>
-    <div id="speeds" class="speeds"></div>
+    <h2>1. Machine speed and shaft (measured by the node)</h2>
+    <div class="hint" style="margin:0 0 12px">Nothing to set here: the node measures the speed itself from the Keyphasor
+      (ADC channel 7) and the shaft position from the two proximity probes. Every saved window keeps these values.</div>
     <div id="speedstate" class="speedstate"></div>
+    <div id="shaft" class="shaft"></div>
   </section>
 
   <section class="card">
@@ -581,40 +591,32 @@ for (const [key, name] of LABELS) {
   $('modes').appendChild(b);
 }
 
-async function chooseSpeed(rpm) {
-  if (!state || busy || state.recording || rpm === state.speed) return;
-  busy = true; $('msg').textContent = '';
-  try { await post('/api/speed', {rpm}); } catch (e) { $('msg').textContent = e.message; }
-  busy = false;
-  refresh();
-}
+function num(value, digits) { return value == null ? '-' : Number(value).toFixed(digits); }
 
 function renderSpeed() {
-  const box = $('speeds');
-  if (!box.children.length) {
-    for (const rpm of state.speeds) {
-      const b = document.createElement('button');
-      b.className = 'speed'; b.textContent = rpm + ' RPM'; b.dataset.rpm = rpm;
-      b.onclick = () => chooseSpeed(rpm);
-      box.appendChild(b);
-    }
+  const s = $('speedstate'), lp = state.last_packet;
+  if (!lp || lp.age_s > 5) {
+    s.className = 'speedstate'; s.textContent = 'Speed: no data from the node yet.';
+    $('shaft').innerHTML = ''; return;
   }
-  const rec = state.recording;
-  for (const b of box.children) {
-    b.classList.toggle('sel', Number(b.dataset.rpm) === state.speed);
-    b.disabled = !!rec;
+  if (lp.measured_rpm == null) {
+    s.className = 'speedstate wait';
+    s.textContent = 'The node runs old firmware (no Keyphasor speed or probe values in its data): flash the new firmware.';
+    $('shaft').innerHTML = ''; return;
   }
-  const s = $('speedstate'), node = state.node_rpm;
-  if (node == null) {
-    s.className = 'speedstate';
-    s.textContent = 'Node speed: no data yet. The node switches to ' + state.speed + ' RPM when it hears this laptop.';
-  } else if (node === state.speed) {
+  if (lp.speed_measured) {
     s.className = 'speedstate ok';
-    s.textContent = 'Node confirmed: computing features for ' + node + ' RPM.' + (rec ? ' Stop recording to change the speed.' : '');
+    s.textContent = 'Speed (Keyphasor): ' + num(lp.measured_rpm, 1) + ' RPM, ' + lp.revolutions + ' turns in the last window';
   } else {
     s.className = 'speedstate wait';
-    s.textContent = 'Switching the node to ' + state.speed + ' RPM (it is still at ' + node + ' RPM)... this takes a few seconds.';
+    s.textContent = 'Speed: the Keyphasor gives no steady speed (check the Keyphasor probe on channel 7).';
   }
+  $('shaft').innerHTML = lp.probes.map(p => '<div class="probe' + (p.valid ? '' : ' off') + '"><h3>' + esc(p.name) +
+    (p.valid ? '' : ' (not valid: check the probe and its wiring)') + '</h3>' +
+    '<div><span>Gap</span><b>' + (p.valid ? num(p.gap_um, 1) + ' &micro;m' : '-') + '</b></div>' +
+    '<div><span>Vibration pk-pk</span><b>' + (p.valid ? num(p.pkpk_um, 1) + ' &micro;m' : '-') + '</b></div>' +
+    '<div><span>1X (once per turn)</span><b>' + (p.x1 ? num(p.x1_um_pp, 1) + ' &micro;m pp at ' + num(p.x1_phase_deg, 0) + '&deg;' : '-') +
+    '</b></div></div>').join('');
 }
 
 $('toggle').onclick = async () => {
@@ -669,7 +671,7 @@ function render() {
     last.className = 'bad'; last.textContent = dur(lp.age_s) + ' ago';
   } else {
     feed.className = 'feed ok';
-    feed.textContent = 'Data arriving: ' + lp.rpm + ' RPM, ' + (lp.valid_channels.toString(2).split('1').length - 1) + ' of 4 channels OK';
+    feed.textContent = 'Data arriving: ' + (lp.speed_measured ? num(lp.measured_rpm, 0) : lp.rpm) + ' RPM, ' + (lp.valid_channels.toString(2).split('1').length - 1) + ' of 4 channels OK';
     last.className = ''; last.textContent = lp.age_s.toFixed(1) + ' s ago';
   }
 
@@ -731,7 +733,7 @@ def main():
     print(f'Open the UI:  http://localhost:{server.server_port}/', flush=True)
     print(f'ESP endpoint: POST http://<this laptop>:{server.server_port}/features', flush=True)
     print(f'Data folder:  {recorder.dir}  ({len(recorder.runs)} runs loaded)', flush=True)
-    print(f'Beacon:       UDP {BEACON_PORT} "COE-HOST {server.server_port} RPM {recorder.speed}" every {BEACON_PERIOD_S:g} s '
+    print(f'Beacon:       UDP {BEACON_PORT} "COE-HOST {server.server_port}" every {BEACON_PERIOD_S:g} s '
           f'from {", ".join(local_ipv4s()) or "no address"}', flush=True)
     stop_beacon = threading.Event()
     threading.Thread(target=run_beacon, args=(server.server_port, recorder, stop_beacon),

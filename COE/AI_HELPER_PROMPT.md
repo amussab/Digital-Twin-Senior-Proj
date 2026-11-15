@@ -40,7 +40,8 @@ Facts you may need:
 - After the update: ESP LED red (starting) -> blue (Wi-Fi COE-NODE up) -> green (data from the STM32).
 - Recording: laptop on Wi-Fi COE-NODE (no password, no internet), run
   "python training_recorder.py" in COE/training, open http://localhost:8000.
-  Choose the machine speed 1750 or 3600 RPM on the page AND set the machine's speed controller to
-  the same value; wait for "Node confirmed". Then choose the bearing condition and record.
+  The node measures the machine speed itself (Keyphasor); there is no speed to choose on the page.
+  Set the machine's speed controller, check the page shows that speed, then choose the bearing
+  condition and record.
 - All four sensors are independent (B1X, B1Y, B2X, B2Y). Bearing profile 3 = the new RK4 bearings.
 ```
