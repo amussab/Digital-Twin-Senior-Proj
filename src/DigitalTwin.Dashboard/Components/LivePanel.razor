@@ -11,6 +11,7 @@
         </div>
         <p class="live-note">Source: @(IsSim ? "simulated trajectory replay" : "Node (live)") &mdash; @Live.DeviceId, contract <strong>@Live.Contract</strong>, window @Live.WindowId, @Live.Rpm.ToString("F0") rpm.
             @if (IsSim) {<text>[SIMULATION; rig-anchored replay]: windows are resampled from real rig windows along an ASSUMED damage curve; RUL values are in simulated hours (10-min snapshots) and are NOT measurements of a real bearing. Physics RUL = feature-only twin (reads the same features as the AI).</text>}
+            else if (Live.RulSource is not null) {<text>Live node; class, stage and remaining life per bearing.</text>}
             else {<text>The node sends features only (no raw waveform, no proximity probes): RUL and physics RUL are n/a. Stage and health index come from heads not validated on live node data.</text>}</p>
 
         <div class="live-bearings">

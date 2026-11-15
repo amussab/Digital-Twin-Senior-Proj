@@ -3,10 +3,22 @@
            Real node -> Wi-Fi COE-NODE -> http://<laptop>:8000/features -> NodeEngine -> POST /api/live/prediction -> dashboard.
 .EXAMPLE   ./scripts/run-rig-live.ps1
 .EXAMPLE   ./scripts/run-rig-live.ps1 -Contract v4_real -Baseline logs/baseline_1800.json
+.EXAMPLE   ./scripts/run-rig-live.ps1 -Contract v4_real        # classification only (RUL / stage / physics n/a)
+
+HYBRID RIG DEMO (default, -Contract hybrid_rig): fault class + baseline policy from v4_real (trained on REAL node windows);
+stage, AI RUL, physics RUL and Miner D from the SIMULATION-trained heads (NODE_RUL_CONTRACT, default v6_node) on a table clock:
+each live window = NODE_RUL_TIMESCALE (default 1) simulated 10-minute snapshots, RUL in TABLE hours. Issued only for a bearing v4_real
+calls faulted, after the baseline policy, stage >= 2; otherwise n/a. The dashboard shows NO label on these tiles; provenance is in the
+payload (rulSource), logs/receiver.log and logs/live_*.jsonl. PRESENTER SAYS (exact wording):
+  "Fault class comes from a model trained on real rig data. Stage and remaining life come from a model trained on simulated
+   degradation anchored on our rig recordings; it has not been validated on real run-to-failure data, and the time unit is
+   simulated hours."
 Stop with ./scripts/stop-rig-live.ps1. Logs: logs/backend.log, logs/receiver.log, logs/live_<time>.jsonl (every window + prediction).
 #>
 param(
-  [string]$Contract = 'v4_real',           # NODE_CONTRACT: RIG demo model = v4_real (trained on real node data; classification only, RUL/physics n/a)
+  [string]$Contract = 'hybrid_rig',        # NODE_CONTRACT: hybrid_rig = v4_real class + sim-head stage/RUL/physics; v4_real = classification only
+  [string]$RulContract = 'v6_node',        # NODE_RUL_CONTRACT (hybrid_rig only; v7_node can replace it)
+  [string]$RulTimescale = '1',             # NODE_RUL_TIMESCALE: table snapshots (10 min each) per live window
   [string]$Baseline = 'AI-engine/models/baseline_v4_real.json',  # NODE_BASELINE json (loaded if present, saved when captured)
   [int]$BackendPort = 5080,
   [int]$NodePort = 8000,
@@ -40,6 +52,8 @@ $be = Start-Process dotnet -PassThru -WindowStyle Minimized -WorkingDirectory $o
 
 # Receiver
 $env:NODE_CONTRACT = $Contract
+$env:NODE_RUL_CONTRACT = $RulContract
+$env:NODE_RUL_TIMESCALE = $RulTimescale
 if ($Baseline) { $env:NODE_BASELINE = (Resolve-Path -LiteralPath $Baseline -ErrorAction SilentlyContinue) ; if (-not $env:NODE_BASELINE) { $env:NODE_BASELINE = (Join-Path $root $Baseline) } }
 if ($SettleS) { $env:NODE_SETTLE_S = $SettleS }
 if ($BaselineS) { $env:NODE_BASELINE_S = $BaselineS }

@@ -29,4 +29,5 @@ public sealed record LiveInfo(
     long Seq, long WindowId, double Rpm, int ValidChannels, string DeviceId, string SessionId, string Contract, string Provenance,
     double[] Features, string? BaselinePhase, double InferenceMs,
     long ReceivedAtMs, long PredictedAtMs, long PostedAtMs, long BackendAckMs, long PostsDropped,
-    IReadOnlyList<LiveBearing> Bearings);
+    IReadOnlyList<LiveBearing> Bearings,
+    string? RulSource = null, string? RulContract = null, string? ClassContract = null, double? RulTimescale = null);

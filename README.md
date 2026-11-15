@@ -182,6 +182,20 @@ Presenter checklist
 6. Evidence notebook (when written): `docker compose --profile evidence run --rm evidence-fpr` -> `artifacts/evidence/`.
 7. Tests: `docker compose --profile test run --rm test` (+ `test-dotnet`), or natively `pytest AI-engine/tests/fpr_integration` and `dotnet test tests/DigitalTwin.Backend.Tests -c Release`.
 
+### Live rig: hybrid_rig demo (default of `scripts/run-rig-live.ps1`)
+
+`NODE_CONTRACT=hybrid_rig`: fault class, baseline policy, onset and health index from **v4_real** (trained on real node windows);
+stage, AI RUL, physics RUL and Miner D from the **simulation-anchored heads** named by `NODE_RUL_CONTRACT` (default `v6_node`; `v7_node` swaps in by name).
+The heads were trained on 10-minute simulated snapshots, live windows arrive every 1200/rpm s, so each live window advances the head's table clock by
+`NODE_RUL_TIMESCALE` snapshots (default 1 = one 10-minute snapshot per live window); RUL is in **table hours**, not wall-clock hours. Stage/RUL/physics are issued
+only for a bearing v4_real calls faulted, after the baseline policy, at stage >= 2; otherwise n/a. `-Contract v4_real` = classification only.
+The live dashboard carries no label on these tiles; provenance is non-visual: payload/API `/api/live/latest` fields `rulSource` ("sim-trained head (hybrid_rig), not validated on rig"),
+`rulContract`, `classContract`, `rulTimescale`; `logs/receiver.log` (startup line) and every `logs/live_*.jsonl` row.
+**Presenter says (exact wording):** "Fault class comes from a model trained on real rig data. Stage and remaining life come from a model trained on simulated degradation
+anchored on our rig recordings; it has not been validated on real run-to-failure data, and the time unit is simulated hours."
+[MEASURED host, replay of rig data] `python -m aiengine.hybrid_replay` (reports/hybrid_replay.json): same-bearing recordings, not independent bearings.
+Simulation replay sources keep the `[SIMULATION; rig-anchored replay]` badge unchanged.
+
 ## Presenter checklist (UP2)
 
 Before: Docker Desktop running; `docker compose build` done while online; ports 5080/5081/5005 free; or native: .NET 10 SDK, `AI-engine/.venv`, a Release build.

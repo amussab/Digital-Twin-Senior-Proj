@@ -142,6 +142,9 @@ def backend_body(window, out, took_ms, contract):
             # a table time base (NODE_TIME_BASE=table) exists only for the simulated rig_anchor replay: never label it as rig data
             'provenance': SIM_TAG if os.environ.get('NODE_TIME_BASE') == 'table' else
                           ('[REPLAY of recorded rig data]' if window['replay'] else '[LIVE rig data]'),
+            # hybrid_rig provenance (non-visual): None for every other contract
+            'rulSource': (out or {}).get('rul_source'), 'rulContract': (out or {}).get('rul_contract'),
+            'classContract': (out or {}).get('class_contract'), 'rulTimescale': (out or {}).get('rul_timescale'),
             'features': window['features'], 'baselinePhase': (out or {}).get('baseline_phase'),
             'inferenceMs': round(took_ms, 3),
             'receivedAtMs': int(window['epoch_received'] * 1000), 'predictedAtMs': int(now * 1000),
@@ -177,6 +180,8 @@ def run_model(windows, stats, stop, fwd):
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log_path = LOG_DIR / f"live_{datetime.now():%Y%m%d_%H%M%S}.jsonl"
     stats['log_path'] = str(log_path)
+    if hasattr(model, 'meta'):
+        print(f"HYBRID RIG: {json.dumps(model.meta())}", flush=True)
     print(f'Model ready. Logging every window + prediction to {log_path}. Backend: {BACKEND_URL}', flush=True)
     with open(log_path, 'a', encoding='utf-8') as log:
         while not stop.is_set():
@@ -201,7 +206,9 @@ def run_model(windows, stats, stop, fwd):
             log.write(json.dumps({'received_at': window['received_at'], 'device_id': window['device_id'],
                                   'session_id': window['session_id'], 'sequence': window['sequence'],
                                   'window_id': window['window_id'], 'rpm': window['rpm'],
-                                  'replay': window['replay'], 'contract': contract, 'features': window['features'],
+                                  'replay': window['replay'], 'contract': contract,
+                                  'rul_source': (out or {}).get('rul_source'), 'rul_contract': (out or {}).get('rul_contract'),
+                                  'rul_timescale': (out or {}).get('rul_timescale'), 'features': window['features'],
                                   'prediction': out, 'infer_ms': round(took_ms, 3),
                                   'recv_to_prediction_ms': round(e2e_pred_ms, 3),
                                   'last_post_ms': round(stats.get('last_post_ms', 0.0), 3),

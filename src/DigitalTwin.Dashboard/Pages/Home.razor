@@ -46,7 +46,7 @@ else
 
                 <MetricCard Label="AI Remaining Life"
                             Value="@(Snapshot.AiRulHours < 0 ? "n/a" : $"{Snapshot.AiRulHours:F0} h")"
-                            Detail="@(Snapshot.Live is null ? "N-HiTS estimate" : Snapshot.AiRulHours >= 0 ? "RUL head, simulated hours" : "n/a: no RUL model validated on live node windows")"
+                            Detail="@(Snapshot.Live is null ? "N-HiTS estimate" : Snapshot.AiRulHours >= 0 ? (Snapshot.Live.RulSource is not null ? "Remaining life estimate" : "RUL head, simulated hours") : Snapshot.Live.RulSource is not null ? "n/a (healthy or warming up)" : "n/a: no RUL model validated on live node windows")"
                             AccentClass="accent-violet" />
 
                 <MetricCard Label="Fault State"
@@ -89,7 +89,7 @@ else
                         }
                         else
                         {
-                            <div class="comparison-row"><span>Physics RUL / AI RUL</span><strong>n/a (@(Snapshot.Live.Provenance.Contains("SIMULATION") ? "shown for a bearing classified faulted at stage 2 or later" : "live node: no RUL model validated, twin reads features only"))</strong></div>
+                            <div class="comparison-row"><span>Physics RUL / AI RUL</span><strong>n/a (@(Snapshot.Live.Provenance.Contains("SIMULATION") ? "shown for a bearing classified faulted at stage 2 or later" : (Snapshot.Live.RulSource is not null ? "shown for a bearing classified faulted" : "live node: no RUL model validated, twin reads features only")))</strong></div>
                         }
                     }
                     else if (Snapshot.PhysicsRulHours is double physicsRul)

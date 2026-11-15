@@ -133,7 +133,8 @@ public sealed class Pipeline
         lock (_gate)
         {
             var info = new LiveInfo(w.Seq, w.WindowId, w.Rpm, w.ValidChannels, w.DeviceId, w.SessionId, w.Contract, w.Provenance,
-                w.Features, w.BaselinePhase, w.InferenceMs, w.ReceivedAtMs, w.PredictedAtMs, w.PostedAtMs, ackMs, w.PostsDropped, w.Bearings);
+                w.Features, w.BaselinePhase, w.InferenceMs, w.ReceivedAtMs, w.PredictedAtMs, w.PostedAtMs, ackMs, w.PostsDropped, w.Bearings,
+                w.RulSource, w.RulContract, w.ClassContract, w.RulTimescale);
             var win = new WindowPayload((float)w.Rpm, w.Features.Select(x => (float)x).ToArray(), new float[4], 0);
             state = new PipelineState(win, results, DateTimeOffset.UtcNow, w.InferenceMs, ++_liveSeen, physRul, info);
             _store.Set(state);

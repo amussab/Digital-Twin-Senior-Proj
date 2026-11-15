@@ -21,6 +21,11 @@ public sealed class LiveWindow
     public string Contract { get; set; } = "";
     /// <summary>"[LIVE rig data]" for the real node, "[REPLAY of recorded rig data]" for the rehearsal replayer.</summary>
     public string Provenance { get; set; } = "[LIVE rig data]";
+    /// <summary>hybrid_rig only (null otherwise): non-visual provenance of stage/RUL/physics, e.g. "sim-trained head (hybrid_rig), not validated on rig".</summary>
+    public string? RulSource { get; set; }
+    public string? RulContract { get; set; }
+    public string? ClassContract { get; set; }
+    public double? RulTimescale { get; set; }
     public double[] Features { get; set; } = Array.Empty<double>();
     public string? BaselinePhase { get; set; }
     public double InferenceMs { get; set; }
@@ -36,6 +41,7 @@ public sealed record LiveInfo(
     long Seq, long WindowId, double Rpm, int ValidChannels, string DeviceId, string SessionId, string Contract, string Provenance,
     double[] Features, string? BaselinePhase, double InferenceMs,
     long ReceivedAtMs, long PredictedAtMs, long PostedAtMs, long BackendAckMs, long PostsDropped,
-    IReadOnlyList<LiveBearing> Bearings);
+    IReadOnlyList<LiveBearing> Bearings,
+    string? RulSource = null, string? RulContract = null, string? ClassContract = null, double? RulTimescale = null);
 
 public sealed record RenderAck(long Seq, double RenderMs);
