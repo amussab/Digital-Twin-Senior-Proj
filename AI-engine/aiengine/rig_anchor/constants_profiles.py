@@ -24,6 +24,11 @@ PROFILES = {
     "ls010_narrow": {"life_sigma": 0.10, "shape_train": NARROW, "shape_test": NARROW},
     "ls010_narrow_l05": {"life_sigma": 0.10, "shape_train": NARROW, "shape_test": NARROW, "late_sigma": 0.05},
     "ls010_narrow_l05_j01": {"life_sigma": 0.10, "shape_train": NARROW, "shape_test": NARROW, "late_sigma": 0.05, "u_jitter": 0.01},
+    "N_ls035": {"life_sigma": 0.35, "shape_train": NARROW, "shape_test": NARROW, "late_sigma": 0.05, "u_jitter": 0.01},
+    "N_ls025": {"life_sigma": 0.25, "shape_train": NARROW, "shape_test": NARROW, "late_sigma": 0.05, "u_jitter": 0.01},
+    "N_ls015": {"life_sigma": 0.15, "shape_train": NARROW, "shape_test": NARROW, "late_sigma": 0.05, "u_jitter": 0.01},
+    # PRE-DECLARED learnable profile used by v7_node (selected on VALIDATION; rule + evidence in reports/s7_research_*.md)
+    "L": {"life_sigma": 0.25, "shape_train": NARROW, "shape_test": {"a": (0.20, 0.40), "p": (2.0, 3.0)}, "late_sigma": 0.05, "u_jitter": 0.01},
     "floor_probe": {"life_sigma": 0.03, "shape_train": {"a": (0.30, 0.30), "p": (2.5, 2.5)}, "shape_test": {"a": (0.30, 0.30), "p": (2.5, 2.5)},
                     "late_sigma": 0.02, "u_jitter": 0.0},
 }
