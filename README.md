@@ -153,6 +153,35 @@ Full steps and assumptions: [`AI-engine/aiengine/coe/README.md`](AI-engine/aieng
 
 Branches: `feature/*` -> `dev` -> `stage` -> `main`. UP2 work is on `feature/up2-prototype` (cut from `feature/integration`); `feature/dashboard` is Mussab's, never commit to it.
 
+## FPR demo (2026-11-16): rig-anchored simulated trajectories through the real live stack
+
+One documented command (Docker): `docker compose --profile fpr-demo up --build backend-fpr fpr-replay` -> http://localhost:5080/
+(name both services: a plain `up` would also start the default `backend` on the same port). Native (no Docker): `./scripts/run-fpr-demo.ps1`
+(or `./scripts/run-fpr-demo.sh`); options `-Contract v6_node`, `-Speed 12`, `-Once`. Docker: `FPR_CONTRACT=v6_node docker compose ...`.
+
+What runs: the committed units `AI-engine/demo/fpr_{inner_race,outer_race,cage}_*.jsonl` (rendered by `python -m aiengine.fpr_demo render` from
+`rig_anchor` VALIDATION units; commissioning windows prepended) -> `COE/inference/replay_node.py` -> receiver -> `NodeEngine`
+(contract `NODE_CONTRACT`, `NODE_TIME_BASE=table`: one window = one 10-minute snapshot, so RUL is in simulated hours) -> `POST /api/live/prediction`
+-> dashboard Live block: class, health stage, AI RUL, physics RUL (feature-only twin), Miner D. A fresh receiver is started per unit (new commissioning).
+The live rig path is unchanged (`NODE_TIME_BASE` default `realtime`): AI RUL and physics RUL stay **n/a** on real node windows.
+
+Tags on screen: `[SIMULATION; rig-anchored replay]` (this demo) vs `[LIVE rig data]` (real node) vs `[REPLAY of recorded rig data]`. The receiver forces
+the simulation tag whenever `NODE_TIME_BASE=table`, so simulated windows can never be labelled as rig data.
+
+Presenter checklist
+1. Say first: "These windows are simulated: endpoints resampled from real rig windows, ONE physical bearing per fault, the damage curve is assumed.
+   No real run-to-failure data exists for 4 of 5 fault classes." Point at the `[SIMULATION; rig-anchored replay]` badge.
+2. Open the dashboard. After about 15 s of commissioning the Live block shows class, stage, AI RUL and physics RUL for bearing 1; bearing 2 stays healthy (RUL n/a).
+3. Show the pipeline is the real one: receiver log (`logs/fpr_replay.log`), `/api/metrics` (live_* stages), the same code path as the live rig.
+4. Honest limits to state (numbers: reports/v5_node_*.md; update with the final contract before presenting): v5_node on its single test pass FAILED its gates
+   (S7 MAPE 23.39 % vs <= 15 %, macro-F1 0.838 vs >= 0.85, stage error 2 vs <= 1, caught by stage 3 in 46/48); v6 results as per the final report.
+   S7/IS3 are simulation-based (Rank 6 at most); the live demo is Rank 9 for the PIPELINE only.
+5. IS2 (physics-AI residual): `python -m aiengine.fpr_is2 select` on validation. With the current feature twin the exact-AI floor is MED 0.48 / P95 1.11 x L_ref,
+   the thresholds that follow (0.54 / 1.23) are loose, and 4 of 6 wrong-AI controls PASS, so IS2 is NOT scoreable as a meaningful test yet
+   (frozen file `valid_for_test: false`). Say it as a limit, do not claim IS2. The twin's Miner damage saturates at stage 3+ (physics RUL 0.0 h), see the report.
+6. Evidence notebook (when written): `docker compose --profile evidence run --rm evidence-fpr` -> `artifacts/evidence/`.
+7. Tests: `docker compose --profile test run --rm test` (+ `test-dotnet`), or natively `pytest AI-engine/tests/fpr_integration` and `dotnet test tests/DigitalTwin.Backend.Tests -c Release`.
+
 ## Presenter checklist (UP2)
 
 Before: Docker Desktop running; `docker compose build` done while online; ports 5080/5081/5005 free; or native: .NET 10 SDK, `AI-engine/.venv`, a Release build.

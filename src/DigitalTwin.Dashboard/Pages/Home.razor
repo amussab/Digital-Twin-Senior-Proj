@@ -18,7 +18,7 @@
         @if (Snapshot?.Live is { } lv)
         {
             <span class="divider"></span>
-            <span class="tag success">Source: Node (live)</span>
+            <span class="tag @(lv.Provenance.Contains("SIMULATION") ? "" : "success")">@(lv.Provenance.Contains("SIMULATION") ? "Source: simulated replay" : "Source: Node (live)")</span>
             <span class="tag @(lv.Provenance.Contains("REPLAY") ? "" : "success")">@lv.Provenance</span>
         }
     </div>

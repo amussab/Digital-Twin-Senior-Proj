@@ -35,6 +35,7 @@ def load(path):
     else:
         with open(path, encoding='utf-8') as handle:
             rows = [json.loads(line) for line in handle if line.strip()]
+            rows = [r['message'] if isinstance(r.get('message'), dict) else r for r in rows]   # recorder-format {"message": ..., "received_at": ...} (rig_anchor.render_unit)
     return rows
 
 

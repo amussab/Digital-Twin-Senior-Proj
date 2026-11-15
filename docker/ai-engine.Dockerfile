@@ -12,6 +12,9 @@ RUN pip install -r requirements.txt jupyterlab
 COPY AI-engine/ ./
 COPY evidence/ /work/evidence/
 COPY scripts/coe_fault_scenario.py /work/scripts/coe_fault_scenario.py
+# FPR demo: receiver + replayer + driver (stdlib only); rendered units live in AI-engine/demo (inside AI-engine/)
+COPY COE/inference/ /work/COE/inference/
+COPY scripts/fpr_replay.py /work/scripts/fpr_replay.py
 RUN useradd -m -u 1000 app && chown -R app /work
 USER app
 EXPOSE 8888

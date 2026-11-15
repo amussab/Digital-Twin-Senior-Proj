@@ -1,0 +1,28 @@
+{
+ "provenance": "[SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed]",
+ "limits": "No real run-to-failure data exists for 4 of 5 fault classes. Anchors = 5 physical bearings (H-01 + one per fault); test units are held-out simulated trajectories, not held-out bearings; the damage-curve family is assumed.",
+ "split": "val",
+ "files": {
+  "fpr_inner_race_u0241.jsonl": {
+   "unit": "rig_anchor:u0241",
+   "windows": 625,
+   "prepended": 270,
+   "class": "inner_race",
+   "rpm": 1800
+  },
+  "fpr_outer_race_u0242.jsonl": {
+   "unit": "rig_anchor:u0242",
+   "windows": 780,
+   "prepended": 270,
+   "class": "outer_race",
+   "rpm": 1800
+  },
+  "fpr_cage_u0244.jsonl": {
+   "unit": "rig_anchor:u0244",
+   "windows": 703,
+   "prepended": 270,
+   "class": "cage",
+   "rpm": 1800
+  }
+ }
+}
