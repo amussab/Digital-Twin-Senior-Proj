@@ -6,8 +6,8 @@
 Stop with ./scripts/stop-rig-live.ps1. Logs: logs/backend.log, logs/receiver.log, logs/live_<time>.jsonl (every window + prediction).
 #>
 param(
-  [string]$Contract = 'v3e_node',          # NODE_CONTRACT (v4_real after tomorrow's training)
-  [string]$Baseline = '',                  # NODE_BASELINE json (loaded if present, saved when captured)
+  [string]$Contract = 'v4_real',           # NODE_CONTRACT: RIG demo model = v4_real (trained on real node data; classification only, RUL/physics n/a)
+  [string]$Baseline = 'AI-engine/models/baseline_v4_real.json',  # NODE_BASELINE json (loaded if present, saved when captured)
   [int]$BackendPort = 5080,
   [int]$NodePort = 8000,
   [string]$SettleS = '',                   # NODE_SETTLE_S override (default 120)
