@@ -27,3 +27,12 @@ fault severities ESTIMATED (not measured), B2X on the node is a copy of B1Y (pol
 2. S7 / IS2 / S9-RUL: run-to-failure runs with true RUL labels recorded as features-over-time + a physics-twin input that the node does not currently provide.
 3. IS1: a node timestamp (firmware) to measure the Wi-Fi hop.
 4. Cross-speed: more speeds or more bearings; the 4-sensor re-run helps only once B2X is genuinely wired.
+
+## Simulation-based evidence (added 2026-11-15) — all [SIMULATION], coach-approved synthetic basis, NOT rig measurements
+- `v4_real` on the HELD-OUT SIMULATED test units (synth_coe_node split=test, 208 units, 9,360 windows; scored once): **macro-F1 0.802**
+  (ball .80 cage .72 healthy .84 inner .83 outer .82; 1800 rpm 0.819 / 3600 rpm 0.789). Below the 0.85 target.
+- Sim-weight variants (1.0, 3.0) chosen on the simulation VALIDATION split only: val macro-F1 0.763 (w=0.3, shipped), 0.775 (w=1), 0.768 (w=3). None reaches 0.85;
+  they were discarded (not shipped). Reason: the real faults are far stronger (RMS 5-19x healthy) than the simulated ones, so the real data pulls the model away from the simulated distribution.
+- Existing simulation-only model `v3e_node` (trained only on synth_coe_node, 2026-11-12): **[SIMULATION] test macro-F1 0.877 (>= 0.85)** on the same held-out simulated units. That is the model with a simulation IS3 pass; it has no rig-measured evidence of equal strength.
+- A synthetic "held-out bearing" built by jittering the real windows was deliberately NOT made: it would derive from the same real bearings, so it would only look like generalisation.
+- S7 / IS2 [SIMULATION] evidence (RUL and physics twin) exists from the UP2 prototype (v3 contracts, `Repo/DT-up2`, `UP2_Evidence.ipynb`); `v4_real` itself outputs no RUL.
