@@ -35,10 +35,21 @@ RUL outputs: rul_trend (time for the fitted ln r line to reach ln r_fail) and ru
 (0.95 - D) integrated along the fitted exponential, L_ref at the current rpm); rul_hours = min of the two. Prior (no
 significant trend): (0.95 - D) * L_ref(rpm) / max(r_t,1)^p, i.e. rated life remaining at the current severity.
 Deterministic: no RNG, no wall clock.
+
+ROUND 2 (2026-11-15): BOUNDED DAMAGE LINK. r is a VIBRATION energy ratio, not an ISO 281 load ratio, so applying p = 3 to r directly
+(law="power", kept for the record) saturated Miner D at real fault amplitudes (r 5-19 -> r^3 = 125-6859). The default law is now
+    g(r) = 1 + k ln(max(r, 1))            equivalent-load factor P_eq/P0 (log-like, bounded growth)   [ASSUMED modelling law]
+    dD/dt = g(r)^p / L_ref(rpm),  p = 3 on the LOAD factor  [CITED: ISO 281]
+and the RUL extrapolation uses the same law in closed form along the fitted line y = ln r = y0 + b s:
+    D_rem = 0.95 - D = ((g0 + k b s)^(p+1) - g0^(p+1)) / ((p+1) k b L_ref)   ->  s = ((g0^(p+1) + (p+1) k b L_ref D_rem)^(1/(p+1)) - g0)/(k b)
+k and r_fail are fitted to the SIMULATION GENERATOR on rig_anchor VAL units only (reports/twin_feature_calibration_*.json, loaded by
+default). That is a fit to the generator: the law is a modelling assumption and IS2 on it stays common-mode (Rank <= 6).
 """
 from __future__ import annotations
 
+import json
 import math
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -66,10 +77,34 @@ class LifeRef:
         return 1e6 / (60.0 * rpm) * self.c_over_p ** self.p
 
 
+FALLBACK_K = 1.0                         # [ASSUMED] used only when no calibration file exists
+FALLBACK_R_FAIL = 20.0                   # [ASSUMED] ties to features.HI_R_REF
+CAL_DIR = Path(__file__).resolve().parents[2] / "reports"
+
+
+def load_calibration(path=None) -> dict:
+    """Latest reports/twin_feature_calibration_*.json (or `path`) -> {"k", "r_fail", ...}; fallback constants if none."""
+    fs = [Path(path)] if path else sorted(CAL_DIR.glob("twin_feature_calibration_*.json"))
+    if not fs:
+        return {"k": FALLBACK_K, "r_fail": FALLBACK_R_FAIL, "source": "fallback [ASSUMED]"}
+    d = json.loads(fs[-1].read_text())
+    return {"k": float(d["k"]), "r_fail": float(d["r_fail"]), "source": fs[-1].name}
+
+
+def _default_k() -> float:
+    return load_calibration()["k"]
+
+
+def _default_r_fail() -> float:
+    return load_calibration()["r_fail"]
+
+
 @dataclass
 class FeaturePhysicsParams:
     life: LifeRef = field(default_factory=LifeRef)
-    r_fail: float = 20.0                 # [ASSUMED] ties to features.HI_R_REF (health stage 6 level)
+    r_fail: float = field(default_factory=_default_r_fail)   # [CALIBRATED on sim val / ASSUMED] stage-6 level of r
+    k: float = field(default_factory=_default_k)             # load-factor slope in g(r) = 1 + k ln r  [CALIBRATED on sim val]
+    law: str = "bounded"                 # "bounded" (default) | "power" (round-1 g = r, kept for the record)
     n_commission: int = 24               # windows used for the baseline (features.BASELINE_WINDOWS) [DESIGN]
     min_points: int = 8                  # points before a trend RUL is issued [DESIGN, = physics_rul.min_rul_points]
     fit_points: int = 200                # recent points in the trend fit [DESIGN]
@@ -101,6 +136,11 @@ def defect_energy_ratio(raw16, baseline16) -> float:
             s += x * x
         best = max(best, math.sqrt(s / len(ENERGY_IDX)))
     return best
+
+
+def load_factor(r: float, p: "FeaturePhysicsParams") -> float:
+    r1 = max(r, 1.0)
+    return r1 if p.law == "power" else 1.0 + p.k * math.log(r1)
 
 
 class FeaturePhysicsTwin:
@@ -141,14 +181,14 @@ class FeaturePhysicsTwin:
         t = float(t_hours)
         pw = self.p.life.p
         if self._t_prev is not None and t > self._t_prev:
-            self.d += max(r, 1.0) ** pw * (t - self._t_prev) / life
+            self.d += load_factor(r, self.p) ** pw * (t - self._t_prev) / life
         self._t_prev = t
         self.t.append(t)
         self.y.append(math.log(max(r, EPS)))
         n = self.p.fit_points
         self.t, self.y = self.t[-n:], self.y[-n:]
         hi_ = min(max(math.log(max(r, 1.0)) / math.log(self.p.r_fail), 0.0), 1.0)
-        prior = max(D_FAIL - self.d, 0.0) * life / max(r, 1.0) ** pw
+        prior = max(D_FAIL - self.d, 0.0) * life / load_factor(r, self.p) ** pw
         fit = self._fit()
         if fit is None:
             self.counts["prior"] += 1
@@ -162,8 +202,14 @@ class FeaturePhysicsTwin:
 
         def miner(slope):
             rem = max(D_FAIL - self.d, 0.0)
-            r0 = math.exp(y_now)
-            return math.log1p(pw * slope * life * rem / r0 ** pw) / (pw * slope)
+            if self.p.law == "power":
+                r0 = math.exp(y_now)
+                return math.log1p(pw * slope * life * rem / r0 ** pw) / (pw * slope)
+            g0 = 1.0 + self.p.k * max(y_now, 0.0)
+            kb = self.p.k * slope
+            if kb < 1e-12:                       # k = 0: constant load factor, D grows linearly
+                return rem * life / g0 ** pw
+            return ((g0 ** (pw + 1) + (pw + 1) * kb * life * rem) ** (1.0 / (pw + 1)) - g0) / kb
 
         def both(slope):
             return min(trend(slope), miner(slope))
