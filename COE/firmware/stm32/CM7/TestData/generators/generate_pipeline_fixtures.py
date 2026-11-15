@@ -46,7 +46,7 @@ def main():
         raise ValueError("Expected exactly 4 x 1024 float literals.")
     snippets = np.array(values, dtype=np.float32).reshape(4, 1024)
     bandpass = design_bandpass(30000, 2000, 8000)
-    lowpass = design_envelope_lowpass(30000, 350, 1250)
+    lowpass = design_envelope_lowpass(30000, 700, 2500)
     expected, envelopes, counts, offsets, quantized_errors = [], [], [], [], []
     for rpm in (1750, 3600):
         count = round(30000 * 60 * 20 / rpm)

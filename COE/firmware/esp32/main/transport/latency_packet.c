@@ -65,8 +65,8 @@ bool latency_ack_push(LatencyStream *stream, uint8_t byte, LatencyAck *ack)
     const LatencyAck decoded = {read_u32(p + 4U), read_u32(p + 8U), read_u32(p + 12U),
         read_u32(p + 16U), read_u32(p + 20U), read_u32(p + 24U), read_u32(p + 28U)};
     if (decoded.measurement_id == 0U || decoded.window_id == 0U
-        || decoded.rpm < 60U || decoded.rpm > 3600U
-        || (decoded.bearing_profile != 1U && decoded.bearing_profile != 2U)
+        || decoded.rpm < FEATURE_PACKET_MIN_RPM || decoded.rpm > FEATURE_PACKET_MAX_RPM
+        || decoded.bearing_profile < 1U || decoded.bearing_profile > 3U /* 3 = RK4 S6700 */
         || (uint64_t)decoded.esp_queue_us + decoded.esp_network_us != decoded.esp_total_us)
         return false;
     *ack = decoded;

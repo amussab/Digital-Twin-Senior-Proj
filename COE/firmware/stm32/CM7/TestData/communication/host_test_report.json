@@ -5,7 +5,8 @@
     "/mnt/c/Users/USER2/OneDrive - KFUPM/kfupm/Senior Design/coe_firmware/CM7/TestData/demos/communication_demo.c",
     "/mnt/c/Users/USER2/OneDrive - KFUPM/kfupm/Senior Design/coe_esp32/main/feature_packet.c",
     "/mnt/c/Users/USER2/OneDrive - KFUPM/kfupm/Senior Design/coe_esp32/main/transport/latency_packet.c",
-    "/mnt/c/Users/USER2/OneDrive - KFUPM/kfupm/Senior Design/coe_firmware/CM7/App/communication/delivery_timing.c"
+    "/mnt/c/Users/USER2/OneDrive - KFUPM/kfupm/Senior Design/coe_firmware/CM7/App/communication/delivery_timing.c",
+    "/mnt/c/Users/USER2/OneDrive - KFUPM/kfupm/Senior Design/coe_firmware/CM7/App/payload/node_packet.c"
   ],
   "sanitizers": [
     "address",
@@ -25,7 +26,7 @@
     "speed_command": "passed",
     "rx_error": "passed"
   },
-  "decoder_cases": 22,
+  "decoder_cases": 42,
   "additional_stream_cases": 480,
   "scope": "C software logic with mocked HAL; no ESP-IDF build or physical UART proof"
 }

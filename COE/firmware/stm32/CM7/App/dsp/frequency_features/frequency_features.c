@@ -9,6 +9,19 @@
 const BearingFeatureProfile coe_project_bearing = {
     .id = COE_PROJECT_BEARING, .orders = {0.38f, 1.98f, 3.05f, 4.95f}, .half_width_order = 0.10f
 };
+/* RK4 rotor kit, S6700-type deep-groove bearing (10 x 15 mm), measured by ME on
+ * 16 Nov 2026: 11 balls of 1.2 mm, pitch 12.45 mm (between the 11.4 mm inner and
+ * 13.5 mm outer raceway lands), contact angle 0. Orders: FTF 0.5(1-d/D),
+ * BPFO n/2(1-d/D), BPFI n/2(1+d/D). The ball band is 2 x BSF = D/d(1-(d/D)^2):
+ * a damaged ball strikes both races once per spin, and single BSF (5.139) would
+ * sit only 0.17 order from BPFO (4.970), so the two bands would overlap.
+ * +/-0.15 order allows bearing slip and the pitch uncertainty (12.45 vs 12.5 mm).
+ * generate_final_fixtures.py recomputes these values and checks this literal.
+ */
+const BearingFeatureProfile coe_rk4_s6700_bearing = {
+    .id = COE_RK4_S6700_BEARING,
+    .orders = {0.451807229f, 10.2786145f, 4.96987952f, 6.03012048f}, .half_width_order = 0.15f
+};
 const BearingFeatureProfile coe_cwru_drive_end_bearing = {
     .id = COE_CWRU_DRIVE_END_BEARING,
     .orders = {0.39828f, 2.35675f, 3.5848f, 5.4152f}, .half_width_order = 0.10f
@@ -28,7 +41,8 @@ static double band_half_width_hz(const BearingFeatureProfile *profile, double sh
 bool frequency_profile_is_valid(const BearingFeatureProfile *profile, uint32_t rpm)
 {
     if (profile == NULL || rpm == 0U
-        || (profile->id != COE_PROJECT_BEARING && profile->id != COE_CWRU_DRIVE_END_BEARING)
+        || (profile->id != COE_PROJECT_BEARING && profile->id != COE_CWRU_DRIVE_END_BEARING
+            && profile->id != COE_RK4_S6700_BEARING)
         || !isfinite(profile->half_width_order) || profile->half_width_order <= 0.0f)
         return false;
     const double shaft_hz = (double)rpm / 60.0;

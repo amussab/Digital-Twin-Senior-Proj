@@ -9,8 +9,10 @@ does not build the ESP application. Keep the sibling folder names unchanged.
 
 The two phases are independent:
 
-1. **UART reception:** collect a full COE1 packet, verify CRC/schema/metadata/
-   values, then latch the RGB LED **green** and display the 32 actual features.
+1. **UART reception:** collect a full COE1 packet (schema 1, 160 bytes, REPLAY; or
+   schema 2, 204 bytes, LIVE: also the Keyphasor speed and both proximity probes),
+   verify CRC/schema/metadata/values, then latch the RGB LED **green** and display
+   the 32 actual features (and the shaft values).
 2. **Wi-Fi forwarding:** copy the validated vector into a bounded queue; a
    separate task connects to Wi-Fi and sends **HTTP POST JSON** to your host.
    Only an HTTP 2xx response counts as host acceptance.
@@ -143,16 +145,32 @@ Each JSON object contains:
 
 | Field | Meaning |
 | --- | --- |
-| schema_version | 1 |
+| schema_version | 1 (REPLAY) or 2 (LIVE, with the shaft fields below) |
 | device_id | Configured node identifier |
 | session_id | 16-hex-digit identifier generated at ESP boot |
 | sequence | Increasing delivery number within that ESP session |
 | window_id | Original STM32 window identifier |
-| rpm | 1750 or 3600 |
-| bearing_profile | 1 = provisional project; 2 = CWRU |
+| rpm | Speed the bands were computed for, 60–4000 (LIVE: the Keyphasor-measured speed, whole RPM) |
+| bearing_profile | 3 = RK4 S6700 (LIVE since 16 Nov 2026); 1 = old provisional project; 2 = CWRU |
 | valid_channels | Four channel-valid bits |
 | acceleration_unit | g (kurtosis/crest factor remain dimensionless) |
 | features | 32 ordered numeric values, unchanged Float32 values |
+
+Schema 2 adds (all numbers; a value whose `shaft_flags` bit is clear is 0):
+
+| Field | Meaning |
+| --- | --- |
+| measured_rpm | Machine speed from the Keyphasor (ADC channel 7), mean over the window's turns |
+| revolutions | Whole shaft turns in the window |
+| shaft_flags | bit 0 speed measured, bit 1 PROX 1 valid, bit 2 PROX 3 valid, bit 3 PROX 1 1X valid, bit 4 PROX 3 1X valid |
+| prox1_gap_um, prox1_pkpk_um | PROX 1 (AIN5): mean gap and pk-pk vibration, µm |
+| prox1_x1_um_pp, prox1_x1_phase_deg | PROX 1 once-per-turn (1X) vibration, µm pp, and its phase lag from the Keyphasor notch, 0–360° |
+| prox3_... | The same four values for PROX 3 (AIN6) |
+
+The 32 features are for the AI model; the speed and probe values are for the digital
+twin. The ESP checks the same rules as the STM32 encoder (flag bits, ranges, finite values)
+before forwarding. The laptop's beacon is `COE-HOST <port>` (UDP 8001); the ESP no longer
+sends a speed to the STM32 (the old `COR1` command), because the node measures it.
 
 The original binary packet is decoded before forwarding; its CRC is verified
 on ESP. The HTTP payload is JSON, so it does not retain the original binary CRC.

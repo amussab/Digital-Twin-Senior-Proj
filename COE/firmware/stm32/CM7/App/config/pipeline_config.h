@@ -15,9 +15,12 @@
 #define COE_BANDPASS_LOW_HZ 2000U
 #define COE_BANDPASS_HIGH_HZ 8000U
 
-/* Envelope: filter at the input rate, then retain one sample in six. */
-#define COE_ENVELOPE_PASSBAND_HZ 350U
-#define COE_ENVELOPE_STOPBAND_HZ 1250U
+/* Envelope: filter at the input rate, then retain one sample in six.
+ * 700 Hz passband (16 Nov 2026, was 350): the RK4 S6700 bearing's highest band,
+ * 2 x BSF + 0.15 order, reaches 629 Hz at 3600 RPM. 2500 Hz = decimated Nyquist.
+ */
+#define COE_ENVELOPE_PASSBAND_HZ 700U
+#define COE_ENVELOPE_STOPBAND_HZ 2500U
 #define COE_ENVELOPE_DECIMATION_FACTOR 6U
 #define COE_ENVELOPE_SAMPLE_RATE_HZ (COE_INPUT_SAMPLE_RATE_HZ / COE_ENVELOPE_DECIMATION_FACTOR)
 
@@ -27,9 +30,12 @@
 /* Any shaft speed in this range is accepted. A window is 20 revolutions when
  * that fits the envelope FFT (about 1500 RPM and above); at slower speeds it is
  * the most whole revolutions that fit (250 RPM: 3 revolutions, 0.72 s).
+ * 4000 (was 3600, 16 Nov 2026): LIVE now uses the speed measured by the Keyphasor,
+ * which can be a little above a 3600 setting. 4000 is the most at which the RK4
+ * profile's highest band (2 x BSF + 0.15 order = 695 Hz) still fits the 700 Hz envelope.
  */
 #define COE_MIN_RPM 60U
-#define COE_MAX_RPM 3600U
+#define COE_MAX_RPM 4000U
 #define COE_MAX_ENVELOPE_SAMPLES 3600U /* <= COE_FFT_SIZE; 0.72 s, sized to fit RAM_D1 */
 #define COE_MAX_WINDOW_SAMPLES (COE_MAX_ENVELOPE_SAMPLES * COE_ENVELOPE_DECIMATION_FACTOR)
 #define COE_SPECTRUM_BINS (COE_FFT_SIZE / 2U + 1U)

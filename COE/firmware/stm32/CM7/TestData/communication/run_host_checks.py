@@ -22,11 +22,14 @@ binary = build / 'test_communication'
 sources = [host / 'test_communication.c', firmware / 'CM7/App/communication/feature_uart.c',
            firmware / 'CM7/TestData/demos/communication_demo.c',
            esp / 'main/feature_packet.c', esp / 'main/transport/latency_packet.c',
-           firmware / 'CM7/App/communication/delivery_timing.c']
-includes = [host, firmware / 'CM7/App/communication', firmware / 'CM7/TestData/demos',
+           firmware / 'CM7/App/communication/delivery_timing.c',
+           firmware / 'CM7/App/payload/node_packet.c']
+includes = [host, firmware / 'CM7/App/communication', firmware / 'CM7/App/payload',
+            firmware / 'CM7/App/dsp/shaft', firmware / 'CM7/TestData/demos',
             firmware / 'CM7/TestData/fixtures', esp / 'main', esp / 'main/transport']
 command = ['gcc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-pedantic', '-g',
-           '-fsanitize=address,undefined', '-fno-omit-frame-pointer']
+           '-fsanitize=address,undefined', '-fno-omit-frame-pointer',
+           '-include', str(host / 'feature_payload.h')]
 for include in includes:
     command += ['-I', str(include)]
 command += [str(source) for source in sources] + ['-o', str(binary)]
@@ -43,6 +46,6 @@ for case in ('decoder', 'queue', 'timeout', 'start_failure', 'uart_error', 'init
 report = {'compiler': subprocess.check_output(['gcc', '--version'], text=True).splitlines()[0],
           'actual_sources_compiled': [str(p) for p in sources[1:]],
           'sanitizers': ['address', 'undefined_behavior'], 'strict_compile': 'passed',
-          'scenarios': results, 'decoder_cases': 22, 'additional_stream_cases': 480,
+          'scenarios': results, 'decoder_cases': 42, 'additional_stream_cases': 480,
           'scope': 'C software logic with mocked HAL; no ESP-IDF build or physical UART proof'}
 (here / 'host_test_report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')

@@ -31,6 +31,7 @@
 #include "final_features_demo.h"
 #include "pipeline_demo.h"
 #include "pipeline_batch_demo.h"
+#include "shaft_demo.h"
 #include "feature_uart.h"
 #include "communication_demo.h"
 #elif COE_FIRMWARE_MODE == COE_MODE_LIVE_RAW
@@ -197,6 +198,7 @@ Error_Handler();
   run_final_features_demo();
   run_pipeline_demo();
   run_pipeline_batch_demo();
+  run_shaft_demo();
   uint32_t led_tick = HAL_GetTick();
 #elif COE_FIRMWARE_MODE == COE_MODE_LIVE_RAW
   raw_monitor_init(); /* B1 starts acquisition once the ADC is powered. */

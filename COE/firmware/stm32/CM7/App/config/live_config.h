@@ -1,19 +1,27 @@
 /**
  * @file live_config.h
- * LIVE mode settings: machine speed, bearing profile and calibration.
+ * LIVE mode settings: bearing profile, calibration of the accelerometers and
+ * of the RK4 proximity probes.
  */
 #ifndef COE_LIVE_CONFIG_H
 #define COE_LIVE_CONFIG_H
 
-/* Machine speed. The node starts at COE_LIVE_START_RPM after every power-up or
- * reset. The laptop then chooses the speed (training page 1750/3600 buttons, or
- * inference_receiver.py --rpm): it sends the speed in its beacon, the ESP32
- * passes it on over the UART return wire (COR1 frame), and LIVE restarts the
- * window at the new speed. Any 60..3600 RPM is accepted (pipeline_config.h).
- * 14 Nov 2026: the lab machine runs at a set speed again (1750 or 3600); a
- * measured speed input from the machine's tachometer comes later.
+/* Machine speed: NOT a setting. Since 16 Nov 2026 LIVE measures it from the RK4
+ * Keyphasor on AIN7 (shaft_sensors.c). Windows start once 4 turns agree within
+ * 1 %, the window length and bearing bands follow the measured speed, and the
+ * window restarts when the speed moves by more than COE_LIVE_SPEED_RESTART.
+ * No Keyphasor pulses = no feature windows (nothing is guessed).
  */
-#define COE_LIVE_START_RPM 1750U
+#define COE_LIVE_SPEED_RESTART 0.005f /* 0.5 %: 8.75 RPM at 1750 */
+/* A window is sent only if its measured mean speed is within this of the speed
+ * its bands were computed for, and every turn in it within twice this. */
+#define COE_LIVE_SPEED_TOLERANCE 0.01f
+
+/* RK4 proximity probes (PROX 1 on AIN5, PROX 3 on AIN6) and Keyphasor (AIN7):
+ * each through a 47 k / 10 k divider, ratio measured 0.170 (15 Nov 2026).
+ * Proximitor sensitivity 200 mV/mil (RK4 datasheet) = 127 um per volt. */
+#define COE_LIVE_PROBE_DIVIDER {0.170f, 0.170f}
+#define COE_LIVE_PROBE_UM_PER_VOLT 127.0f
 
 /* 1: start acquiring on power-up (first try after the delay, so the ADC has
  * power) and retry while stopped, so the node runs with no one at the board.
@@ -24,10 +32,11 @@
 #define COE_LIVE_AUTOSTART_DELAY_MS 2000U
 #define COE_LIVE_AUTOSTART_RETRY_MS 5000U
 
-/* Bearing orders for the frequency features. coe_project_bearing is the
- * provisional project profile (confirm before AI training).
+/* Bearing orders for the frequency features: the RK4 rotor kit's S6700 bearings
+ * (profile 3, since 16 Nov 2026; see frequency_features.c). Profile 1 was the old
+ * provisional bearing: its data must not be mixed with profile 3 data.
  */
-#define COE_LIVE_BEARING_PROFILE coe_project_bearing
+#define COE_LIVE_BEARING_PROFILE coe_rk4_s6700_bearing
 
 /* Volts at the ADC input per g, for B1X, B1Y, B2X, B2Y: sensor sensitivity
  * x conditioner gain x filter gain. 0 = unknown: do not guess a value.

@@ -64,7 +64,8 @@ bool build_ai_payload(const TimeDomainFeatures time_features[COE_CHANNEL_COUNT],
     memset(payload, 0, sizeof(*payload));
     if (time_features == NULL || frequency_features == NULL || valid == NULL
         || window_id == 0U || rpm < COE_MIN_RPM || rpm > COE_MAX_RPM
-        || (bearing_profile_id != COE_PROJECT_BEARING && bearing_profile_id != COE_CWRU_DRIVE_END_BEARING))
+        || (bearing_profile_id != COE_PROJECT_BEARING && bearing_profile_id != COE_CWRU_DRIVE_END_BEARING
+            && bearing_profile_id != COE_RK4_S6700_BEARING))
         return false;
     for (size_t channel = 0U; channel < COE_CHANNEL_COUNT; ++channel)
     {

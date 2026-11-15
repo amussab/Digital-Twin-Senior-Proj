@@ -15,6 +15,7 @@
 HostSCB fake_scb;
 UART_HandleTypeDef *fake_uart;
 uint8_t *fake_buffer;
+unsigned fake_size;
 uint32_t fake_tick, fake_start_calls, fake_abort_calls, fake_cache_calls;
 uint32_t fake_dma_irqs, fake_uart_irqs, fake_receive_calls;
 UART_HandleTypeDef *fake_rx_uart;
@@ -29,11 +30,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *handle);
 void DMA1_Stream0_IRQHandler(void);
 void USART2_IRQHandler(void);
 
-/** Execute the same 22 decoder tests compiled into the MCU plus button edge checks. */
+/** Execute the same 42 decoder tests compiled into the MCU plus button edge checks. */
 static void test_decoder(void)
 {
     run_communication_demo();
-    assert(communication_checks_passed && communication_checked_cases == 22U);
+    assert(communication_checks_passed && communication_checked_cases == 42U);
     assert(communication_failed_check == 0U);
     feature_uart_ready = true;
     poll_communication_replay();
@@ -68,18 +69,18 @@ static void test_queue(void)
     memset(first, 11, sizeof(first));
     memset(second, 22, sizeof(second));
     memset(third, 33, sizeof(third));
-    assert(!feature_uart_send(first)); /* Not initialized. */
+    assert(!feature_uart_send(first, 160U)); /* Not initialized. */
     assert(feature_uart_init());
-    assert(!feature_uart_send(NULL));
+    assert(!feature_uart_send(NULL, 160U));
     fake_scb.CCR = SCB_CCR_DC_Msk;
-    assert(feature_uart_send(first));
+    assert(feature_uart_send(first, 160U));
     assert(fake_start_calls == 1U && fake_buffer[0] == 11U && fake_buffer[159] == 11U);
     assert(((uintptr_t)fake_buffer % 32U) == 0U && fake_cache_calls == 1U);
     memset(first, 77, sizeof(first));
     assert(fake_buffer[0] == 11U); /* Caller storage may immediately change. */
-    assert(feature_uart_send(second));
+    assert(feature_uart_send(second, 160U));
     memset(second, 88, sizeof(second));
-    assert(!feature_uart_send(third));
+    assert(!feature_uart_send(third, 160U));
     assert(feature_uart_queue_full_count == 1U && fake_start_calls == 1U);
     DMA1_Stream0_IRQHandler();
     USART2_IRQHandler();
@@ -97,8 +98,16 @@ static void test_queue(void)
     HAL_UART_TxCpltCallback(fake_uart);
     feature_uart_process();
     assert(feature_uart_packets_sent == 2U && feature_uart_errors == 0U);
-    assert(feature_uart_send(third));
-    assert(fake_buffer[0] == 33U && fake_start_calls == 3U);
+    assert(feature_uart_send(third, 160U));
+    assert(fake_buffer[0] == 33U && fake_start_calls == 3U && fake_size == 160U);
+    /* Schema 2 packets are 204 bytes; a slot holds at most FEATURE_UART_SLOT_BYTES. */
+    HAL_UART_TxCpltCallback(fake_uart);
+    feature_uart_process();
+    uint8_t big[FEATURE_UART_SLOT_BYTES + 1U];
+    memset(big, 44, sizeof(big));
+    assert(!feature_uart_send(big, 0U) && !feature_uart_send(big, FEATURE_UART_SLOT_BYTES + 1U));
+    assert(feature_uart_send(big, 204U));
+    assert(fake_start_calls == 4U && fake_size == 204U && fake_buffer[203] == 44U);
 }
 
 /** Measure at UART completion, including DWT wrap; main polling adds no time. */
@@ -107,7 +116,7 @@ static void test_uart_timing(void)
     uint8_t bytes[160] = {0};
     fake_tick = 10730U; /* The modeled 400-MHz cycle counter wraps at about 10737 ms. */
     assert(feature_uart_init() && feature_uart_timer_ready);
-    assert(feature_uart_send(bytes));
+    assert(feature_uart_send(bytes, 160U));
     fake_tick += 14U;
     HAL_UART_TxCpltCallback(fake_uart);
     assert(feature_uart_last_tx_us == 14000.0f);
@@ -123,11 +132,11 @@ static void test_timeout(void)
 {
     uint8_t bytes[160] = {0};
     fake_tick = UINT32_MAX - 15U;
-    assert(feature_uart_init() && feature_uart_send(bytes));
+    assert(feature_uart_init() && feature_uart_send(bytes, 160U));
     fake_tick += 101U;
     feature_uart_process();
     assert(!feature_uart_ready && feature_uart_errors == 1U && fake_abort_calls == 1U);
-    assert(!feature_uart_send(bytes) && fake_start_calls == 1U);
+    assert(!feature_uart_send(bytes, 160U) && fake_start_calls == 1U);
 }
 
 /** Reject a HAL start failure; never report that packet as transmitted. */
@@ -136,7 +145,7 @@ static void test_start_failure(void)
     uint8_t bytes[160] = {0};
     assert(feature_uart_init());
     fake_start_status = HAL_BUSY;
-    assert(!feature_uart_send(bytes));
+    assert(!feature_uart_send(bytes, 160U));
     assert(!feature_uart_ready && feature_uart_errors == 1U && feature_uart_packets_sent == 0U);
 }
 
@@ -144,7 +153,7 @@ static void test_start_failure(void)
 static void test_uart_error(void)
 {
     uint8_t bytes[160] = {0};
-    assert(feature_uart_init() && feature_uart_send(bytes));
+    assert(feature_uart_init() && feature_uart_send(bytes, 160U));
     HAL_UART_ErrorCallback(fake_uart);
     assert(feature_uart_ready);
     feature_uart_process();
@@ -248,7 +257,7 @@ static void test_speed_command(void)
 static void test_rx_error(void)
 {
     uint8_t bytes[160] = {0};
-    assert(feature_uart_init() && feature_uart_send(bytes));
+    assert(feature_uart_init() && feature_uart_send(bytes, 160U));
     const uint32_t armed = fake_receive_calls;
     fake_rx_uart->ErrorCode = HAL_UART_ERROR_ORE; /* HAL stopped reception: re-arm it. */
     fake_rx_uart->RxState = HAL_UART_STATE_READY;

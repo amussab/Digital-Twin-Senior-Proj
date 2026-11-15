@@ -73,16 +73,18 @@ with tempfile.TemporaryDirectory() as temporary:
                 assert not accepted(damaged, kind)
                 assert accepted(damaged + valid, kind) == [result]
                 count += 2
-    for index, wrong in ((0, 0), (1, 0), (2, 3601), (3, 3), (4, 123455), (5, 3457), (6, 0xFFFFFFFF)):
+    for index, wrong in ((0, 0), (1, 0), (2, 4001), (3, 4), (4, 123455), (5, 3457), (6, 0xFFFFFFFF)):
         values = list(fields)
         values[index] = wrong
         assert not accepted(frame(b'COA1', values), 'ack')
         count += 1
 
     class FeatureStream(c.Structure):
-        _fields_ = [('bytes', c.c_uint8 * 160), ('count', c.c_size_t), ('rejected_packets', c.c_uint32)]
+        _fields_ = [('bytes', c.c_uint8 * 204), ('count', c.c_size_t), ('rejected_packets', c.c_uint32)]
     class Feature(c.Structure):
-        _fields_ = [(n, c.c_uint32) for n in ('window_id', 'rpm', 'bearing_profile', 'valid_channels')] + [('features', c.c_float * 32)]
+        _fields_ = ([(n, c.c_uint32) for n in ('window_id', 'rpm', 'bearing_profile', 'valid_channels')]
+                    + [('features', c.c_float * 32), ('schema', c.c_uint32), ('measured_rpm', c.c_float),
+                       ('revolutions', c.c_uint32), ('shaft_flags', c.c_uint32), ('probes', c.c_float * 8)])
     class Transport(c.Structure):
         _fields_ = [('features', FeatureStream), ('requests', Stream),
                     ('request_bytes_left', c.c_uint), ('measurement_id', c.c_uint32)]
@@ -101,7 +103,8 @@ with tempfile.TemporaryDirectory() as temporary:
                 results.append((identity.value, value.window_id, value.rpm, bytes(value.features)))
         return results
 
-    expected_values = bytes(Feature.from_buffer_copy(struct.pack('<IIII', 3, 3600, 1, 15) + body[28:]).features)
+    raw_feature = (struct.pack('<IIII', 3, 3600, 1, 15) + body[28:]).ljust(c.sizeof(Feature), bytes(1))
+    expected_values = bytes(Feature.from_buffer_copy(raw_feature).features)
     for identity in (1, 7, 0x31454F43, 0xFFFFFFFF):
         tagged = frame(b'COT1', [identity]) + vector
         assert decode_transport(b'noiseCO' + tagged + vector) == [(identity, 3, 3600, expected_values), (0, 3, 3600, expected_values)]
@@ -122,6 +125,47 @@ with tempfile.TemporaryDirectory() as temporary:
             break
     else:
         raise AssertionError('No finite embedded timing fixture found')
+    # Schema 2 (204 bytes, LIVE since 16 Nov 2026): built here independently of the C encoder.
+    def shaft_packet(flags=0x1F, measured=1749.93, turns=20, prox=(1231.9, 52.25, 50.0, 70.5, 1041.4, 20.0, 12.0, 200.0)):
+        head = b'COE1' + struct.pack('<HHIIIII', 2, 32, 5, 1750, 3, 15, 1) + struct.pack('<32f', *[i / 10 for i in range(32)])
+        block = head + struct.pack('<fII', measured, turns, flags) + struct.pack('<8f', *prox)
+        return block + struct.pack('<I', zlib.crc32(block))
+
+    def decode_shaft(data):
+        state, value, identity = Transport(), Feature(), c.c_uint32()
+        results = []
+        for byte in data:
+            if lib.latency_feature_push(c.byref(state), byte, c.byref(value), c.byref(identity)):
+                results.append((identity.value, value.schema, value.window_id, value.measured_rpm,
+                                value.revolutions, value.shaft_flags, tuple(value.probes)))
+        return results
+
+    f32 = lambda values: tuple(struct.unpack('<%df' % len(values), struct.pack('<%df' % len(values), *values)))
+    good = shaft_packet()
+    expected = (5, f32([1749.93])[0], 20, 0x1F, f32([1231.9, 52.25, 50.0, 70.5, 1041.4, 20.0, 12.0, 200.0]))
+    assert len(good) == 204
+    assert decode_shaft(frame(b'COT1', [9]) + good + vector + good) == [
+        (9, 2) + expected, (0, 1, 3, 0.0, 0, 0, (0.0,) * 8), (0, 2) + expected]
+    count += 1
+    # Each broken rule is rejected even with a correct CRC; the next good packet still decodes.
+    bad = [shaft_packet(flags=0x3F), shaft_packet(flags=0x1D), shaft_packet(flags=0x0E),
+           shaft_packet(measured=0.0), shaft_packet(turns=0), shaft_packet(measured=4001.0),
+           shaft_packet(prox=(1231.9, 52.25, 50.0, 360.0, 1041.4, 20.0, 12.0, 200.0)),
+           shaft_packet(prox=(-1.0, 52.25, 50.0, 70.5, 1041.4, 20.0, 12.0, 200.0)),
+           shaft_packet(flags=0x0B, prox=(1231.9, 52.25, 50.0, 70.5, 0.0, 0.0, 0.0, 0.1)),
+           shaft_packet(flags=0x00, measured=0.0, turns=0, prox=(0.0,) * 7 + (float('nan'),))]
+    for packet in bad:
+        assert decode_shaft(packet) == [] and decode_shaft(packet + good) == [(0, 2) + expected]
+        count += 1
+    # No speed and only PROX 1 valid: accepted, zeros elsewhere.
+    plain = shaft_packet(flags=0x02, measured=0.0, turns=0, prox=(1231.9, 52.25) + (0.0,) * 6)
+    assert decode_shaft(plain)[0][3:] == (0.0, 0, 0x02, f32([1231.9, 52.25]) + (0.0,) * 6)
+    count += 1
+    for index in range(156, 204):
+        damaged = bytearray(good)
+        damaged[index] ^= 0x10
+        assert decode_shaft(bytes(damaged)) == [] and decode_shaft(bytes(damaged) + good) == [(0, 2) + expected]
+        count += 1
     state = Transport()
     state.measurement_id = 99
     state.request_bytes_left = 3

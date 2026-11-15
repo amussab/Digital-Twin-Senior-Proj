@@ -76,9 +76,10 @@ static inline HAL_StatusTypeDef HAL_UARTEx_DisableFifoMode(UART_HandleTypeDef *u
 static inline void HAL_NVIC_SetPriority(int irq, unsigned priority, unsigned sub) { (void)irq; (void)priority; (void)sub; }
 static inline void HAL_NVIC_EnableIRQ(int irq) { (void)irq; }
 static inline uint32_t HAL_GetTick(void) { return fake_tick; }
+extern unsigned fake_size;
 static inline HAL_StatusTypeDef HAL_UART_Transmit_DMA(UART_HandleTypeDef *uart, uint8_t *bytes, unsigned size)
 {
-    (void)size;
+    fake_size = size;
     fake_uart = uart;
     fake_buffer = bytes;
     ++fake_start_calls;

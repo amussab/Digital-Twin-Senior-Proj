@@ -19,14 +19,18 @@
 /* One serial frame on DOUTA: V1..V8, 16-bit two's complement, MSB first. */
 #define AD7606_SLOTS 8U
 
-/* Confirmed physical wiring: ADC input AINn is serial slot n-1. The pipeline
- * channels B1X, B1Y, B2X, B2Y use AIN2/4/6/8. The AINn-to-slot order is still
- * to be verified on the board with raw_monitor (signal on one input only).
+/* Wiring since 15 Nov 2026: ADC input AINn is serial slot n-1 (confirmed by
+ * unplugging one sensor at a time). Accelerometers on AIN1-4 in conditioner
+ * input order (input 1 = B1Y, 2 = B1X, 3 = B2X, 4 = B2Y); RK4 proximity probes
+ * and Keyphasor on AIN5-7 through 47 k / 10 k dividers (measured ratio 0.170).
  */
-#define AD7606_SLOT_B1X 1U /* AIN2 */
-#define AD7606_SLOT_B1Y 3U /* AIN4 */
-#define AD7606_SLOT_B2X 5U /* AIN6 */
-#define AD7606_SLOT_B2Y 7U /* AIN8 */
+#define AD7606_SLOT_B1Y 0U       /* AIN1 */
+#define AD7606_SLOT_B1X 1U       /* AIN2 */
+#define AD7606_SLOT_B2X 2U       /* AIN3 */
+#define AD7606_SLOT_B2Y 3U       /* AIN4 */
+#define AD7606_SLOT_PROX1 4U     /* AIN5, RK4 PROX 1 */
+#define AD7606_SLOT_PROX3 5U     /* AIN6, RK4 PROX 3 */
+#define AD7606_SLOT_KEYPHASOR 6U /* AIN7, RK4 Keyphasor */
 
 /* RANGE low (held by PC7 or tied to 0 V): +/-5 V full scale, 16-bit two's complement. */
 #define AD7606_RANGE_VOLTS 5.0f

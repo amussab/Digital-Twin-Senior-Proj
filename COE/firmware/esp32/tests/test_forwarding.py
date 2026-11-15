@@ -22,7 +22,9 @@ class Packet(ctypes.Structure):
     """Mirror the portable, verified FeaturePacket C layout for test inputs."""
     _fields_ = [('window_id', ctypes.c_uint32), ('rpm', ctypes.c_uint32),
                 ('bearing_profile', ctypes.c_uint32), ('valid_channels', ctypes.c_uint32),
-                ('features', ctypes.c_float * 32)]
+                ('features', ctypes.c_float * 32), ('schema', ctypes.c_uint32),
+                ('measured_rpm', ctypes.c_float), ('revolutions', ctypes.c_uint32),
+                ('shaft_flags', ctypes.c_uint32), ('probes', ctypes.c_float * 8)]
 
 
 class ForwardingTests(unittest.TestCase):
@@ -67,6 +69,13 @@ class ForwardingTests(unittest.TestCase):
         """Use distinctive synthetic Float32 values; these are test data, not board results."""
         return Packet(3, 1750, 1, 15, (ctypes.c_float * 32)(*[i / 10 for i in range(32)]))
 
+    def shaft(self):
+        """Schema 2 packet with Keyphasor speed and both probes (synthetic test values)."""
+        packet = self.packet()
+        packet.schema, packet.measured_rpm, packet.revolutions, packet.shaft_flags = 2, 1749.93, 20, 0x1F
+        packet.probes[:] = [1231.9, 52.25, 50.0, 70.5, 1041.4, 20.0, 12.0, 200.0]
+        return packet
+
     def encode(self, packet, capacity=2048, device=b'coe-test', sequence=1):
         buffer = ctypes.create_string_buffer(capacity)
         length = self.library.feature_packet_to_json(ctypes.byref(packet), device,
@@ -95,6 +104,39 @@ class ForwardingTests(unittest.TestCase):
         self.assertEqual(message['rpm'], 1750)
         for actual, received in zip(packet.features, message['features']):
             self.assertEqual(struct.pack('<f', actual), struct.pack('<f', received))
+
+    def test_schema2_shaft_fields(self):
+        packet = self.shaft()
+        length, body = self.encode(packet)
+        message = json.loads(body)
+        self.assertEqual(validate_vector(message), ('coe-test', '1234567890abcdef', 1))
+        self.assertEqual(message['schema_version'], 2)
+        self.assertEqual(struct.pack('<f', message['measured_rpm']), struct.pack('<f', packet.measured_rpm))
+        self.assertEqual((message['revolutions'], message['shaft_flags']), (20, 0x1F))
+        names = [f'{p}_{n}' for p in ('prox1', 'prox3') for n in ('gap_um', 'pkpk_um', 'x1_um_pp', 'x1_phase_deg')]
+        for name, value in zip(names, packet.probes):
+            self.assertEqual(struct.pack('<f', message[name]), struct.pack('<f', value))
+        self.assertEqual(self.post(message)[0], 200)
+        # Schema 1 JSON has none of the shaft fields.
+        self.assertNotIn('measured_rpm', json.loads(self.encode(self.packet())[1]))
+
+    def test_schema2_rules_on_the_host(self):
+        _, body = self.encode(self.shaft(), sequence=40)
+        original = json.loads(body)
+        for name, value in (('shaft_flags', 0x3F), ('shaft_flags', 0x1D), ('shaft_flags', 0x0E),
+                            ('measured_rpm', 0), ('revolutions', 0), ('prox1_x1_phase_deg', 360),
+                            ('prox1_gap_um', -1), ('prox3_x1_um_pp', float('nan')), ('measured_rpm', 'fast')):
+            changed = dict(original)
+            changed[name] = value
+            with self.assertRaises(ValueError):
+                validate_vector(changed)
+        missing = dict(original)
+        del missing['prox3_pkpk_um']
+        with self.assertRaises(ValueError):
+            validate_vector(missing)
+        no_speed = dict(original, shaft_flags=0x06, measured_rpm=0, revolutions=0,
+                        prox1_x1_um_pp=0, prox1_x1_phase_deg=0, prox3_x1_um_pp=0, prox3_x1_phase_deg=0)
+        validate_vector(no_speed)
 
     def test_float32_roundtrip(self):
         rng = random.Random(42)
@@ -130,7 +172,7 @@ class ForwardingTests(unittest.TestCase):
         _, body = self.encode(self.packet(), sequence=28)
         original = json.loads(body)
         variants = []
-        for name, value in (('features', [1, 2]), ('rpm', 5000), ('schema_version', 2),
+        for name, value in (('features', [1, 2]), ('rpm', 4001), ('schema_version', 2), ('schema_version', 3),
                             ('valid_channels', 0), ('acceleration_unit', 'm/s2')):
             changed = dict(original)
             changed[name] = value

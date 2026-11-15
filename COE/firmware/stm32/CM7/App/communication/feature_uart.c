@@ -28,9 +28,10 @@ static DMA_HandleTypeDef dma;
 /* DMA1 cannot read DTCM. The linker assigns these cache-line-aligned packets
  * to AXI SRAM. NOLOAD: send() writes every byte before DMA reads a slot.
  */
-static uint8_t packets[2][COE_PAYLOAD_BYTES]
+static uint8_t packets[2][FEATURE_UART_SLOT_BYTES]
     __attribute__((section(".feature_uart_dma"), aligned(32)));
-_Static_assert(COE_PAYLOAD_BYTES % 32U == 0U, "Own complete cache lines");
+static uint16_t packet_lengths[2];
+_Static_assert(FEATURE_UART_SLOT_BYTES % 32U == 0U, "Own complete cache lines");
 static uint32_t first_slot;
 static uint32_t packet_count; /* Includes the packet currently being sent. */
 static uint32_t start_tick;
@@ -135,25 +136,25 @@ void feature_uart_process(void)
     {
         uint8_t *packet = packets[first_slot];
         /* Cache is currently disabled. This remains safe if D-cache is enabled
-         * later: each 160-byte slot owns five complete 32-byte cache lines.
+         * later: each 224-byte slot owns seven complete 32-byte cache lines.
          */
         if ((SCB->CCR & SCB_CCR_DC_Msk) != 0U)
-            SCB_CleanDCache_by_Addr((uint32_t *)packet, COE_PAYLOAD_BYTES);
+            SCB_CleanDCache_by_Addr((uint32_t *)packet, FEATURE_UART_SLOT_BYTES);
         __DSB();
         transmission_done = false;
         start_tick = HAL_GetTick();
         tx_start_cycles = benchmark_cycles_now();
         transmitting = true;
-        if (HAL_UART_Transmit_DMA(&uart, packet, COE_PAYLOAD_BYTES) != HAL_OK)
+        if (HAL_UART_Transmit_DMA(&uart, packet, packet_lengths[first_slot]) != HAL_OK)
             stop_transmitter();
     }
 }
 
 /** Copy into a free slot; DMA retains its own buffer until TC completes. */
-bool feature_uart_send(const uint8_t packet[COE_PAYLOAD_BYTES])
+bool feature_uart_send(const uint8_t *packet, size_t length)
 {
     feature_uart_process();
-    if (!feature_uart_ready || packet == NULL)
+    if (!feature_uart_ready || packet == NULL || length == 0U || length > FEATURE_UART_SLOT_BYTES)
         return false;
     if (packet_count == 2U)
     {
@@ -161,7 +162,8 @@ bool feature_uart_send(const uint8_t packet[COE_PAYLOAD_BYTES])
         return false;
     }
     const uint32_t slot = (first_slot + packet_count) % 2U;
-    memcpy(packets[slot], packet, COE_PAYLOAD_BYTES);
+    memcpy(packets[slot], packet, length);
+    packet_lengths[slot] = (uint16_t)length;
     delivery_timing_bind_packet(packet);
     ++packet_count;
     feature_uart_process();

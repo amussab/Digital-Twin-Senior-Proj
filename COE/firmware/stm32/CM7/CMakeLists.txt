@@ -98,6 +98,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/App/dsp/envelope
     ${CMAKE_CURRENT_SOURCE_DIR}/App/dsp/envelope_spectrum
     ${CMAKE_CURRENT_SOURCE_DIR}/App/dsp/frequency_features
+    ${CMAKE_CURRENT_SOURCE_DIR}/App/dsp/shaft
     ${CMAKE_CURRENT_SOURCE_DIR}/App/platform/clock
     ${CMAKE_CURRENT_SOURCE_DIR}/App/platform/timing
     ${CMAKE_CURRENT_SOURCE_DIR}/App/acquisition
@@ -118,6 +119,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/dsp/envelope_spectrum/envelope_spectrum.c
     App/dsp/frequency_features/frequency_features.c
     App/payload/feature_payload.c
+    App/payload/node_packet.c
+    App/dsp/shaft/shaft_sensors.c
     App/pipeline/pipeline.c
     App/platform/clock/processing_clock.c
     # Holds the ADC interface pins low in every mode.
@@ -136,6 +139,7 @@ if(COE_FIRMWARE_MODE STREQUAL "REPLAY")
         TestData/demos/final_features_demo.c
         TestData/demos/pipeline_demo.c
         TestData/demos/pipeline_batch_demo.c
+        TestData/demos/shaft_demo.c
     )
 else()
     # Live acquisition owns the AXI SRAM ring instead.
@@ -162,6 +166,7 @@ if(COE_OPTIMIZE_DSP)
         App/dsp/envelope_spectrum/envelope_spectrum.c
         App/dsp/frequency_features/frequency_features.c
         App/payload/feature_payload.c
+        App/dsp/shaft/shaft_sensors.c
         App/pipeline/pipeline.c
         # Preserve the reference function's original arithmetic options after its move.
         TestData/demos/time_features_reference.c
