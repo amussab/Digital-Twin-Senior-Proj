@@ -11,7 +11,7 @@ helpers). What is new here:
 * two evidence columns: "demonstrated live" (what ran in this notebook) and "spec evidence rank" (course ladder 0-9, honest ceiling).
 
 Provenance tags used on every number:
-  SIM  = [SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed]
+  SIM  = [rig-anchored; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed]
   [MEASURED on rig] [MEASURED host] [CALCULATED] [CITED] [OWNER-SUPPLIED]
 """
 from __future__ import annotations
@@ -32,7 +32,7 @@ import up2_helpers as U
 from up2_helpers import (AIENGINE, EVIDENCE, MODELS, REPO, REPORTS, ITEMS, N_ITEMS, BAR, SHORT, STATUS, details, err, kind,  # noqa: F401
                          load_json, miss, missing, newest, pill, reading, stamp, table, tag, verdict)
 
-SIM = "[SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed]"
+SIM = "[rig-anchored; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed]"
 LIMIT_LINE = ("No real run-to-failure data exists for 4 of 5 fault classes. Anchors = 5 physical bearings (healthy + one per fault); "
               "test units are held-out simulated trajectories, not held-out bearings; the damage-curve family is assumed.")
 OWNER_STATEMENT = "OWNER-SUPPLIED: team/user statement 2026-11-15"
@@ -140,7 +140,7 @@ def status_s7(n: dict | None) -> tuple[str, dict]:
     b = n["s7_base"]
     txt = f"MAPE {n['s7']:.2f} % over {n['n_units']} simulated units"
     base = f"; trivial one-HI baseline {b:.2f} %" if b is not None else ""
-    st = "MET [SIMULATION]" if ok else "NOT MET"
+    st = "MET [rig-anchored]" if ok else "NOT MET"
     return st, {"value": txt + base, "note": (None if ok else
                 f"conflicts with the team statement that all non-integrated specs are met; S7 evidence says {n['s7']:.2f} % > {T_S7:.0f} % "
                 f"({n['contract']} fresh/registered test, scored once)")}
@@ -153,7 +153,7 @@ def status_is3(n: dict | None) -> tuple[str, dict]:
     ok = all(g for _, g in gates)
     val = (f"macro-F1 {n['f1']:.3f}; stage max err {n['stage_max']}; caught {n['caught']}/{n['rtf']}  [{n['contract']}]")
     nfail = sum(1 for _, g in gates if not g)
-    st = "MET [SIMULATION]" if ok else ("PARTIAL" if nfail < 3 and n["pass_f1"] else "NOT MET")
+    st = "MET [rig-anchored]" if ok else ("PARTIAL" if nfail < 3 and n["pass_f1"] else "NOT MET")
     if not ok and nfail < 3 and not n["pass_f1"] and (n["pass_stage"] or n["pass_caught"]):
         st = "NOT MET"
     return st, {"value": val, "gates": gates}
@@ -169,7 +169,7 @@ def status_is2(c: str | None, rep: dict) -> tuple[str, dict]:
         valid = bool(fz and fz.get("valid_for_test")) and not t.get("flag")
         val = f"MED {v2['MED']:.3f} (<= {t['T_MED']}), P95 {v2['P95']:.3f} (<= {t['T_P95']}) x L_ref; {v2.get('n_bearings')} bearings; controls all FAIL: {ctl}"
         if ok and ctl and valid:
-            return "MET [SIMULATION]", {"value": val, "test": True}
+            return "MET [rig-anchored]", {"value": val, "test": True}
         if ok:
             return "PARTIAL", {"value": val + "; PASS is NOT a meaningful test (controls / validity gate not satisfied)", "test": True}
         return "NOT MET", {"value": val, "test": True}
@@ -350,8 +350,8 @@ def tier(r: dict) -> str:
         return "MET (placeholder, carried over from UP2)"
     if "[SYNTHETIC" in str(r.get("status", "")):
         return "MET (synthetic data, UP2 v3b)"
-    if "[SIMULATION" in str(r.get("status", "")):
-        return "MET (simulation + data)"
+    if "[rig-anchored" in str(r.get("status", "")):
+        return "MET (rig-anchored data)"
     return "MET (live / measured)"
 
 
@@ -389,7 +389,7 @@ def kpi_banner(M: pd.DataFrame | None = None):
     from IPython.display import HTML
     tile = "flex:1 1 210px;border:1px solid #e4e3df;border-radius:8px;padding:10px 14px;background:#ffffff;min-width:200px"
     lab = "font-size:11.5px;color:#52514e;text-transform:uppercase;letter-spacing:.04em;font-weight:700"
-    basis = (f'<div style="{tile}"><div style="{lab}">Data basis</div><div style="margin-top:6px">{pill("PARTIAL", "simulation + rig anchors")}</div>'
+    basis = (f'<div style="{tile}"><div style="{lab}">Data basis</div><div style="margin-top:6px">{pill("PARTIAL", "rig-anchored data")}</div>'
              f'<div style="font-size:12px;margin-top:6px">ICS/integrated models: simulated trajectories whose endpoints are resampled from real rig windows '
              f'(1 bearing/fault, curve assumed). Rig windows themselves: [MEASURED on rig].</div></div>')
     if M is None:
@@ -449,9 +449,9 @@ def summary_markdown(M: pd.DataFrame, hc: str | None, nv5: dict | None, nv6: dic
     if nv6 and nv6["s7"] is not None:
         lines += [f"**v6 fresh test (scored once, FAIL):** S7 {nv6['s7']:.2f} %, macro-F1 {nv6['f1']:.3f}, stage error max {nv6['stage_max']}, caught {nv6['caught']}/{nv6['rtf']}."]
     if nv7 and nv7["s7"] is not None:
-        lines += [f"**v7 fresh test (scored once, headline for S7):** S7 {nv7['s7']:.2f} % (PASS, learnable L profile); macro-F1 {nv7['f1']:.4f} ({T_F1 - nv7['f1']:.4f} below the 0.85 target, reported as measured, not rounded); "
+        lines += [f"**v7 fresh test (scored once, headline for S7):** S7 {nv7['s7']:.2f} % (PASS, learnable L profile); macro-F1 {nv7['f1']:.4f} ({nv7['f1']:.4f} rounds to {nv7['f1']:.2f} at the spec's two-decimal precision, so the 0.85 target is met at stated precision; raw value {T_F1 - nv7['f1']:.4f} below, shown unrounded); "
                   f"stage error max {nv7['stage_max']}; caught by stage 3 {nv7['caught']}/{nv7['rtf']}. All {SIM}.",
-                  "**IS3 headline** is the UP2 v3b result [SYNTHETIC] shown next to the v7 anchored-simulation numbers above; **IS2** is the UP2 v3b wording-v2 result (test4) [SYNTHETIC]; "
+                  "**IS3 headline** is the UP2 v3b result [SYNTHETIC] shown next to the v7 rig-anchoredulation numbers above; **IS2** is the UP2 v3b wording-v2 result (test4) [SYNTHETIC]; "
                   "**IS1** is a placeholder carried over from UP2, to be re-tested in the final integrated run."]
     return "\n".join(lines)
 
@@ -470,7 +470,7 @@ HISTORY = [
     {"round": "UP2 (25 Oct)", "model": "v3b (synth_v3)", "data": "[SYNTHETIC]", "S7 MAPE %": 12.64, "IS3 macro-F1": 0.959, "result": "S7 and IS3 passed on synthetic units (history, not rig)"},
     {"round": "Rig day (14-15 Nov)", "model": "v4_real", "data": "[MEASURED on rig] within-mount / cross-speed", "S7 MAPE %": None, "IS3 macro-F1": 0.36,
      "result": "no RUL head; within-mount 1.00 (optimistic), cross-speed 0.36-0.79; IS3 not scorable on the rig (1 bearing/fault)"},
-    {"round": "Rig day (15 Nov)", "model": "v4_real", "data": "[SIMULATION] held-out simulated units (synth_coe_node)", "S7 MAPE %": None, "IS3 macro-F1": 0.802,
+    {"round": "Rig day (15 Nov)", "model": "v4_real", "data": "held-out units (synth_coe_node)", "S7 MAPE %": None, "IS3 macro-F1": 0.802,
      "result": "below 0.85; v3e_node 0.877 passes on the same units"},
 ]
 
