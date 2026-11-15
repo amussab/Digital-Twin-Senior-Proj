@@ -20,6 +20,7 @@ Units of RUL: TABLE windows of 10 min (one simulated snapshot per window); rul_h
 from __future__ import annotations
 
 import argparse
+import os
 import hashlib
 import json
 import pickle
@@ -58,9 +59,9 @@ CLASS_ORDER = up2.CLASS_ORDER
 HI_COL = 0                                           # COLS[0] == "hi"
 MEAN6_HI = uw.AGGS.index("mean6") * R + HI_COL       # column of the baseline-control feature in the aggregate vector
 
-CLS_GRID = [dict(max_depth=d, learning_rate=lr) for d in (4, 6) for lr in (0.05, 0.1)]
+CLS_GRID = [dict(max_depth=d, learning_rate=0.1) for d in (4, 6)]
 GATE_TAUS = (0.0, 0.3, 0.5, 0.75, 1.0)
-RUL_GRID = [dict(max_depth=d, levels=lv) for d in (4, 6) for lv in (False, True)]
+RUL_GRID = [dict(max_depth=d, levels=True) for d in (6, 8)]
 Z_GRID = [dict(max_depth=d) for d in (4, 6)]
 Z_CUTS = (0.0, -0.04, -0.08, -0.12)
 STAGE_K = (1, 5, 9, 15)
@@ -80,7 +81,7 @@ def now_tag() -> str:
 def meta(extra: dict | None = None) -> dict:
     from .train import git_commit, git_dirty
     return {"provenance": TAG, "limits": LIMITS, "seed": SEED, "git_commit": git_commit(), "git_dirty": git_dirty(),
-            "command": "python -m aiengine.v7_node " + " ".join(sys.argv[1:]),
+            "xgboost_device": DEVICE, "command": "python -m aiengine.v7_node " + " ".join(sys.argv[1:]),
             "utc": datetime.now(timezone.utc).isoformat(timespec="seconds"), **(extra or {})}
 
 
@@ -173,8 +174,17 @@ def y_cls(T: pd.DataFrame) -> np.ndarray:
     return T["observable_class"].map({c: i for i, c in enumerate(CLASS_ORDER)}).to_numpy()
 
 
+DEVICE = os.environ.get("V7_DEVICE", "cuda")          # xgboost device for ALL fits/predictions (cuda|cpu); recorded in the reports
+CLS_STRIDE, Z_STRIDE = 4, 2          # training-row thinning (10-min snapshots are highly autocorrelated); val / test rows are never thinned
+
+
+def _thin(T: pd.DataFrame, k: int) -> np.ndarray:
+    return (T["window_index"].to_numpy() % k) == 0
+
+
 def fit_cls(tr: FeatSet, va: FeatSet, hp: dict, threads: int):
-    return up2.fit_classifier("xgb", tr.Xc, y_cls(tr.T), va.Xc, y_cls(va.T), threads=threads, params=dict(hp))
+    m = _thin(tr.T, CLS_STRIDE)
+    return up2.fit_classifier("xgb", tr.Xc[m], y_cls(tr.T[m]), va.Xc, y_cls(va.T), threads=threads, params=dict(hp, device=DEVICE))
 
 
 def deg_mask(T: pd.DataFrame) -> np.ndarray:
@@ -187,12 +197,13 @@ def fit_rul(tr: FeatSet, va: FeatSet, cfg: dict, threads: int):
     return up2.fit_regressor("xgb", Xtr[dtr], np.log1p(tr.T.loc[dtr, "rul_windows"].to_numpy()), Xva[dva],
                              np.log1p(va.T.loc[dva, "rul_windows"].to_numpy()), threads=threads,
                              wtr=up2.unit_balanced_weights(tr.T.loc[dtr, "unit_id"]), wva=up2.unit_balanced_weights(va.T.loc[dva, "unit_id"]),
-                             params={"max_depth": cfg["max_depth"]})
+                             params={"max_depth": cfg["max_depth"], "device": DEVICE})
 
 
 def fit_z(tr: FeatSet, va: FeatSet, cfg: dict, levels: bool, threads: int):
-    return up2.fit_regressor("xgb", tr.xr(levels), tr.T["z_target"].to_numpy(), va.xr(levels), va.T["z_target"].to_numpy(),
-                             threads=threads, params={"max_depth": cfg["max_depth"]})
+    m = _thin(tr.T, Z_STRIDE)
+    return up2.fit_regressor("xgb", tr.xr(levels)[m], tr.T.loc[m, "z_target"].to_numpy(), va.xr(levels), va.T["z_target"].to_numpy(),
+                             threads=threads, params={"max_depth": cfg["max_depth"], "device": DEVICE})
 
 
 def fit_hi_baseline(tr: FeatSet) -> dict:
@@ -386,7 +397,8 @@ def cmd_select(a) -> int:
         "meta": meta({"phase": "PRE-REGISTRATION: frozen choices written before the test units are scored",
                       "data_counts": counts, "data_file": str(DATA.name), "elapsed_s": round(time.perf_counter() - t0, 1),
                       "n_threads": th}),
-        "feature_columns": COLS, "T_cls": T_CLS, "NL_rul": NL,
+        "feature_columns": COLS, "T_cls": T_CLS, "NL_rul": NL, "training_row_thinning": {"classifier": CLS_STRIDE, "z_head": Z_STRIDE, "rul_head": 1},
+        "profile_L": CP.PROFILES["L"], "n_train_units": 2000,
         "frozen": {"classifier_hp": best_c[1], "classifier_best_iteration": best_c[4]["best_iteration"], "gate_tau": best_c[2],
                    "gate_signal": "family", "rul_head": cfg_r, "rul_best_iteration": best_r[3]["best_iteration"],
                    "z_head": zc, "z_best_iteration": zinfo["best_iteration"], "z_cut": cut, "postprocess": pp_sel,
@@ -411,9 +423,12 @@ def load_frozen() -> tuple[dict, Path]:
     return json.loads(fs[-1].read_text()), fs[-1]
 
 
-def load_heads() -> dict:
+def load_heads(device: str | None = None) -> dict:
     with open(RUN_DIR / "heads.pkl", "rb") as f:
-        return pickle.load(f)
+        h = pickle.load(f)
+    for k in ("cls", "rul", "z"):
+        h[k].set_params(device=device or DEVICE)
+    return h
 
 
 def predict_all(heads: dict, fz: dict, S: FeatSet) -> dict:
@@ -543,7 +558,7 @@ def cmd_export(a) -> int:
     from .engine import HybridEngine
     fz, path = load_frozen()
     fz["_file"] = path.name
-    heads = load_heads()
+    heads = load_heads("cpu")                       # ONNX conversion + parity reference on CPU (native booster predict = same trees)
     va = featset(DATA, "val")
     tab = va.tab
     m_cls, m_rul = build_models(heads, fz)
@@ -585,9 +600,9 @@ def cmd_export(a) -> int:
 
 def train_1800_cls(frozen: dict, tr: FeatSet, va: FeatSet, th: int):
     """Cross-speed control: the frozen classifier hyper-parameters, fitted on 1800-rpm train units only (no early stopping on test)."""
-    m1 = tr.T["rpm_mode"].to_numpy() == 1800
+    m1 = (tr.T["rpm_mode"].to_numpy() == 1800) & _thin(tr.T, CLS_STRIDE)
     v1 = va.T["rpm_mode"].to_numpy() == 1800
-    return up2.fit_classifier("xgb", tr.Xc[m1], y_cls(tr.T[m1]), va.Xc[v1], y_cls(va.T[v1]), threads=th, params=dict(frozen["classifier_hp"]))[0]
+    return up2.fit_classifier("xgb", tr.Xc[m1], y_cls(tr.T[m1]), va.Xc[v1], y_cls(va.T[v1]), threads=th, params=dict(frozen["classifier_hp"], device=DEVICE))[0]
 
 
 TEST_SETS = {"test_L": "PRIMARY: L profile, test shape range SHAPE_TEST_L (OOD vs train)",
