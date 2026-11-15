@@ -46,7 +46,7 @@ else
 
                 <MetricCard Label="AI Remaining Life"
                             Value="@(Snapshot.AiRulHours < 0 ? "n/a" : $"{Snapshot.AiRulHours:F0} h")"
-                            Detail="@(Snapshot.Live is null ? "N-HiTS estimate" : "RUL head not valid on node features")"
+                            Detail="@(Snapshot.Live is null ? "N-HiTS estimate" : Snapshot.AiRulHours >= 0 ? "RUL head, simulated hours" : "n/a: no RUL model validated on live node windows")"
                             AccentClass="accent-violet" />
 
                 <MetricCard Label="Fault State"
@@ -68,7 +68,7 @@ else
             </section>
 
             <TrendChart Title="AI RUL Trend"
-                        CurrentValue="@($"{Snapshot.AiRulHours:F0} hours")"
+                        CurrentValue="@(Snapshot.AiRulHours < 0 ? "n/a" : $"{Snapshot.AiRulHours:F0} hours")"
                         Values="RulHistory" />
 
             <section class="lower-grid">
@@ -80,7 +80,17 @@ else
 
                     @if (Snapshot.Live is not null)
                     {
-                        <div class="comparison-row"><span>Physics twin</span><strong>n/a: node sends features only</strong></div>
+                        @if (Snapshot.PhysicsRulHours is double lp && Snapshot.AiRulHours >= 0)
+                        {
+                            <div class="comparison-row"><span>Physics RUL (feature twin)</span><strong>@lp.ToString("F1") h</strong></div>
+                            <div class="comparison-row"><span>AI RUL</span><strong>@Snapshot.AiRulHours.ToString("F1") h</strong></div>
+                            <div class="comparison-row"><span>Residual |phys-AI| / AI</span><strong>@Snapshot.RulResidualPercent?.ToString("F0")%</strong></div>
+                            <div class="comparison-row"><span>Provenance</span><strong>@Snapshot.Live.Provenance</strong></div>
+                        }
+                        else
+                        {
+                            <div class="comparison-row"><span>Physics RUL / AI RUL</span><strong>n/a (@(Snapshot.Live.Provenance.Contains("SIMULATION") ? "shown for a bearing classified faulted at stage 2 or later" : "live node: no RUL model validated, twin reads features only"))</strong></div>
+                        }
                     }
                     else if (Snapshot.PhysicsRulHours is double physicsRul)
                     {
@@ -186,7 +196,10 @@ else
                 var snapshot in DataSource.StreamAsync(_cancellation.Token))
             {
                 Snapshot = snapshot;
-                _rulHistory.Add(snapshot.AiRulHours);
+                if (snapshot.AiRulHours >= 0)      // -1 = n/a (live node): never plot it
+                {
+                    _rulHistory.Add(snapshot.AiRulHours);
+                }
 
                 if (_rulHistory.Count > 40)
                 {

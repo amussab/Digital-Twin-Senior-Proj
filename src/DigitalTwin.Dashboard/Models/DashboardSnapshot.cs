@@ -21,7 +21,9 @@ public sealed record DashboardSnapshot(
 public sealed record LiveBearing(
     int Bearing, string Status, string FaultClass,
     Dictionary<string, double>? ClassProbs = null, double? Confidence = null,
-    double? HealthIndex = null, int? HealthStage = null, bool? OnsetDetected = null, string? Reason = null);
+    double? HealthIndex = null, int? HealthStage = null, bool? OnsetDetected = null, string? Reason = null,
+    double? AiRulHours = null, double? PhysicsRulHours = null, double? MinerD = null, double? PhysicsHealthIndex = null,
+    string? PhysicsSource = null, bool? RulValid = null, string? RulNote = null, string? TimeBase = null);
 
 public sealed record LiveInfo(
     long Seq, long WindowId, double Rpm, int ValidChannels, string DeviceId, string SessionId, string Contract, string Provenance,

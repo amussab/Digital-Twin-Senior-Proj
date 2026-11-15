@@ -6,11 +6,12 @@
 {
     <section class="live-panel system-panel">
         <div class="panel-heading">
-            <span>Node (live) &middot; per-bearing AI output</span>
-            <span class="tag @(Live.Provenance.Contains("REPLAY") ? "" : "success") live-badge">@Live.Provenance</span>
+            <span>@(IsSim ? "Simulated replay" : "Node (live)") &middot; per-bearing AI output</span>
+            <span class="tag @(Live.Provenance.Contains("LIVE") ? "success" : "") live-badge">@Live.Provenance</span>
         </div>
-        <p class="live-note">Source: Node (live) &mdash; @Live.DeviceId, contract <strong>@Live.Contract</strong>, window @Live.WindowId, @Live.Rpm.ToString("F0") rpm.
-            The node sends features only (no raw waveform, no proximity probes): physics twin and RUL are n/a. Stage and health index come from heads not validated on node data.</p>
+        <p class="live-note">Source: @(IsSim ? "simulated trajectory replay" : "Node (live)") &mdash; @Live.DeviceId, contract <strong>@Live.Contract</strong>, window @Live.WindowId, @Live.Rpm.ToString("F0") rpm.
+            @if (IsSim) {<text>[SIMULATION; rig-anchored replay]: windows are resampled from real rig windows along an ASSUMED damage curve; RUL values are in simulated hours (10-min snapshots) and are NOT measurements of a real bearing. Physics RUL = feature-only twin (reads the same features as the AI).</text>}
+            else {<text>The node sends features only (no raw waveform, no proximity probes): RUL and physics RUL are n/a. Stage and health index come from heads not validated on live node data.</text>}</p>
 
         <div class="live-bearings">
             @foreach (var b in Live.Bearings)
@@ -27,6 +28,8 @@
                         <div class="comparison-row"><span>Class</span><strong>@b.FaultClass</strong></div>
                         <div class="comparison-row"><span>Onset detected</span><strong>@(b.OnsetDetected == true ? "YES" : "no")</strong></div>
                         <div class="comparison-row"><span>Health stage / index</span><strong>@(b.HealthStage?.ToString() ?? "n/a") / @((b.HealthIndex * 100)?.ToString("F0") ?? "n/a")%</strong></div>
+                        <div class="comparison-row"><span>AI RUL</span><strong>@(b.RulValid == true && b.AiRulHours is double ar ? $"{ar:F1} h" : "n/a")</strong></div>
+                        <div class="comparison-row"><span>Physics RUL / Miner D</span><strong>@(b.RulValid == true && b.PhysicsRulHours is double pr ? $"{pr:F1} h" : "n/a") / @(b.MinerD is double md ? md.ToString("F2") : "n/a")</strong></div>
                         @if (b.ClassProbs is not null)
                         {
                             @foreach (var kv in b.ClassProbs.OrderByDescending(k => k.Value))
@@ -74,6 +77,7 @@
     private IReadOnlyList<double> B1YKurt => _kurt;
     private long _lastSeq = long.MinValue;
     public double? RenderMs { get; private set; }
+    private bool IsSim => Live?.Provenance.Contains("SIMULATION") == true;
 
     private static string Fmt(double v, int k) => k is 1 or 2 ? v.ToString("F2") : v.ToString("0.0000");
 

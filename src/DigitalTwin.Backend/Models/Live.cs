@@ -4,7 +4,9 @@ namespace DigitalTwin.Backend.Models;
 public sealed record LiveBearing(
     int Bearing, string Status, string FaultClass,
     Dictionary<string, double>? ClassProbs = null, double? Confidence = null,
-    double? HealthIndex = null, int? HealthStage = null, bool? OnsetDetected = null, string? Reason = null);
+    double? HealthIndex = null, int? HealthStage = null, bool? OnsetDetected = null, string? Reason = null,
+    double? AiRulHours = null, double? PhysicsRulHours = null, double? MinerD = null, double? PhysicsHealthIndex = null,
+    string? PhysicsSource = null, bool? RulValid = null, string? RulNote = null, string? TimeBase = null);
 
 /// <summary>Body of POST /api/live/prediction: node window + AI result produced by COE/inference (Python NodeEngine).
 /// Timestamps are epoch milliseconds on the laptop clock (the node sends none; the node->laptop hop is not measurable).</summary>

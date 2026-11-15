@@ -5,7 +5,7 @@
     line  = predict(window, model)        # one-line string per window
 
 `window` = receiver dict: features (32), rpm, window_id, valid_channels, received_at (epoch s or ISO str).
-Env: NODE_CONTRACT (default v3e_node), NODE_BASELINE (JSON saved by NodeEngine.save_baseline; loaded if it exists, and
+Env: NODE_TIME_BASE (realtime|table; table = simulated rig_anchor replay, RUL/physics shown), NODE_CONTRACT (default v3e_node), NODE_BASELINE (JSON saved by NodeEngine.save_baseline; loaded if it exists, and
 re-saved whenever a new rpm baseline is captured), NODE_SETTLE_S / NODE_BASELINE_S (override 120 / 60 s).
 """
 from __future__ import annotations
@@ -22,7 +22,8 @@ def setup() -> NodeEngine:
     contract = os.environ.get("NODE_CONTRACT", "v3e_node")
     pol = {"settle_seconds": float(os.environ.get("NODE_SETTLE_S", 120)),
            "baseline_seconds": float(os.environ.get("NODE_BASELINE_S", 60))}
-    eng = NodeEngine(contract_file=f"model_contract_{contract}.json", policy=pol)
+    tb = os.environ.get("NODE_TIME_BASE", "realtime")      # "table" ONLY for the simulated-trajectory replay (rig_anchor); live node = realtime
+    eng = NodeEngine(contract_file=f"model_contract_{contract}.json", policy=pol, time_base=tb)
     p = os.environ.get("NODE_BASELINE")
     eng._baseline_path = p
     eng._saved_keys = set()
@@ -63,7 +64,10 @@ def predict_full(window: dict, model: NodeEngine):
             parts.append(f"B{b['bearing']} warming_up {b.get('reason', '')}")
             continue
         c = b["fault_class"]
-        parts.append(f"B{b['bearing']} {c} {b['class_probs'].get(c, 0):.2f} onset={'Y' if b.get('onset_detected') else 'n'}")
+        extra = ""
+        if b.get("rul_valid"):
+            extra = f" stage={b.get('health_stage')} AIrul={b['ai_rul_hours']:.1f}h phys={b['physics_rul_hours']:.1f}h"
+        parts.append(f"B{b['bearing']} {c} {b['class_probs'].get(c, 0):.2f} onset={'Y' if b.get('onset_detected') else 'n'}{extra}")
     if out["bearings"][0].get("status") != "ok" and "baseline_phase" in out:
         return out, f"warming_up {out['baseline_phase']} | {lat}"
     return out, f"w{msg['window_id']} {msg['rpm']:.0f}rpm | " + " | ".join(parts) + f" | {lat}"

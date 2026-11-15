@@ -114,6 +114,7 @@ class InferenceServer(ThreadingHTTPServer):
 BACKEND_URL = os.environ.get('BACKEND_URL', 'http://127.0.0.1:5080').rstrip('/')
 LOG_DIR = Path(os.environ.get('RIG_LOG_DIR', HERE.parents[1] / 'logs'))
 FWD_QUEUE_LIMIT = 20
+SIM_TAG = '[SIMULATION; rig-anchored replay]'
 
 
 def backend_body(window, out, took_ms, contract):
@@ -128,12 +129,19 @@ def backend_body(window, out, took_ms, contract):
                          'healthIndex': b.get('health_index') if ok else None,
                          'healthStage': b.get('health_stage') if ok else None,
                          'onsetDetected': b.get('onset_detected') if ok else None,
-                         'reason': b.get('reason')})
+                         'reason': b.get('reason'),
+                         # S9 fields (NodeEngine contracts with a RUL table cadence only; absent -> null -> dashboard n/a)
+                         'aiRulHours': b.get('ai_rul_hours'), 'physicsRulHours': b.get('physics_rul_hours'),
+                         'minerD': b.get('miner_d'), 'physicsHealthIndex': b.get('physics_health_index'),
+                         'physicsSource': b.get('physics_source'), 'rulValid': b.get('rul_valid'),
+                         'rulNote': b.get('rul_note'), 'timeBase': b.get('time_base')})
     now = time.time()
     return {'seq': window['sequence'], 'windowId': window['window_id'], 'rpm': float(window['rpm']),
             'validChannels': window['valid_channels'], 'deviceId': window['device_id'],
             'sessionId': window['session_id'], 'contract': contract,
-            'provenance': '[REPLAY of recorded rig data]' if window['replay'] else '[LIVE rig data]',
+            # a table time base (NODE_TIME_BASE=table) exists only for the simulated rig_anchor replay: never label it as rig data
+            'provenance': SIM_TAG if os.environ.get('NODE_TIME_BASE') == 'table' else
+                          ('[REPLAY of recorded rig data]' if window['replay'] else '[LIVE rig data]'),
             'features': window['features'], 'baselinePhase': (out or {}).get('baseline_phase'),
             'inferenceMs': round(took_ms, 3),
             'receivedAtMs': int(window['epoch_received'] * 1000), 'predictedAtMs': int(now * 1000),

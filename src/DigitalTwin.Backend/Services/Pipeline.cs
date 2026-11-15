@@ -122,16 +122,20 @@ public sealed class Pipeline
         {
             var ok = b.Status == "ok";
             var det = ok ? new BearingDetails(b.HealthStage ?? 0, b.OnsetDetected ?? false, "", Array.Empty<double>(), 0, 0, 0, 0) : null;
+            // RUL only when the engine marks it valid (simulated-trajectory replay, faulted bearing, stage >= 2); live node -> null -> n/a
+            double? rul = ok && b.RulValid == true && b.AiRulHours is double ai && double.IsFinite(ai) ? ai : null;
             return new BearingResult(b.Bearing, ok ? BearingStates.Ready : BearingStates.WarmingUp,
-                ok ? b.FaultClass : "warming_up", (b.Confidence ?? 0) * 100, b.HealthIndex, null, b.ClassProbs, 0, 0, det);
+                ok ? b.FaultClass : "warming_up", (b.Confidence ?? 0) * 100, b.HealthIndex, rul, b.ClassProbs, 0, 0, det);
         }).ToList();
+        var physRul = w.Bearings.Where(b => b.RulValid == true && b.PhysicsRulHours is double pr && double.IsFinite(pr))
+            .OrderBy(b => b.AiRulHours ?? double.MaxValue).Select(b => b.PhysicsRulHours).FirstOrDefault();
         PipelineState state;
         lock (_gate)
         {
             var info = new LiveInfo(w.Seq, w.WindowId, w.Rpm, w.ValidChannels, w.DeviceId, w.SessionId, w.Contract, w.Provenance,
                 w.Features, w.BaselinePhase, w.InferenceMs, w.ReceivedAtMs, w.PredictedAtMs, w.PostedAtMs, ackMs, w.PostsDropped, w.Bearings);
             var win = new WindowPayload((float)w.Rpm, w.Features.Select(x => (float)x).ToArray(), new float[4], 0);
-            state = new PipelineState(win, results, DateTimeOffset.UtcNow, w.InferenceMs, ++_liveSeen, null, info);
+            state = new PipelineState(win, results, DateTimeOffset.UtcNow, w.InferenceMs, ++_liveSeen, physRul, info);
             _store.Set(state);
         }
         if (w.ReceivedAtMs > 0) _lat.Record("live_recv_to_backend_ack", ackMs - w.ReceivedAtMs);
