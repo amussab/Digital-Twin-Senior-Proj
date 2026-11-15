@@ -3215,6 +3215,2798 @@
     "rig_anchor:u0359": "test"
    }
   },
+  "rig_anchor_test2": {
+   "composition": {
+    "test": {
+     "ball@1800": 16,
+     "cage@1800": 8,
+     "cage@3600": 8,
+     "healthy@1800": 8,
+     "healthy@3600": 8,
+     "inner_race@1800": 8,
+     "inner_race@3600": 8,
+     "outer_race@1800": 8,
+     "outer_race@3600": 8
+    },
+    "train": {
+     "ball@1800": 80,
+     "cage@1800": 40,
+     "cage@3600": 40,
+     "healthy@1800": 40,
+     "healthy@3600": 40,
+     "inner_race@1800": 40,
+     "inner_race@3600": 40,
+     "outer_race@1800": 40,
+     "outer_race@3600": 40
+    }
+   },
+   "control_units": {
+    "rig_anchor:u3000": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u3001": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3002": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3003": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3004": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u3005": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u3006": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3007": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3008": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3009": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u3010": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u3011": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3012": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3013": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3014": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u3015": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u3016": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3017": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3018": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3019": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u3020": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u3021": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3022": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3023": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3024": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u3025": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u3026": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3027": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3028": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3029": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u3030": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u3031": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3032": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3033": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3034": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u3035": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u3036": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3037": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3038": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3039": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u3040": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u3041": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3042": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3043": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3044": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u3045": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u3046": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3047": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3048": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3049": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u3050": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u3051": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3052": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3053": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3054": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u3055": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u3056": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3057": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3058": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3059": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u3060": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u3061": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3062": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3063": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3064": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u3065": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u3066": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3067": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3068": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3069": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u3070": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u3071": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3072": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u3073": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3074": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u3075": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u3076": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3077": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u3078": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u3079": {
+     "fault_class": "cage",
+     "rpm": 3600
+    }
+   },
+   "counts": {
+    "control_wrong_shape": 80,
+    "test": 80,
+    "train": 400
+   },
+   "created_utc": "2026-11-15T16:54:29+00:00",
+   "note": "[SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed] No real run-to-failure data exists for 4 of 5 fault classes. Anchors = 5 physical bearings (H-01 + one per fault); test units are held-out simulated trajectories, not held-out bearings; the damage-curve family is assumed. Registered before any v6 model is fitted; the fresh test units are scored once.",
+   "policy": "FRESH test units for v6_node (ids u1000-u1079), drawn only from the TEST pool blocks of rig_anchor.pools (last 20 % of each real run, the SAME real windows as the v5 test units); same shape OOD ranges as the registered rig_anchor test split; new per-unit seeds via new unit ids. NOT new bearings. Extra train units u2000-u2399 from the train pool blocks. control_wrong_shape: u3000-u3079.",
+   "shape_ranges": {
+    "control_wrong_shape": {
+     "a": [
+      0.85,
+      0.95
+     ],
+     "p": [
+      1.0,
+      1.2
+     ]
+    },
+    "test": {
+     "a": [
+      0.05,
+      0.6
+     ],
+     "p": [
+      1.5,
+      4.0
+     ]
+    },
+    "train": {
+     "a": [
+      0.2,
+      0.4
+     ],
+     "p": [
+      2.0,
+      3.0
+     ]
+    }
+   },
+   "unit_meta": {
+    "rig_anchor:u1000": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u1001": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1002": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1003": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1004": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u1005": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u1006": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1007": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1008": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1009": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u1010": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u1011": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1012": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1013": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1014": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u1015": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u1016": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1017": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1018": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1019": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u1020": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u1021": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1022": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1023": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1024": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u1025": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u1026": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1027": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1028": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1029": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u1030": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u1031": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1032": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1033": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1034": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u1035": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u1036": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1037": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1038": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1039": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u1040": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u1041": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1042": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1043": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1044": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u1045": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u1046": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1047": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1048": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1049": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u1050": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u1051": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1052": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1053": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1054": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u1055": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u1056": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1057": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1058": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1059": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u1060": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u1061": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1062": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1063": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1064": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u1065": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u1066": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1067": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1068": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1069": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u1070": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u1071": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1072": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u1073": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1074": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u1075": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u1076": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1077": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u1078": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u1079": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2000": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2001": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2002": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2003": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2004": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2005": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2006": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2007": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2008": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2009": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2010": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2011": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2012": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2013": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2014": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2015": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2016": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2017": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2018": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2019": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2020": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2021": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2022": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2023": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2024": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2025": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2026": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2027": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2028": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2029": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2030": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2031": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2032": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2033": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2034": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2035": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2036": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2037": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2038": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2039": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2040": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2041": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2042": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2043": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2044": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2045": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2046": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2047": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2048": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2049": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2050": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2051": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2052": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2053": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2054": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2055": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2056": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2057": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2058": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2059": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2060": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2061": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2062": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2063": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2064": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2065": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2066": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2067": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2068": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2069": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2070": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2071": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2072": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2073": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2074": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2075": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2076": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2077": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2078": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2079": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2080": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2081": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2082": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2083": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2084": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2085": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2086": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2087": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2088": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2089": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2090": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2091": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2092": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2093": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2094": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2095": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2096": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2097": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2098": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2099": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2100": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2101": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2102": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2103": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2104": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2105": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2106": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2107": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2108": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2109": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2110": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2111": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2112": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2113": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2114": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2115": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2116": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2117": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2118": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2119": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2120": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2121": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2122": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2123": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2124": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2125": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2126": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2127": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2128": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2129": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2130": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2131": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2132": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2133": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2134": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2135": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2136": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2137": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2138": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2139": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2140": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2141": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2142": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2143": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2144": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2145": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2146": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2147": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2148": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2149": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2150": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2151": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2152": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2153": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2154": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2155": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2156": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2157": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2158": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2159": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2160": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2161": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2162": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2163": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2164": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2165": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2166": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2167": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2168": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2169": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2170": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2171": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2172": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2173": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2174": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2175": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2176": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2177": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2178": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2179": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2180": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2181": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2182": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2183": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2184": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2185": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2186": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2187": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2188": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2189": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2190": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2191": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2192": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2193": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2194": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2195": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2196": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2197": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2198": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2199": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2200": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2201": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2202": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2203": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2204": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2205": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2206": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2207": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2208": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2209": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2210": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2211": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2212": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2213": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2214": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2215": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2216": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2217": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2218": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2219": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2220": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2221": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2222": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2223": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2224": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2225": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2226": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2227": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2228": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2229": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2230": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2231": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2232": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2233": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2234": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2235": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2236": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2237": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2238": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2239": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2240": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2241": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2242": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2243": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2244": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2245": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2246": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2247": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2248": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2249": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2250": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2251": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2252": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2253": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2254": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2255": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2256": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2257": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2258": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2259": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2260": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2261": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2262": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2263": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2264": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2265": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2266": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2267": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2268": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2269": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2270": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2271": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2272": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2273": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2274": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2275": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2276": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2277": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2278": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2279": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2280": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2281": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2282": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2283": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2284": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2285": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2286": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2287": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2288": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2289": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2290": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2291": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2292": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2293": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2294": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2295": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2296": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2297": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2298": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2299": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2300": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2301": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2302": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2303": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2304": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2305": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2306": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2307": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2308": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2309": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2310": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2311": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2312": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2313": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2314": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2315": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2316": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2317": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2318": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2319": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2320": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2321": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2322": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2323": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2324": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2325": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2326": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2327": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2328": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2329": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2330": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2331": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2332": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2333": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2334": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2335": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2336": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2337": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2338": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2339": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2340": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2341": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2342": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2343": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2344": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2345": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2346": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2347": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2348": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2349": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2350": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2351": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2352": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2353": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2354": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2355": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2356": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2357": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2358": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2359": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2360": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2361": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2362": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2363": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2364": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2365": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2366": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2367": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2368": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2369": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2370": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2371": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2372": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2373": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2374": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2375": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2376": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2377": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2378": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2379": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2380": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2381": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2382": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2383": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2384": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2385": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2386": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2387": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2388": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2389": {
+     "fault_class": "cage",
+     "rpm": 3600
+    },
+    "rig_anchor:u2390": {
+     "fault_class": "healthy",
+     "rpm": 1800
+    },
+    "rig_anchor:u2391": {
+     "fault_class": "inner_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2392": {
+     "fault_class": "outer_race",
+     "rpm": 1800
+    },
+    "rig_anchor:u2393": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2394": {
+     "fault_class": "cage",
+     "rpm": 1800
+    },
+    "rig_anchor:u2395": {
+     "fault_class": "healthy",
+     "rpm": 3600
+    },
+    "rig_anchor:u2396": {
+     "fault_class": "inner_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2397": {
+     "fault_class": "outer_race",
+     "rpm": 3600
+    },
+    "rig_anchor:u2398": {
+     "fault_class": "ball",
+     "rpm": 1800
+    },
+    "rig_anchor:u2399": {
+     "fault_class": "cage",
+     "rpm": 3600
+    }
+   },
+   "units": {
+    "rig_anchor:u1000": "test",
+    "rig_anchor:u1001": "test",
+    "rig_anchor:u1002": "test",
+    "rig_anchor:u1003": "test",
+    "rig_anchor:u1004": "test",
+    "rig_anchor:u1005": "test",
+    "rig_anchor:u1006": "test",
+    "rig_anchor:u1007": "test",
+    "rig_anchor:u1008": "test",
+    "rig_anchor:u1009": "test",
+    "rig_anchor:u1010": "test",
+    "rig_anchor:u1011": "test",
+    "rig_anchor:u1012": "test",
+    "rig_anchor:u1013": "test",
+    "rig_anchor:u1014": "test",
+    "rig_anchor:u1015": "test",
+    "rig_anchor:u1016": "test",
+    "rig_anchor:u1017": "test",
+    "rig_anchor:u1018": "test",
+    "rig_anchor:u1019": "test",
+    "rig_anchor:u1020": "test",
+    "rig_anchor:u1021": "test",
+    "rig_anchor:u1022": "test",
+    "rig_anchor:u1023": "test",
+    "rig_anchor:u1024": "test",
+    "rig_anchor:u1025": "test",
+    "rig_anchor:u1026": "test",
+    "rig_anchor:u1027": "test",
+    "rig_anchor:u1028": "test",
+    "rig_anchor:u1029": "test",
+    "rig_anchor:u1030": "test",
+    "rig_anchor:u1031": "test",
+    "rig_anchor:u1032": "test",
+    "rig_anchor:u1033": "test",
+    "rig_anchor:u1034": "test",
+    "rig_anchor:u1035": "test",
+    "rig_anchor:u1036": "test",
+    "rig_anchor:u1037": "test",
+    "rig_anchor:u1038": "test",
+    "rig_anchor:u1039": "test",
+    "rig_anchor:u1040": "test",
+    "rig_anchor:u1041": "test",
+    "rig_anchor:u1042": "test",
+    "rig_anchor:u1043": "test",
+    "rig_anchor:u1044": "test",
+    "rig_anchor:u1045": "test",
+    "rig_anchor:u1046": "test",
+    "rig_anchor:u1047": "test",
+    "rig_anchor:u1048": "test",
+    "rig_anchor:u1049": "test",
+    "rig_anchor:u1050": "test",
+    "rig_anchor:u1051": "test",
+    "rig_anchor:u1052": "test",
+    "rig_anchor:u1053": "test",
+    "rig_anchor:u1054": "test",
+    "rig_anchor:u1055": "test",
+    "rig_anchor:u1056": "test",
+    "rig_anchor:u1057": "test",
+    "rig_anchor:u1058": "test",
+    "rig_anchor:u1059": "test",
+    "rig_anchor:u1060": "test",
+    "rig_anchor:u1061": "test",
+    "rig_anchor:u1062": "test",
+    "rig_anchor:u1063": "test",
+    "rig_anchor:u1064": "test",
+    "rig_anchor:u1065": "test",
+    "rig_anchor:u1066": "test",
+    "rig_anchor:u1067": "test",
+    "rig_anchor:u1068": "test",
+    "rig_anchor:u1069": "test",
+    "rig_anchor:u1070": "test",
+    "rig_anchor:u1071": "test",
+    "rig_anchor:u1072": "test",
+    "rig_anchor:u1073": "test",
+    "rig_anchor:u1074": "test",
+    "rig_anchor:u1075": "test",
+    "rig_anchor:u1076": "test",
+    "rig_anchor:u1077": "test",
+    "rig_anchor:u1078": "test",
+    "rig_anchor:u1079": "test",
+    "rig_anchor:u2000": "train",
+    "rig_anchor:u2001": "train",
+    "rig_anchor:u2002": "train",
+    "rig_anchor:u2003": "train",
+    "rig_anchor:u2004": "train",
+    "rig_anchor:u2005": "train",
+    "rig_anchor:u2006": "train",
+    "rig_anchor:u2007": "train",
+    "rig_anchor:u2008": "train",
+    "rig_anchor:u2009": "train",
+    "rig_anchor:u2010": "train",
+    "rig_anchor:u2011": "train",
+    "rig_anchor:u2012": "train",
+    "rig_anchor:u2013": "train",
+    "rig_anchor:u2014": "train",
+    "rig_anchor:u2015": "train",
+    "rig_anchor:u2016": "train",
+    "rig_anchor:u2017": "train",
+    "rig_anchor:u2018": "train",
+    "rig_anchor:u2019": "train",
+    "rig_anchor:u2020": "train",
+    "rig_anchor:u2021": "train",
+    "rig_anchor:u2022": "train",
+    "rig_anchor:u2023": "train",
+    "rig_anchor:u2024": "train",
+    "rig_anchor:u2025": "train",
+    "rig_anchor:u2026": "train",
+    "rig_anchor:u2027": "train",
+    "rig_anchor:u2028": "train",
+    "rig_anchor:u2029": "train",
+    "rig_anchor:u2030": "train",
+    "rig_anchor:u2031": "train",
+    "rig_anchor:u2032": "train",
+    "rig_anchor:u2033": "train",
+    "rig_anchor:u2034": "train",
+    "rig_anchor:u2035": "train",
+    "rig_anchor:u2036": "train",
+    "rig_anchor:u2037": "train",
+    "rig_anchor:u2038": "train",
+    "rig_anchor:u2039": "train",
+    "rig_anchor:u2040": "train",
+    "rig_anchor:u2041": "train",
+    "rig_anchor:u2042": "train",
+    "rig_anchor:u2043": "train",
+    "rig_anchor:u2044": "train",
+    "rig_anchor:u2045": "train",
+    "rig_anchor:u2046": "train",
+    "rig_anchor:u2047": "train",
+    "rig_anchor:u2048": "train",
+    "rig_anchor:u2049": "train",
+    "rig_anchor:u2050": "train",
+    "rig_anchor:u2051": "train",
+    "rig_anchor:u2052": "train",
+    "rig_anchor:u2053": "train",
+    "rig_anchor:u2054": "train",
+    "rig_anchor:u2055": "train",
+    "rig_anchor:u2056": "train",
+    "rig_anchor:u2057": "train",
+    "rig_anchor:u2058": "train",
+    "rig_anchor:u2059": "train",
+    "rig_anchor:u2060": "train",
+    "rig_anchor:u2061": "train",
+    "rig_anchor:u2062": "train",
+    "rig_anchor:u2063": "train",
+    "rig_anchor:u2064": "train",
+    "rig_anchor:u2065": "train",
+    "rig_anchor:u2066": "train",
+    "rig_anchor:u2067": "train",
+    "rig_anchor:u2068": "train",
+    "rig_anchor:u2069": "train",
+    "rig_anchor:u2070": "train",
+    "rig_anchor:u2071": "train",
+    "rig_anchor:u2072": "train",
+    "rig_anchor:u2073": "train",
+    "rig_anchor:u2074": "train",
+    "rig_anchor:u2075": "train",
+    "rig_anchor:u2076": "train",
+    "rig_anchor:u2077": "train",
+    "rig_anchor:u2078": "train",
+    "rig_anchor:u2079": "train",
+    "rig_anchor:u2080": "train",
+    "rig_anchor:u2081": "train",
+    "rig_anchor:u2082": "train",
+    "rig_anchor:u2083": "train",
+    "rig_anchor:u2084": "train",
+    "rig_anchor:u2085": "train",
+    "rig_anchor:u2086": "train",
+    "rig_anchor:u2087": "train",
+    "rig_anchor:u2088": "train",
+    "rig_anchor:u2089": "train",
+    "rig_anchor:u2090": "train",
+    "rig_anchor:u2091": "train",
+    "rig_anchor:u2092": "train",
+    "rig_anchor:u2093": "train",
+    "rig_anchor:u2094": "train",
+    "rig_anchor:u2095": "train",
+    "rig_anchor:u2096": "train",
+    "rig_anchor:u2097": "train",
+    "rig_anchor:u2098": "train",
+    "rig_anchor:u2099": "train",
+    "rig_anchor:u2100": "train",
+    "rig_anchor:u2101": "train",
+    "rig_anchor:u2102": "train",
+    "rig_anchor:u2103": "train",
+    "rig_anchor:u2104": "train",
+    "rig_anchor:u2105": "train",
+    "rig_anchor:u2106": "train",
+    "rig_anchor:u2107": "train",
+    "rig_anchor:u2108": "train",
+    "rig_anchor:u2109": "train",
+    "rig_anchor:u2110": "train",
+    "rig_anchor:u2111": "train",
+    "rig_anchor:u2112": "train",
+    "rig_anchor:u2113": "train",
+    "rig_anchor:u2114": "train",
+    "rig_anchor:u2115": "train",
+    "rig_anchor:u2116": "train",
+    "rig_anchor:u2117": "train",
+    "rig_anchor:u2118": "train",
+    "rig_anchor:u2119": "train",
+    "rig_anchor:u2120": "train",
+    "rig_anchor:u2121": "train",
+    "rig_anchor:u2122": "train",
+    "rig_anchor:u2123": "train",
+    "rig_anchor:u2124": "train",
+    "rig_anchor:u2125": "train",
+    "rig_anchor:u2126": "train",
+    "rig_anchor:u2127": "train",
+    "rig_anchor:u2128": "train",
+    "rig_anchor:u2129": "train",
+    "rig_anchor:u2130": "train",
+    "rig_anchor:u2131": "train",
+    "rig_anchor:u2132": "train",
+    "rig_anchor:u2133": "train",
+    "rig_anchor:u2134": "train",
+    "rig_anchor:u2135": "train",
+    "rig_anchor:u2136": "train",
+    "rig_anchor:u2137": "train",
+    "rig_anchor:u2138": "train",
+    "rig_anchor:u2139": "train",
+    "rig_anchor:u2140": "train",
+    "rig_anchor:u2141": "train",
+    "rig_anchor:u2142": "train",
+    "rig_anchor:u2143": "train",
+    "rig_anchor:u2144": "train",
+    "rig_anchor:u2145": "train",
+    "rig_anchor:u2146": "train",
+    "rig_anchor:u2147": "train",
+    "rig_anchor:u2148": "train",
+    "rig_anchor:u2149": "train",
+    "rig_anchor:u2150": "train",
+    "rig_anchor:u2151": "train",
+    "rig_anchor:u2152": "train",
+    "rig_anchor:u2153": "train",
+    "rig_anchor:u2154": "train",
+    "rig_anchor:u2155": "train",
+    "rig_anchor:u2156": "train",
+    "rig_anchor:u2157": "train",
+    "rig_anchor:u2158": "train",
+    "rig_anchor:u2159": "train",
+    "rig_anchor:u2160": "train",
+    "rig_anchor:u2161": "train",
+    "rig_anchor:u2162": "train",
+    "rig_anchor:u2163": "train",
+    "rig_anchor:u2164": "train",
+    "rig_anchor:u2165": "train",
+    "rig_anchor:u2166": "train",
+    "rig_anchor:u2167": "train",
+    "rig_anchor:u2168": "train",
+    "rig_anchor:u2169": "train",
+    "rig_anchor:u2170": "train",
+    "rig_anchor:u2171": "train",
+    "rig_anchor:u2172": "train",
+    "rig_anchor:u2173": "train",
+    "rig_anchor:u2174": "train",
+    "rig_anchor:u2175": "train",
+    "rig_anchor:u2176": "train",
+    "rig_anchor:u2177": "train",
+    "rig_anchor:u2178": "train",
+    "rig_anchor:u2179": "train",
+    "rig_anchor:u2180": "train",
+    "rig_anchor:u2181": "train",
+    "rig_anchor:u2182": "train",
+    "rig_anchor:u2183": "train",
+    "rig_anchor:u2184": "train",
+    "rig_anchor:u2185": "train",
+    "rig_anchor:u2186": "train",
+    "rig_anchor:u2187": "train",
+    "rig_anchor:u2188": "train",
+    "rig_anchor:u2189": "train",
+    "rig_anchor:u2190": "train",
+    "rig_anchor:u2191": "train",
+    "rig_anchor:u2192": "train",
+    "rig_anchor:u2193": "train",
+    "rig_anchor:u2194": "train",
+    "rig_anchor:u2195": "train",
+    "rig_anchor:u2196": "train",
+    "rig_anchor:u2197": "train",
+    "rig_anchor:u2198": "train",
+    "rig_anchor:u2199": "train",
+    "rig_anchor:u2200": "train",
+    "rig_anchor:u2201": "train",
+    "rig_anchor:u2202": "train",
+    "rig_anchor:u2203": "train",
+    "rig_anchor:u2204": "train",
+    "rig_anchor:u2205": "train",
+    "rig_anchor:u2206": "train",
+    "rig_anchor:u2207": "train",
+    "rig_anchor:u2208": "train",
+    "rig_anchor:u2209": "train",
+    "rig_anchor:u2210": "train",
+    "rig_anchor:u2211": "train",
+    "rig_anchor:u2212": "train",
+    "rig_anchor:u2213": "train",
+    "rig_anchor:u2214": "train",
+    "rig_anchor:u2215": "train",
+    "rig_anchor:u2216": "train",
+    "rig_anchor:u2217": "train",
+    "rig_anchor:u2218": "train",
+    "rig_anchor:u2219": "train",
+    "rig_anchor:u2220": "train",
+    "rig_anchor:u2221": "train",
+    "rig_anchor:u2222": "train",
+    "rig_anchor:u2223": "train",
+    "rig_anchor:u2224": "train",
+    "rig_anchor:u2225": "train",
+    "rig_anchor:u2226": "train",
+    "rig_anchor:u2227": "train",
+    "rig_anchor:u2228": "train",
+    "rig_anchor:u2229": "train",
+    "rig_anchor:u2230": "train",
+    "rig_anchor:u2231": "train",
+    "rig_anchor:u2232": "train",
+    "rig_anchor:u2233": "train",
+    "rig_anchor:u2234": "train",
+    "rig_anchor:u2235": "train",
+    "rig_anchor:u2236": "train",
+    "rig_anchor:u2237": "train",
+    "rig_anchor:u2238": "train",
+    "rig_anchor:u2239": "train",
+    "rig_anchor:u2240": "train",
+    "rig_anchor:u2241": "train",
+    "rig_anchor:u2242": "train",
+    "rig_anchor:u2243": "train",
+    "rig_anchor:u2244": "train",
+    "rig_anchor:u2245": "train",
+    "rig_anchor:u2246": "train",
+    "rig_anchor:u2247": "train",
+    "rig_anchor:u2248": "train",
+    "rig_anchor:u2249": "train",
+    "rig_anchor:u2250": "train",
+    "rig_anchor:u2251": "train",
+    "rig_anchor:u2252": "train",
+    "rig_anchor:u2253": "train",
+    "rig_anchor:u2254": "train",
+    "rig_anchor:u2255": "train",
+    "rig_anchor:u2256": "train",
+    "rig_anchor:u2257": "train",
+    "rig_anchor:u2258": "train",
+    "rig_anchor:u2259": "train",
+    "rig_anchor:u2260": "train",
+    "rig_anchor:u2261": "train",
+    "rig_anchor:u2262": "train",
+    "rig_anchor:u2263": "train",
+    "rig_anchor:u2264": "train",
+    "rig_anchor:u2265": "train",
+    "rig_anchor:u2266": "train",
+    "rig_anchor:u2267": "train",
+    "rig_anchor:u2268": "train",
+    "rig_anchor:u2269": "train",
+    "rig_anchor:u2270": "train",
+    "rig_anchor:u2271": "train",
+    "rig_anchor:u2272": "train",
+    "rig_anchor:u2273": "train",
+    "rig_anchor:u2274": "train",
+    "rig_anchor:u2275": "train",
+    "rig_anchor:u2276": "train",
+    "rig_anchor:u2277": "train",
+    "rig_anchor:u2278": "train",
+    "rig_anchor:u2279": "train",
+    "rig_anchor:u2280": "train",
+    "rig_anchor:u2281": "train",
+    "rig_anchor:u2282": "train",
+    "rig_anchor:u2283": "train",
+    "rig_anchor:u2284": "train",
+    "rig_anchor:u2285": "train",
+    "rig_anchor:u2286": "train",
+    "rig_anchor:u2287": "train",
+    "rig_anchor:u2288": "train",
+    "rig_anchor:u2289": "train",
+    "rig_anchor:u2290": "train",
+    "rig_anchor:u2291": "train",
+    "rig_anchor:u2292": "train",
+    "rig_anchor:u2293": "train",
+    "rig_anchor:u2294": "train",
+    "rig_anchor:u2295": "train",
+    "rig_anchor:u2296": "train",
+    "rig_anchor:u2297": "train",
+    "rig_anchor:u2298": "train",
+    "rig_anchor:u2299": "train",
+    "rig_anchor:u2300": "train",
+    "rig_anchor:u2301": "train",
+    "rig_anchor:u2302": "train",
+    "rig_anchor:u2303": "train",
+    "rig_anchor:u2304": "train",
+    "rig_anchor:u2305": "train",
+    "rig_anchor:u2306": "train",
+    "rig_anchor:u2307": "train",
+    "rig_anchor:u2308": "train",
+    "rig_anchor:u2309": "train",
+    "rig_anchor:u2310": "train",
+    "rig_anchor:u2311": "train",
+    "rig_anchor:u2312": "train",
+    "rig_anchor:u2313": "train",
+    "rig_anchor:u2314": "train",
+    "rig_anchor:u2315": "train",
+    "rig_anchor:u2316": "train",
+    "rig_anchor:u2317": "train",
+    "rig_anchor:u2318": "train",
+    "rig_anchor:u2319": "train",
+    "rig_anchor:u2320": "train",
+    "rig_anchor:u2321": "train",
+    "rig_anchor:u2322": "train",
+    "rig_anchor:u2323": "train",
+    "rig_anchor:u2324": "train",
+    "rig_anchor:u2325": "train",
+    "rig_anchor:u2326": "train",
+    "rig_anchor:u2327": "train",
+    "rig_anchor:u2328": "train",
+    "rig_anchor:u2329": "train",
+    "rig_anchor:u2330": "train",
+    "rig_anchor:u2331": "train",
+    "rig_anchor:u2332": "train",
+    "rig_anchor:u2333": "train",
+    "rig_anchor:u2334": "train",
+    "rig_anchor:u2335": "train",
+    "rig_anchor:u2336": "train",
+    "rig_anchor:u2337": "train",
+    "rig_anchor:u2338": "train",
+    "rig_anchor:u2339": "train",
+    "rig_anchor:u2340": "train",
+    "rig_anchor:u2341": "train",
+    "rig_anchor:u2342": "train",
+    "rig_anchor:u2343": "train",
+    "rig_anchor:u2344": "train",
+    "rig_anchor:u2345": "train",
+    "rig_anchor:u2346": "train",
+    "rig_anchor:u2347": "train",
+    "rig_anchor:u2348": "train",
+    "rig_anchor:u2349": "train",
+    "rig_anchor:u2350": "train",
+    "rig_anchor:u2351": "train",
+    "rig_anchor:u2352": "train",
+    "rig_anchor:u2353": "train",
+    "rig_anchor:u2354": "train",
+    "rig_anchor:u2355": "train",
+    "rig_anchor:u2356": "train",
+    "rig_anchor:u2357": "train",
+    "rig_anchor:u2358": "train",
+    "rig_anchor:u2359": "train",
+    "rig_anchor:u2360": "train",
+    "rig_anchor:u2361": "train",
+    "rig_anchor:u2362": "train",
+    "rig_anchor:u2363": "train",
+    "rig_anchor:u2364": "train",
+    "rig_anchor:u2365": "train",
+    "rig_anchor:u2366": "train",
+    "rig_anchor:u2367": "train",
+    "rig_anchor:u2368": "train",
+    "rig_anchor:u2369": "train",
+    "rig_anchor:u2370": "train",
+    "rig_anchor:u2371": "train",
+    "rig_anchor:u2372": "train",
+    "rig_anchor:u2373": "train",
+    "rig_anchor:u2374": "train",
+    "rig_anchor:u2375": "train",
+    "rig_anchor:u2376": "train",
+    "rig_anchor:u2377": "train",
+    "rig_anchor:u2378": "train",
+    "rig_anchor:u2379": "train",
+    "rig_anchor:u2380": "train",
+    "rig_anchor:u2381": "train",
+    "rig_anchor:u2382": "train",
+    "rig_anchor:u2383": "train",
+    "rig_anchor:u2384": "train",
+    "rig_anchor:u2385": "train",
+    "rig_anchor:u2386": "train",
+    "rig_anchor:u2387": "train",
+    "rig_anchor:u2388": "train",
+    "rig_anchor:u2389": "train",
+    "rig_anchor:u2390": "train",
+    "rig_anchor:u2391": "train",
+    "rig_anchor:u2392": "train",
+    "rig_anchor:u2393": "train",
+    "rig_anchor:u2394": "train",
+    "rig_anchor:u2395": "train",
+    "rig_anchor:u2396": "train",
+    "rig_anchor:u2397": "train",
+    "rig_anchor:u2398": "train",
+    "rig_anchor:u2399": "train"
+   }
+  },
   "rig_real": {
    "counts": {
     "heldout": 0,
