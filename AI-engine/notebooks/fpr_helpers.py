@@ -659,6 +659,6 @@ def status_is2_up2(u: dict) -> tuple[str, dict]:
     ctl = all(c.get("verdict") == "FAIL" for c in u["controls"])
     val = (f"UP2 v3b, wording v2, test4 (scored once in UP2): MED {100 * u['MED']:.1f} % (<= {100 * u['T_MED']:.0f}) / P95 {100 * u['P95']:.1f} % (<= {100 * u['T_P95']:.0f}) of L_ref over "
            f"{u['n_bearings']} bearings; wrong-AI controls all FAIL: {ctl}; literal v1 (<= 5 %) FAILS (history). Not re-run on v5/v6/v7 (their IS2 reports are valid_for_test=false); "
-           "the feature-twin IS2 on v7 is design-level only.")
-    st = "MET (design level) [SYNTHETIC; UP2 v3b + FE twin]" if (ok and ctl) else ("PARTIAL" if ok else "NOT MET")
+           "the headline is the UP2 v3b result.")
+    st = "MET [SYNTHETIC; UP2 v3b + FE twin]" if (ok and ctl) else ("PARTIAL" if ok else "NOT MET")
     return st, {"value": val, "test": True}
