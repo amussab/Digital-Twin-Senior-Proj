@@ -8,13 +8,14 @@ For flashing without installing the build tools. How to flash: [`../../ICS_START
 | `coe_node_stm32_LIVE.hex` | STM32 (NUCLEO-H755ZI-Q), both cores, LIVE mode | STM32CubeProgrammer | in the file (CM7 0x08000000, CM4 0x08100000) |
 | `coe_node_esp32.bin` | ESP32-C6 (nanoESP32-C6): bootloader + partition table + app in one file | esptool-js web page or `esptool` | **0x0** |
 
-Built 14 Nov 2026 from `COE/firmware` at commit `f26b05d` (machine speed chosen on the laptop,
-1750/3600 RPM, start 1750). The ESP32 file has no hotspot settings: it runs only its own Wi-Fi
-**COE-NODE**. SHA-256:
+Built 16 Nov 2026 from `COE/firmware` at commit `bce7dcc`: the node measures the machine speed
+from the Keyphasor (ADC channel 7, no speed to set) and sends both proximity probes' values with
+the 32 features (packet schema 2, 204 bytes); bearing profile 3 (RK4 S6700). The ESP32 file has
+no hotspot settings: it runs only its own Wi-Fi **COE-NODE**. SHA-256:
 
 ```
-c1b388013896051f3b19db5a4e6fe1e69c412614ab5bf98ba08e322ecb5c349c  coe_node_stm32_LIVE.hex
-ce8a2afbb16189bf4796166d3904ec48612cf2f6d5bf1b3740ebacbe3b5d0dbf  coe_node_esp32.bin
+7d4a019ea3d204d1fa266a862c92a66b40b2b493f725356a0e53accf01e5418e  coe_node_stm32_LIVE.hex
+1ff562c54035b6437662138b8d9f6bde2b3251b105abda57b8ba7e85959594c7  coe_node_esp32.bin
 ```
 
 Command-line flashing (instead of the apps in the guide):
