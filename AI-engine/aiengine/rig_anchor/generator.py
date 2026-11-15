@@ -59,24 +59,32 @@ def _shape_ranges(split: str) -> dict:
     return K.SHAPE_TEST if split == "test" else K.SHAPE_TRAIN
 
 
-def generate_unit(spec: dict, pools: P.Pools, late: dict | None = None, shape_override: dict | None = None) -> pd.DataFrame:
+def generate_unit(spec: dict, pools: P.Pools, late: dict | None = None, shape_override: dict | None = None,
+                  profile: dict | None = None) -> pd.DataFrame:
     """-> per-bearing rows (2 per window) with OUT_COLUMNS. Deterministic for the spec's unit_id."""
     late = late or P.load_late_profile()
     uid, split, cls, rpm = spec["unit_id"], spec["split"], spec["fault_class"], int(spec["rpm"])
     rng = np.random.default_rng(unit_seed(uid))
     healthy = cls == "healthy"
-    ranges = shape_override or _shape_ranges(split)
+    profile = profile or {}
+    if shape_override:
+        ranges = shape_override
+    elif split == "test":
+        ranges = profile.get("shape_test", K.SHAPE_TEST)
+    else:
+        ranges = profile.get("shape_train", K.SHAPE_TRAIN)
+    life_sigma = profile.get("life_sigma", K.LIFE_SIGMA)
     a = float(rng.uniform(*ranges["a"]))
     pw = float(rng.uniform(*ranges["p"]))
-    late_scale = float(np.exp(rng.normal(0, K.LATE_SIGMA[split])))
+    late_scale = float(np.exp(rng.normal(0, profile.get("late_sigma", K.LATE_SIGMA[split]))))
     if healthy:
         n_h, n_d = int(rng.integers(K.HEALTHY_UNIT_WINDOWS[0], K.HEALTHY_UNIT_WINDOWS[1] + 1)), 0
         sev, u_anchor = 0, np.nan
     else:
         sev = pools.severity(cls)
-        u_anchor = float(K.U_ANCHOR[sev] + rng.uniform(-K.U_ANCHOR_JITTER, K.U_ANCHOR_JITTER))
+        u_anchor = float(K.U_ANCHOR[sev] + rng.uniform(-profile.get("u_jitter", K.U_ANCHOR_JITTER), profile.get("u_jitter", K.U_ANCHOR_JITTER)))
         n_h = int(rng.integers(K.RUNIN_WINDOWS[0], K.RUNIN_WINDOWS[1] + 1))
-        life_h = scale.median_life_hours(rpm) * float(np.exp(rng.normal(0, K.LIFE_SIGMA)))
+        life_h = scale.median_life_hours(rpm) * float(np.exp(rng.normal(0, life_sigma)))
         n_d = int(np.clip(round(life_h / K.CADENCE_H), *K.LIFE_CLIP_WINDOWS))
     n = n_h + n_d
     i = np.arange(n)
@@ -162,11 +170,12 @@ def generate_unit(spec: dict, pools: P.Pools, late: dict | None = None, shape_ov
     return pd.concat(frames, ignore_index=True)[OUT_COLUMNS]
 
 
-def build(pools: P.Pools | None = None, plan: list[dict] | None = None, shape_override: dict | None = None) -> pd.DataFrame:
+def build(pools: P.Pools | None = None, plan: list[dict] | None = None, shape_override: dict | None = None,
+          profile: dict | None = None) -> pd.DataFrame:
     pools = pools or P.Pools()
     late = P.load_late_profile()
     plan = plan or plan_units()
-    df = pd.concat([generate_unit(s, pools, late, shape_override) for s in plan], ignore_index=True)
+    df = pd.concat([generate_unit(s, pools, late, shape_override, profile) for s in plan], ignore_index=True)
     df.attrs["provenance"] = {"provenance": K.PROVENANCE, "limits": K.LIMITS, "seed": K.MASTER_SEED, "units": len(plan),
                               "cadence_hours": K.CADENCE_H, "baseline_windows": K.BASELINE_WINDOWS, "b2x_policy": R.B2X_POLICY}
     return df
