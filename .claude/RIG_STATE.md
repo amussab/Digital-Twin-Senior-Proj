@@ -5,6 +5,7 @@ DONE: flashed our `release/rig_runtime_config` (24 V ON + ST-LINK; 24 V OFF fail
 (`node_config.py --query` -> rpm 1800 + new bearing orders). ESP32 NOT reflashed (subagent verdict: COE's new ESP32 firmware is only a speed relay
 we don't use; COE's prebuilt STM32 hex has OLD bearing orders -> do not use). Open COE items: port his PD6 RX-error fix; STM32 rebooted twice
 (once at 3600 rpm, once during the bearing failure) -> node reverts to 1800 rpm default after any reboot, check `window_id` resets.
+DATA INVENTORY (per-run table, formats, all locations): `Repo/rig_data/README.md`. The raw data is git-ignored (not in the repo): only on disk in `Repo/DT-main/COE/training/training_data` + backup `Repo/rig_data/2026-11-14_training_data`.
 Data (`COE/training/training_data`, backup `Repo/rig_data/2026-11-14_training_data`): healthy H-01 (1800 baseline + first 1800 run as healthy + 3600 baseline),
 inner (green, IR-1), outer (white, OR-1), cage (black, CA-1) at 1800+3600, ball (gold, BA-1) at 1800 only. ONE bearing per fault; severities ESTIMATED
 (inner/outer 3, cage/ball 2), notes say so. Housing 1 = swapped bearing, housing 2 = always-healthy bearing. B2X = copy of B1Y (other housing) ->
