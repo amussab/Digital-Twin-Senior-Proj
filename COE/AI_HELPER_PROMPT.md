@@ -42,5 +42,5 @@ Facts you may need:
   "python training_recorder.py" in COE/training, open http://localhost:8000.
   Choose the machine speed 1750 or 3600 RPM on the page AND set the machine's speed controller to
   the same value; wait for "Node confirmed". Then choose the bearing condition and record.
-- B2X is a copy of B1Y (the 4th sensor has no cable).
+- All four sensors are independent (B1X, B1Y, B2X, B2Y). Bearing profile 3 = the new RK4 bearings.
 ```

@@ -96,7 +96,7 @@ That's why the 24 V is off and its 5 V wire is unplugged during this part.
    ```
    The first time, Windows asks about the firewall: click **Allow**.
 3. Open **http://localhost:8000** in the browser. The pill at the top turns green:
-   **"Data arriving: 1750 RPM, 4 of 4 channels OK"** (or 3 of 4, see below).
+   **"Data arriving: 1750 RPM, 4 of 4 channels OK"**.
 4. **1. Machine speed**: click **1750 RPM** or **3600 RPM**, and set the **machine's speed
    controller to the same speed**. Wait for the green line **"Node confirmed: computing features
    for ... RPM"** (a few seconds).
@@ -110,8 +110,9 @@ That's why the 24 V is off and its 5 V wire is unplugged during this part.
    `COE/training/training_data/`. Copy that folder somewhere safe: it's not uploaded to GitHub.
 
 About the data: one row per window, 32 features (`B1X_rms` … `B2Y_bpfi`, units in `COE/README.md`).
-The `rpm` column is the speed the node used for that window. **B2X is a copy of B1Y** (the 4th
-sensor has no cable), so the page may count it as a channel, but don't treat it as a separate sensor.
+The `rpm` column is the speed the node used for that window. All four channels are independent
+sensors (since 15 Nov 2026). Since 16 Nov 2026 the machine has new bearings (S6700) and the node
+uses **bearing profile 3**: `bsf` is the ball band at 2 × BSF. Don't mix older recordings with these.
 
 When finished: **Ctrl+C** in the terminal, then switch the 24 V supply off.
 

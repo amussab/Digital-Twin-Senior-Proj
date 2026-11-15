@@ -45,7 +45,10 @@ Design documents for the node: `Project architecture/COE/`.
 - 32 features, always in this order: for each channel `B1X, B1Y, B2X, B2Y`, the features
   `rms, kurtosis, crest, envelope_rms, ftf, bsf, bpfo, bpfi`. Names: `B1X_rms` … `B2Y_bpfi`.
 - rms, envelope_rms and the four band values are in **g**; kurtosis and crest are ratios.
-- **B2X is a copy of B1Y**: the 4th sensor has no cable, so don't treat B2X as independent.
+- All four channels are independent sensors (since 15 Nov 2026; before that B2X was a copy of B1Y).
+- **Bearing profile 3** (since 16 Nov 2026, new RK4 bearings, S6700): the band features are at
+  FTF 0.452, **bsf = 2 × BSF = 10.28**, BPFO 4.970, BPFI 6.030 times the shaft speed. Each packet
+  carries `bearing_profile`; never mix profile-1 (old bearing) data with profile-3 data.
 - **Machine speed: 1750 or 3600 RPM.** Choose it in the training page ("Machine speed") or with
   `python inference_receiver.py --rpm 3600`, and set the machine's speed controller to the same value.
   The node starts at 1750 after power-up and switches within a few seconds; each window's `rpm`
