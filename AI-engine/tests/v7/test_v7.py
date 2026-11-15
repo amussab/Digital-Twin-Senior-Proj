@@ -30,7 +30,7 @@ def test_default_profile_is_identity(pools):
     c = G.generate_unit(s, pools, profile={})
     d = G.generate_unit(s, pools, profile=CP.HARD)
     for o in (b, c, d):
-        assert np.array_equal(a.to_numpy(), o.to_numpy())
+        assert a.equals(o)
 
 
 def test_profile_changes_only_what_it_declares(pools):
