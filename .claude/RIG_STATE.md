@@ -167,3 +167,8 @@ AI-engine/data/cache_up2, AI-engine/checkpoints/up2_v3.
   (120 replayed real windows -> receiver -> NodeEngine -> backend /api/live/latest) OK.
 - Flash files: COE/firmware/stm32/release/rig_runtime_config (hash-verified). Runtime RPM/BEARING/CONFIG? untested on hardware.
 - Known dashboard nit: "AI RUL Trend" shows -1 hours on node source (should be n/a); header said "Disconnected" in headless screenshot.
+
+# FPR session (2026-11-15, FPR = 2026-11-16) — resume ledger
+Plan: `.claude/FPR_PLAN.md` (+ REVISION 1 after critique, binding). User decisions: anchored-sim RUL set (tagged), no more rig time, extend twin + re-freeze IS2, no merge of origin/main.
+Honest ceiling: S7/IS3 Rank 6, IS2 Rank 3-6 (sim-anchored, curve assumed); live demo Rank 9 for the pipeline only. Tell the user.
+Status: [ ] generator rig_anchor (agent) [ ] feature twin (agent) [ ] v5 RUL head + baseline [ ] v5 classifier/stage [ ] IS2 eval [ ] integration [ ] evidence + reviewer
