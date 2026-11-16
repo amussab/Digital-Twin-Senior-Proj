@@ -64,7 +64,7 @@ FEATURE_COLUMNS = [f'{channel}_{feature}' for channel in CHANNELS for feature in
 # They are empty for windows from old firmware (schema 1). The latency columns (us) are
 # filled from schema 3 firmware on (the node's part of the end-to-end latency).
 SHAFT_COLUMNS = (['schema_version', 'measured_rpm', 'revolutions', 'shaft_flags'] + host_receiver.SHAFT_FIELDS
-                 + host_receiver.LATENCY_FIELDS)
+                 + host_receiver.LATENCY_FIELDS + ['sample_rate_hz'])
 CSV_COLUMNS = ['run_id', 'label', 'note', 'received_at', 'rpm', 'window_id', 'sequence',
                'device_id', 'valid_channels'] + FEATURE_COLUMNS + SHAFT_COLUMNS
 
@@ -106,7 +106,7 @@ def rpm_text(rpm_range):
 
 def shaft_view(message):
     """Keyphasor speed and probe values of a window for the page (None for old firmware)."""
-    if message.get('schema_version') != 2:
+    if message.get('schema_version', 1) < 2:  # schema 2 and 3 carry the shaft values
         return {'measured_rpm': None}
     flags = message.get('shaft_flags', 0)
     probes = []
@@ -115,7 +115,9 @@ def shaft_view(message):
         probes.append(dict(values, name=probe.replace('prox', 'PROX '),
                            valid=bool(flags & (2 << index)), x1=bool(flags & (8 << index))))
     return {'measured_rpm': message.get('measured_rpm'), 'revolutions': message.get('revolutions'),
-            'speed_measured': bool(flags & 1), 'probes': probes}
+            'speed_measured': bool(flags & 1), 'probes': probes,
+            'sample_rate_hz': message.get('sample_rate_hz'),  # schema 3
+            'node_latency_ms': (message['node_latency_us'] / 1000 if 'node_latency_us' in message else None)}
 
 
 class Recorder:
@@ -608,7 +610,9 @@ function renderSpeed() {
   }
   if (lp.speed_measured) {
     s.className = 'speedstate ok';
-    s.textContent = 'Speed (Keyphasor): ' + num(lp.measured_rpm, 1) + ' RPM, ' + lp.revolutions + ' turns in the last window';
+    s.textContent = 'Speed (Keyphasor): ' + num(lp.measured_rpm, 1) + ' RPM, ' + lp.revolutions + ' turns in the last window' +
+      (lp.sample_rate_hz != null ? ', sampling ' + num(lp.sample_rate_hz, 1) + ' samples/s per channel' : '') +
+      (lp.node_latency_ms != null ? ', node latency ' + num(lp.node_latency_ms, 0) + ' ms' : '');
   } else {
     s.className = 'speedstate wait';
     s.textContent = 'Speed: the Keyphasor gives no steady speed (check the Keyphasor probe on channel 7).';

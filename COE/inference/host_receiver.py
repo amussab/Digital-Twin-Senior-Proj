@@ -62,7 +62,8 @@ def validate_shaft(message):
 
 
 def validate_latency(message):
-    """Schema 3: whole microseconds; the STM32 part is at least 1 us and node is the sum."""
+    """Schema 3: latency in whole microseconds (STM32 part >= 1 us, node = the sum) and
+    the ADC sample rate per channel (sample_rate_hz)."""
     for name in LATENCY_FIELDS:
         value = message.get(name)
         if type(value) is not int or not 0 <= value <= 0xFFFFFFFF:
@@ -71,6 +72,8 @@ def validate_latency(message):
         raise ValueError('stm_latency_us must be at least 1')
     if message['node_latency_us'] != sum(message[name] for name in LATENCY_FIELDS[:4]):
         raise ValueError('node_latency_us must be the sum of the other four')
+    if not 1000 <= number(message, 'sample_rate_hz') <= 200000:
+        raise ValueError('sample_rate_hz must be 1000..200000')
 
 
 def validate_vector(message):

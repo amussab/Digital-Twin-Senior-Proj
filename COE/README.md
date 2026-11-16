@@ -56,6 +56,8 @@ Design documents for the node: `Project architecture/COE/`.
   Keyphasor on ADC channel 7 and computes the features for the speed it measures (any 60–4000 RPM;
   the rig runs 1750 and 3600). `rpm` is that speed in whole RPM; `measured_rpm` is the exact mean
   speed of the window. A window is sent only while the speed is steady (within 1 %).
+- **Sampling and window** (`schema_version` 3): `sample_rate_hz` = ADC samples per second per channel
+  (29998.5), `revolutions` = whole shaft turns in the window (about 20).
 - **Shaft values for the digital twin** (same JSON, `schema_version` 2 and 3): `measured_rpm`,
   `revolutions`, `shaft_flags`, and per proximity probe (`prox1` = AIN5, `prox3` = AIN6):
   `_gap_um` (mean gap), `_pkpk_um` (pk-pk vibration), `_x1_um_pp` and `_x1_phase_deg`

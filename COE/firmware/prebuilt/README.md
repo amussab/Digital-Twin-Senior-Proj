@@ -11,7 +11,7 @@ For flashing without installing the build tools. How to flash: [`../../ICS_START
 
 Built 16 Nov 2026 (afternoon): the node measures the machine speed from the Keyphasor (ADC
 channel 7, no speed to set) and sends both proximity probes' values and its part of the end-to-end
-latency with the 32 features (packet schema 3, 208 bytes). `coe_node_stm32_LIVE.hex`: bearing
+latency, the ADC sample rate and the turns per window with the 32 features (packet schema 3, 212 bytes). `coe_node_stm32_LIVE.hex`: bearing
 profile 3 (RK4 S6700). `coe_node_stm32_LIVE_ICS_BACKUP.hex`: bearing profile 4, the ICS 13 Nov
 training settings (single BSF, ± 0.08, 350 Hz envelope, B2X = copy of B1Y), see
 [`../../ICS_UPDATE_16NOV.md`](../../ICS_UPDATE_16NOV.md). Flash one of the two; the same ESP32
@@ -19,9 +19,9 @@ file works with both. The ESP32 file has no hotspot settings: it runs only its o
 **COE-NODE**. SHA-256:
 
 ```
-07ce47d27447628ad0881ab6c08cc1c77a68beead75ee07afe8ba9430b98d795  coe_node_stm32_LIVE.hex
-7e4178f3f3e886e0d3bd3ccc45948c342c9ee165dfe67ae9d6812fc195da8ab0  coe_node_stm32_LIVE_ICS_BACKUP.hex
-6e1cba1b38769de720110e0014b084f7bc95680391505f2d1c88b62d23a3d63d  coe_node_esp32.bin
+453a20b7cdd1aee81aa9ec27449419d2ed47e41524aba8b3f43d2ad40755773e  coe_node_stm32_LIVE.hex
+8569d00a68cda3cb8830015caf1b331a968eac575b3081090a6c29822ac23b59  coe_node_stm32_LIVE_ICS_BACKUP.hex
+970895c58f231de6dd0567882e1379dc7c605ebfe28d354c6f16f7edd2a9d9cf  coe_node_esp32.bin
 ```
 
 Command-line flashing (instead of the apps in the guide):

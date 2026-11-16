@@ -67,7 +67,8 @@ def digital_twin_view(window, received_s):
     view = {'available': True, 'age_s': round(time.monotonic() - received_s, 2),
             'received_at': window['received_at'], 'window_id': window['window_id'],
             'rpm': window['rpm'], 'measured_rpm': window['measured_rpm'],
-            'revolutions': window['revolutions'], 'shaft_flags': window['shaft_flags']}
+            'revolutions': window['revolutions'], 'shaft_flags': window['shaft_flags'],
+            'sample_rate_hz': window['sample_rate_hz']}
     for index, probe in enumerate(host_receiver.PROBES):
         values = {name: window['shaft'].get(f'{probe}_{name}') for name in host_receiver.PROBE_VALUES}
         view[probe] = dict(values, valid=bool(flags & (2 << index)), x1_valid=bool(flags & (8 << index)))
@@ -105,6 +106,8 @@ class WindowSink:
             'revolutions': message.get('revolutions'),
             'shaft_flags': message.get('shaft_flags'),
             'shaft': {name: message[name] for name in host_receiver.SHAFT_FIELDS if name in message},
+            # ADC samples per second per channel (schema 3 firmware; None before), e.g. 29998.5
+            'sample_rate_hz': message.get('sample_rate_hz'),
             # End-to-end latency chain (schema 3 firmware; None before). host_started is when
             # this laptop got the POST; the worker adds its own time to the node's part.
             'latency': node_latency(message),
@@ -167,8 +170,8 @@ def shaft_text(window):
     """Short text of the Keyphasor speed and probe gaps for the terminal line."""
     if window['shaft_flags'] is None:
         return f"{window['rpm']} RPM (old firmware: no Keyphasor or probe values)"
-    speed = (f"{window['measured_rpm']:.1f} RPM" if window['measured_rpm'] is not None
-             else f"{window['rpm']} RPM (no Keyphasor speed)")
+    speed = (f"{window['measured_rpm']:.1f} RPM ({window['revolutions']} turns)"
+             if window['measured_rpm'] is not None else f"{window['rpm']} RPM (no Keyphasor speed)")
     gaps = []
     for index, probe in enumerate(host_receiver.PROBES):
         valid = window['shaft_flags'] & (2 << index)
