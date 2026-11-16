@@ -61,8 +61,10 @@ CHANNELS = ('B1X', 'B1Y', 'B2X', 'B2Y')
 FEATURES = ('rms', 'kurtosis', 'crest', 'envelope_rms', 'ftf', 'bsf', 'bpfo', 'bpfi')
 FEATURE_COLUMNS = [f'{channel}_{feature}' for channel in CHANNELS for feature in FEATURES]
 # Shaft columns come after the features, so the feature columns keep their place.
-# They are empty for windows from old firmware (schema 1).
-SHAFT_COLUMNS = ['schema_version', 'measured_rpm', 'revolutions', 'shaft_flags'] + host_receiver.SHAFT_FIELDS
+# They are empty for windows from old firmware (schema 1). The latency columns (us) are
+# filled from schema 3 firmware on (the node's part of the end-to-end latency).
+SHAFT_COLUMNS = (['schema_version', 'measured_rpm', 'revolutions', 'shaft_flags'] + host_receiver.SHAFT_FIELDS
+                 + host_receiver.LATENCY_FIELDS)
 CSV_COLUMNS = ['run_id', 'label', 'note', 'received_at', 'rpm', 'window_id', 'sequence',
                'device_id', 'valid_channels'] + FEATURE_COLUMNS + SHAFT_COLUMNS
 

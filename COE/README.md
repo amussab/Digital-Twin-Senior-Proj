@@ -49,11 +49,14 @@ Design documents for the node: `Project architecture/COE/`.
 - **Bearing profile 3** (since 16 Nov 2026, new RK4 bearings, S6700): the band features are at
   FTF 0.452, **bsf = 2 × BSF = 10.28**, BPFO 4.970, BPFI 6.030 times the shaft speed. Each packet
   carries `bearing_profile`; never mix profile-1 (old bearing) data with profile-3 data.
+  Profile 4 = the backup STM32 build that makes the same kind of features as the ICS 13 Nov
+  training data (single BSF 5.139, ± 0.08, 350 Hz envelope, B2X = copy of B1Y): see
+  [`ICS_UPDATE_16NOV.md`](ICS_UPDATE_16NOV.md).
 - **Machine speed: measured by the node** (since 16 Nov 2026). Nobody sets it: the node reads the
   Keyphasor on ADC channel 7 and computes the features for the speed it measures (any 60–4000 RPM;
   the rig runs 1750 and 3600). `rpm` is that speed in whole RPM; `measured_rpm` is the exact mean
   speed of the window. A window is sent only while the speed is steady (within 1 %).
-- **Shaft values for the digital twin** (same JSON, `schema_version` 2): `measured_rpm`,
+- **Shaft values for the digital twin** (same JSON, `schema_version` 2 and 3): `measured_rpm`,
   `revolutions`, `shaft_flags`, and per proximity probe (`prox1` = AIN5, `prox3` = AIN6):
   `_gap_um` (mean gap), `_pkpk_um` (pk-pk vibration), `_x1_um_pp` and `_x1_phase_deg`
   (once-per-turn vibration and its phase lag from the Keyphasor notch). `shaft_flags` bits:

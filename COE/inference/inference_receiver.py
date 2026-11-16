@@ -50,6 +50,15 @@ model_hook = load_module('model_hook')
 BEACON_PORT = 8001
 BEACON_PERIOD_S = 2.0
 QUEUE_LIMIT = 50  # windows waiting for the model (about 34 s at 1750 RPM, 17 s at 3600 RPM)
+LATENCY_LIMIT_MS = 500.0  # spec: end-to-end latency (window ready on the STM32 -> AI result)
+
+
+def node_latency(message):
+    """Schema 3: the node's latency parts in ms (STM32, UART, ESP32, Wi-Fi, sum); else None."""
+    if message.get('schema_version') != 3:
+        return None
+    names = ('stm', 'uart', 'esp', 'wifi', 'node')
+    return {f'{name}_ms': round(message[f'{name}_latency_us'] / 1000, 3) for name in names}
 
 
 def digital_twin_view(window, received_s):
@@ -62,6 +71,7 @@ def digital_twin_view(window, received_s):
     for index, probe in enumerate(host_receiver.PROBES):
         values = {name: window['shaft'].get(f'{probe}_{name}') for name in host_receiver.PROBE_VALUES}
         view[probe] = dict(values, valid=bool(flags & (2 << index)), x1_valid=bool(flags & (8 << index)))
+    view['node_latency'] = window['latency']  # None from older firmware
     return view
 
 
@@ -95,6 +105,10 @@ class WindowSink:
             'revolutions': message.get('revolutions'),
             'shaft_flags': message.get('shaft_flags'),
             'shaft': {name: message[name] for name in host_receiver.SHAFT_FIELDS if name in message},
+            # End-to-end latency chain (schema 3 firmware; None before). host_started is when
+            # this laptop got the POST; the worker adds its own time to the node's part.
+            'latency': node_latency(message),
+            'host_started': self.stats.get('post_started') or time.perf_counter(),
         }
         self.stats['last_seen'] = time.monotonic()
         self.stats['latest'] = (window, self.stats['last_seen'])  # for GET /digital-twin, before the model runs
@@ -112,7 +126,9 @@ class WindowSink:
 
 class InferenceHandler(host_receiver.FeatureHandler):
     def do_POST(self):
+        started = time.perf_counter()  # start of this laptop's part of the end-to-end latency
         with self.server.feature_lock:  # one node packet at a time, as in host_receiver
+            self.server.output.stats['post_started'] = started
             super().do_POST()
 
     def do_GET(self):
@@ -174,11 +190,29 @@ def run_model(windows, stats, stop):
             result = model_hook.predict(window, model)
         except Exception as error:  # keep receiving even if the model fails once
             result = f'MODEL ERROR: {type(error).__name__}: {error}'
+        finished = time.perf_counter()
+        took_ms = (finished - started) * 1000
+        host_ms = (finished - window['host_started']) * 1000  # POST received -> AI result
+        node = window['latency']
+        end_to_end_ms = round(node['node_ms'] + host_ms, 1) if node else None
         stats['done'] += 1
-        stats['ai_result'] = {'window_id': window['window_id'], 'result': str(result)}
-        took_ms = (time.perf_counter() - started) * 1000
+        stats['ai_result'] = {'window_id': window['window_id'], 'result': str(result),
+                              'host_latency_ms': round(host_ms, 1), 'end_to_end_ms': end_to_end_ms,
+                              'latency_limit_ms': LATENCY_LIMIT_MS,
+                              'within_limit': None if end_to_end_ms is None
+                              else end_to_end_ms < LATENCY_LIMIT_MS}
+        if end_to_end_ms is None:
+            latency = 'end-to-end: needs schema 3 firmware'
+        else:
+            stats['latency_count'] = stats.get('latency_count', 0) + 1
+            stats['latency_max_ms'] = max(stats.get('latency_max_ms', 0.0), end_to_end_ms)
+            stats['latency_over'] = stats.get('latency_over', 0) + (end_to_end_ms >= LATENCY_LIMIT_MS)
+            latency = (f"end-to-end {end_to_end_ms:.0f} ms "
+                       f"{'OK' if end_to_end_ms < LATENCY_LIMIT_MS else 'OVER'} (limit 500: "
+                       f"STM32 {node['stm_ms']:.0f} + UART {node['uart_ms']:.0f} + ESP32 {node['esp_ms']:.0f}"
+                       f" + Wi-Fi {node['wifi_ms']:.0f} + laptop {host_ms:.0f})")
         print(f"{window['received_at'][11:23]}  window {window['window_id']:>6}  "
-              f"{shaft_text(window)}  ->  {result}   ({took_ms:.0f} ms)", flush=True)
+              f"{shaft_text(window)}  ->  {result}   (model {took_ms:.0f} ms; {latency})", flush=True)
 
 
 def local_ipv4s():
@@ -266,6 +300,10 @@ def main():
         server.server_close()
         print(f"Stopped. Windows run through the model: {stats['done']}, "
               f"dropped: {stats['dropped']}.", flush=True)
+        if stats.get('latency_count'):
+            print(f"End-to-end latency: max {stats['latency_max_ms']:.0f} ms over "
+                  f"{stats['latency_count']} windows, {stats['latency_over']} at or over "
+                  f"{LATENCY_LIMIT_MS:.0f} ms.", flush=True)
 
 
 if __name__ == '__main__':
