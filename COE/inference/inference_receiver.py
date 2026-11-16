@@ -15,6 +15,8 @@ How it works:
 - A separate worker thread calls model_hook.predict() for each window, so a slow
   model never delays the node. If the model falls behind, the oldest waiting
   windows are dropped and counted.
+- GET /digital-twin returns the newest window's machine speed and proximity probe values
+  (and the model's latest answer) as JSON, for the digital twin's user interface.
 Do not run the training recorder at the same time (same port, same node).
 Standard library only (your model may need its own packages).
 """
@@ -50,6 +52,19 @@ BEACON_PERIOD_S = 2.0
 QUEUE_LIMIT = 50  # windows waiting for the model (about 34 s at 1750 RPM, 17 s at 3600 RPM)
 
 
+def digital_twin_view(window, received_s):
+    """JSON for GET /digital-twin: one reading per window (speed, both probes), see the README."""
+    flags = window['shaft_flags'] or 0
+    view = {'available': True, 'age_s': round(time.monotonic() - received_s, 2),
+            'received_at': window['received_at'], 'window_id': window['window_id'],
+            'rpm': window['rpm'], 'measured_rpm': window['measured_rpm'],
+            'revolutions': window['revolutions'], 'shaft_flags': window['shaft_flags']}
+    for index, probe in enumerate(host_receiver.PROBES):
+        values = {name: window['shaft'].get(f'{probe}_{name}') for name in host_receiver.PROBE_VALUES}
+        view[probe] = dict(values, valid=bool(flags & (2 << index)), x1_valid=bool(flags & (8 << index)))
+    return view
+
+
 class WindowSink:
     """Stands in for host_receiver's output file: each new valid window lands here."""
 
@@ -82,6 +97,7 @@ class WindowSink:
             'shaft': {name: message[name] for name in host_receiver.SHAFT_FIELDS if name in message},
         }
         self.stats['last_seen'] = time.monotonic()
+        self.stats['latest'] = (window, self.stats['last_seen'])  # for GET /digital-twin, before the model runs
         while True:
             try:
                 self.windows.put_nowait(window)
@@ -100,7 +116,22 @@ class InferenceHandler(host_receiver.FeatureHandler):
             super().do_POST()
 
     def do_GET(self):
-        body = b'COE inference receiver is running. Results are printed in its terminal.\n'
+        if self.path.split('?')[0] == '/digital-twin':
+            stats = self.server.output.stats
+            latest = stats.get('latest')
+            data = digital_twin_view(*latest) if latest else {'available': False}
+            data['ai_result'] = stats.get('ai_result')
+            body = json.dumps(data).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Access-Control-Allow-Origin', '*')  # a web page on another port may read it
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        body = (b'COE inference receiver is running. Results are printed in its terminal.\n'
+                b'Digital twin data (speed, proximity probes): GET /digital-twin\n')
         self.send_response(200)
         self.send_header('Content-Type', 'text/plain')
         self.send_header('Content-Length', str(len(body)))
@@ -144,6 +175,7 @@ def run_model(windows, stats, stop):
         except Exception as error:  # keep receiving even if the model fails once
             result = f'MODEL ERROR: {type(error).__name__}: {error}'
         stats['done'] += 1
+        stats['ai_result'] = {'window_id': window['window_id'], 'result': str(result)}
         took_ms = (time.perf_counter() - started) * 1000
         print(f"{window['received_at'][11:23]}  window {window['window_id']:>6}  "
               f"{shaft_text(window)}  ->  {result}   ({took_ms:.0f} ms)", flush=True)
@@ -206,7 +238,7 @@ def main():
 
     windows = queue.Queue(maxsize=QUEUE_LIMIT)
     stats = {'last_seen': None, 'started': time.monotonic(), 'dropped': 0,
-             'dropped_reported': 0, 'done': 0}
+             'dropped_reported': 0, 'done': 0, 'latest': None, 'ai_result': None}
     try:
         server = InferenceServer(('0.0.0.0', args.port), InferenceHandler)
     except OSError as error:
@@ -222,7 +254,9 @@ def main():
     threading.Thread(target=run_beacon, args=(server.server_port, stop), daemon=True).start()
     threading.Thread(target=watch_feed, args=(stats, stop), daemon=True).start()
     print(f'COE inference receiver on port {server.server_port} (the node measures the machine '
-          f'speed itself). Connect this laptop to the Wi-Fi COE-NODE. Ctrl+C stops.', flush=True)
+          f'speed itself). Connect this laptop to the Wi-Fi COE-NODE. Ctrl+C stops.\n'
+          f'Digital twin: latest speed and probe values at http://localhost:{server.server_port}/digital-twin',
+          flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

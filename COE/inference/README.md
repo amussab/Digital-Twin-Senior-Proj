@@ -30,6 +30,32 @@ speed the features were computed for, whole RPM) and `window['shaft']` (the prob
 e.g. `window['shaft']['prox1_gap_um']`). These are for the digital twin; the model needs only
 the 32 features.
 
+## For the digital twin: GET /digital-twin
+
+While the receiver runs, **http://localhost:8000/digital-twin** (from another computer: the receiver
+laptop's IP instead of `localhost`) returns the newest window's machine speed and proximity probe
+readings as JSON. There is one new reading per window (every 0.69 s at 1750 RPM, 0.33 s at 3600 RPM),
+so ask about once per second. Any program or web page can read it (CORS is open).
+
+```json
+{"available": true, "age_s": 0.4, "window_id": 1356, "received_at": "2026-11-16T01:58:12.411+03:00",
+ "rpm": 1747, "measured_rpm": 1749.3, "revolutions": 20, "shaft_flags": 31,
+ "prox1": {"gap_um": 1225.9, "pkpk_um": 24.9, "x1_um_pp": 16.4, "x1_phase_deg": 63.5, "valid": true, "x1_valid": true},
+ "prox3": {"gap_um": 1024.0, "pkpk_um": 26.8, "x1_um_pp": 19.3, "x1_phase_deg": 70.3, "valid": true, "x1_valid": true},
+ "ai_result": {"window_id": 1356, "result": "healthy"}}
+```
+
+- `measured_rpm`: machine speed measured by the node from the Keyphasor (ADC channel 7); `null` if
+  the node has no steady speed. `rpm` is the whole-RPM speed the features were computed for.
+- `prox1` (ADC channel 5) and `prox3` (channel 6): each probe measures the **distance between its tip
+  and the shaft**, in µm. `gap_um` = average distance (where the shaft sits), `pkpk_um` = how much it
+  swings while turning (vibration, peak to peak), `x1_um_pp` = the part that repeats once per turn,
+  `x1_phase_deg` = where in the turn the shaft comes closest to the probe, measured from the
+  Keyphasor mark (0-360°). Use a value only when its `valid` / `x1_valid` is true.
+- `age_s`: seconds since this window arrived. If it keeps growing, no data is coming in.
+- `ai_result`: the model's answer for the latest window it finished (text).
+- Before the first window: `{"available": false, "ai_result": null}`.
+
 ## Good to know
 
 - If `predict()` raises an error, the error is printed on that line and the next window still arrives.
