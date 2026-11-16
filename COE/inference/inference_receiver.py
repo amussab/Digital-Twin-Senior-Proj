@@ -75,6 +75,11 @@ class WindowSink:
             'valid_channels': message['valid_channels'],
             'features': list(message['features']),
             'named': dict(zip(model_hook.FEATURE_NAMES, message['features'])),
+            # New firmware (schema 2): the node measures the speed itself (Keyphasor); 'rpm' above is that
+            # measured speed in whole RPM. Old firmware (schema 1) has no measured_rpm / shaft values.
+            'schema_version': message.get('schema_version'), 'bearing_profile': message.get('bearing_profile'),
+            'measured_rpm': message.get('measured_rpm') if message.get('shaft_flags', 0) & 1 else None,
+            'shaft_flags': message.get('shaft_flags'),
         }
         self.stats['last_seen'] = time.monotonic()
         while True:

@@ -12,6 +12,12 @@ Deeper rig detail: `RIG_DAY.md`. Evidence numbers: `AI-engine/notebooks/FPR_Evid
 - The dashboard shows no label on the live-rig stage/RUL tiles (user decision). Do not use live-rig screenshots as S7/S9 evidence; the evidence is the notebook.
 - Numbers to quote (all tagged in the notebook): S7 11.47 % [SIMULATION, learnable profile; hard profile 21.1 %; trivial baseline 63.7 %]; IS3 headline = UP2 v3b F1 0.9587, stage max 1, 80/80 [SYNTHETIC]; v7 anchored-sim IS3 = **0.8486 and 76/80** (0.0014 below 0.85, reported as measured); IS2 = UP2 v3b 16.3 % / 49.2 % [SYNTHETIC, common-mode caveat]; IS1 = UP2 placeholder, not rerun on this build; S8 p95 about 10-14 ms [MEASURED host]; C5 live tests.
 
+## STM32 firmware generations (read before touching the node) - added 2026-11-16
+- **Current node (flashed on rig day, our release `COE/firmware/stm32/release/rig_runtime_config`)**: schema 1, bearing profile 2 (S6700 orders, bsf band at 1 x BSF), B2X = copy of B1Y, rpm typed with `node_config.py --rpm` (needs ST-LINK USB; reverts to 1800 on reboot). `v4_real` + `baseline_v4_real.json` match this firmware. USE THIS FOR THE REVIEW.
+- **Ewidah's newer firmware** (`origin/main`, `COE/ICS_START_HERE.md`, `COE/firmware/prebuilt/coe_node_stm32_LIVE.hex` + `coe_node_esp32.bin`, NOT in this branch): node MEASURES the speed from the Keyphasor (ADC ch 7) - no `node_config.py`, no ST-LINK needed for speed, `rpm` = measured speed, window only while speed steady within 1 %; schema 2 adds `measured_rpm`, probe gap/pk-pk/1X; bearing profile 3 (bsf band = 2 x BSF = 10.28); B2X is now a real independent sensor.
+- **Code side is already ready (this branch)**: `COE/*/host_receiver.py` accept schema 1+2 and profiles 1-3, rpm up to 4000; the engine already reads `rpm` from every window and matches baselines within 5 % (a measured 1750 matches the 1800 baseline). So after a reflash the rpm follows the rig automatically.
+- **But the models are NOT validated on the new firmware**: profile 3 moves the bsf feature to 2 x BSF and B2X becomes independent; `v4_real` was trained on profile 2 with B2X := B2Y. The receiver prints `WARNING: node reports bearing_profile 3` once. Class output after a reflash = unvalidated until new labelled data is recorded and `v4_real` retrained (do not mix profile-2 and profile-3 recordings). Not flashed yet; decision recorded in `.claude/RIG_STATE.md`.
+
 ## (a) LIVE rig demo
 
 ### 10-line pre-review checklist

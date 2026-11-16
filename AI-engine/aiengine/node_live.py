@@ -48,8 +48,23 @@ def _recv_epoch(v):
         return None
 
 
+_PROFILE_WARNED = False
+
+
+def _warn_profile(profile) -> None:
+    """Models v4_real / baseline_v4_real.json were trained on bearing profile 2 (bsf band at 1 x BSF, B2X a copy of B1Y).
+    Firmware >= 2026-11-16 reports profile 3 (bsf band at 2 x BSF, four independent channels): class output is then
+    NOT validated. Warn once; never silently relabel."""
+    global _PROFILE_WARNED
+    if profile == 3 and not _PROFILE_WARNED:
+        _PROFILE_WARNED = True
+        print("WARNING: node reports bearing_profile 3 (bsf = 2 x BSF, independent B2X); the loaded model was trained on "
+              "profile 2 data. Predictions are not validated for this firmware.", flush=True)
+
+
 def predict_full(window: dict, model: NodeEngine):
     """Like predict() but returns (engine_output_dict | None, one_line_string)."""
+    _warn_profile(window.get("bearing_profile"))
     msg = {"schema_version": 1, "acceleration_unit": "g", "valid_channels": window.get("valid_channels", 15),
            "rpm": window["rpm"], "window_id": window.get("window_id", 0), "features": list(window["features"])}
     try:
