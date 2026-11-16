@@ -125,7 +125,7 @@ summary{cursor:pointer;font-weight:600}
 
   <section class="box live" aria-labelledby="h-live" style="margin-top:18px">
     <h2 id="h-live">Live rig</h2>
-    <p class="note" style="margin:0 0 6px">Feed address <input id="feedUrl" value="http://localhost:8000" style="font:inherit;padding:2px 6px;width:16em"> (the laptop running the COE inference receiver)</p>
+    <p class="note" style="margin:0 0 6px">Feed address <input autocomplete="off" id="feedUrl" value="http://localhost:8000" style="font:inherit;padding:2px 6px;width:16em"> (the laptop running the COE inference receiver)</p>
     <p class="note" id="liveSrc" style="margin:0 0 10px"></p>
     <div class="grid" style="margin-top:0">
       <div>
@@ -147,11 +147,11 @@ summary{cursor:pointer;font-weight:600}
           <summary>Type a reading by hand</summary>
           <p class="note">For when the node is not streaming. Phase is optional (needed only for the slow-roll correction).</p>
           <div class="params">
-            <label>Speed, rpm<input id="mRpm" type="number" value="1750"></label>
-            <label>PROX 1 1X, µm pp<input id="mP1" type="number" step="0.1"></label>
-            <label>PROX 1 phase, deg<input id="mPh1" type="number" step="1"></label>
-            <label>PROX 3 1X, µm pp<input id="mP3" type="number" step="0.1"></label>
-            <label>PROX 3 phase, deg<input id="mPh3" type="number" step="1"></label>
+            <label>Speed, rpm<input autocomplete="off" id="mRpm" type="number" value="1750"></label>
+            <label>PROX 1 1X, µm pp<input autocomplete="off" id="mP1" type="number" step="0.1"></label>
+            <label>PROX 1 phase, deg<input autocomplete="off" id="mPh1" type="number" step="1"></label>
+            <label>PROX 3 1X, µm pp<input autocomplete="off" id="mP3" type="number" step="0.1"></label>
+            <label>PROX 3 phase, deg<input autocomplete="off" id="mPh3" type="number" step="1"></label>
           </div>
           <div class="btns"><button id="bManual" class="alt">Add this reading</button></div>
         </details>
@@ -180,20 +180,20 @@ summary{cursor:pointer;font-weight:600}
       <h2 id="h-ctl">Simulated test (Spec 2 check)</h2>
       <div class="ctl">
         <label for="kTrue">Reference bearing stiffness K <b id="kTrueV"></b></label>
-        <input id="kTrue" type="range" min="4" max="8" step="0.001" value="6.8">
+        <input autocomplete="off" id="kTrue" type="range" min="4" max="8" step="0.001" value="6.8">
         <small>The "known case". Starts at the Hertz value for the S6700. The model does not see this number.</small>
       </div>
       <div class="ctl">
         <label for="rpm">Shaft speed <b id="rpmV"></b></label>
-        <input id="rpm" type="range" min="1000" max="3600" step="10" value="1750">
+        <input autocomplete="off" id="rpm" type="range" min="1000" max="3600" step="10" value="1750">
       </div>
       <div class="ctl">
         <label for="noise">Probe noise per window <b id="noiseV"></b></label>
-        <input id="noise" type="range" min="0" max="1" step="0.01" value="0.20">
+        <input autocomplete="off" id="noise" type="range" min="0" max="1" step="0.01" value="0.20">
       </div>
       <div class="ctl">
         <label for="avg">Windows averaged <b id="avgV"></b></label>
-        <input id="avg" type="range" min="1" max="200" step="1" value="50">
+        <input autocomplete="off" id="avg" type="range" min="1" max="200" step="1" value="50">
         <small>Each window is 20 shaft revolutions.</small>
       </div>
       <div class="btns">
@@ -232,24 +232,24 @@ summary{cursor:pointer;font-weight:600}
     <summary>Rig and bearing parameters</summary>
     <p class="note">Positions are from the shaft end at the coupling, measured on the rig on 16 Nov 2026. Change any value here and the whole page updates.</p>
     <div class="params">
-      <label>Shaft diameter, mm<input id="pD" type="number" value="9.9" step="0.1"></label>
-      <label>Shaft length, mm<input id="pLs" type="number" value="550" step="5"></label>
-      <label>Bearing A (block A) at, mm<input id="pBa" type="number" value="20" step="1"></label>
-      <label>Bearing D (block D) at, mm<input id="pBd" type="number" value="530" step="1"></label>
-      <label>Disk 1 at, mm<input id="pD1" type="number" value="190" step="1"></label>
-      <label>Disk 2 at, mm<input id="pD2" type="number" value="355" step="1"></label>
-      <label>Mass of each disk, g<input id="pM" type="number" value="800" step="5"></label>
-      <label>PROX 1 (block B) at, mm<input id="pP1" type="number" value="78" step="1"></label>
-      <label>PROX 3 (block C) at, mm<input id="pP3" type="number" value="470" step="1"></label>
-      <label>Test mass in balance hole, g (5 g = PPR test condition)<input id="pTm" type="number" value="5" step="0.1"></label>
-      <label>Balance hole radius, mm<input id="pR" type="number" value="30" step="0.5"></label>
-      <label>Failure point: stiffness drop, %<input id="pFail" type="number" value="25" step="1"></label>
-      <label>Shaft loss factor η<input id="pEta" type="number" value="0.02" step="0.005"></label>
-      <label>Number of balls Z<input id="bZ" type="number" value="11" step="1"></label>
-      <label>Ball diameter, mm<input id="bDw" type="number" value="1.2" step="0.05"></label>
-      <label>Pitch diameter, mm<input id="bDm" type="number" value="12.45" step="0.05"></label>
-      <label>Groove radius / ball diameter<input id="bGr" type="number" value="0.52" step="0.01"></label>
-      <label>PLA ring OD / bore / width, mm<input id="bRing" type="text" value="17.2 / 15.3 / 3.4"></label>
+      <label>Shaft diameter, mm<input autocomplete="off" id="pD" type="number" value="9.9" step="0.1"></label>
+      <label>Shaft length, mm<input autocomplete="off" id="pLs" type="number" value="550" step="5"></label>
+      <label>Bearing A (block A) at, mm<input autocomplete="off" id="pBa" type="number" value="20" step="1"></label>
+      <label>Bearing D (block D) at, mm<input autocomplete="off" id="pBd" type="number" value="530" step="1"></label>
+      <label>Disk 1 at, mm<input autocomplete="off" id="pD1" type="number" value="190" step="1"></label>
+      <label>Disk 2 at, mm<input autocomplete="off" id="pD2" type="number" value="355" step="1"></label>
+      <label>Mass of each disk, g<input autocomplete="off" id="pM" type="number" value="800" step="5"></label>
+      <label>PROX 1 (block B) at, mm<input autocomplete="off" id="pP1" type="number" value="78" step="1"></label>
+      <label>PROX 3 (block C) at, mm<input autocomplete="off" id="pP3" type="number" value="470" step="1"></label>
+      <label>Test mass in balance hole, g (5 g = PPR test condition)<input autocomplete="off" id="pTm" type="number" value="5" step="0.1"></label>
+      <label>Balance hole radius, mm<input autocomplete="off" id="pR" type="number" value="30" step="0.5"></label>
+      <label>Failure point: stiffness drop, %<input autocomplete="off" id="pFail" type="number" value="25" step="1"></label>
+      <label>Shaft loss factor η<input autocomplete="off" id="pEta" type="number" value="0.02" step="0.005"></label>
+      <label>Number of balls Z<input autocomplete="off" id="bZ" type="number" value="11" step="1"></label>
+      <label>Ball diameter, mm<input autocomplete="off" id="bDw" type="number" value="1.2" step="0.05"></label>
+      <label>Pitch diameter, mm<input autocomplete="off" id="bDm" type="number" value="12.45" step="0.05"></label>
+      <label>Groove radius / ball diameter<input autocomplete="off" id="bGr" type="number" value="0.52" step="0.01"></label>
+      <label>PLA ring OD / bore / width, mm<input autocomplete="off" id="bRing" type="text" value="17.2 / 15.3 / 3.4"></label>
     </div>
   </details>
 
@@ -702,9 +702,12 @@ summary{cursor:pointer;font-weight:600}
   });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawRotor();drawPlot();drawTrend();});
 
+  // always start from the values written in the page (browsers can restore old values on reload)
+  document.querySelectorAll('input').forEach(i=>{ if(i.type!=='file') i.value=i.defaultValue; });
   readParams();assemble();validate();
   $('kTrue').value=Math.log10(P.K0).toFixed(3);
   labels();liveTable();handCalc();buildGrid();measure();drawTrend();
+  setTimeout(runTrials,50);
   poll(); setInterval(poll,700);
   window.__fe={processReading,P,L,fitRul:(h,f)=>fitRul(h,f)};
 })();
