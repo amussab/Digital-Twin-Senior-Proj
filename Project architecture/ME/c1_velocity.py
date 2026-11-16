@@ -73,8 +73,15 @@ def main():
     parser.add_argument('--once', action='store_true', help='report the files already there and stop')
     args = parser.parse_args()
     seen, history = set(), []
-    print('C1: housing velocity, 10-1000 Hz, limit %.0f mm/s RMS. Ctrl+C to stop.' % LIMIT_MM_S)
+    print('C1: housing velocity, 10-1000 Hz, limit %.0f mm/s RMS. Press any key (or Ctrl+C) to finish.' % LIMIT_MM_S)
+    try:
+        import msvcrt          # Windows: stop on any key
+    except ImportError:
+        msvcrt = None
     while True:
+        if msvcrt is not None and msvcrt.kbhit():
+            msvcrt.getch()
+            break
         files = sorted(glob.glob(os.path.join(args.folder, 'snap_*.bin')), key=os.path.getmtime)
         for path in files:
             if path not in seen:
