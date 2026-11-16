@@ -68,7 +68,13 @@ def digital_twin_view(window, received_s):
             'received_at': window['received_at'], 'window_id': window['window_id'],
             'rpm': window['rpm'], 'measured_rpm': window['measured_rpm'],
             'revolutions': window['revolutions'], 'shaft_flags': window['shaft_flags'],
-            'sample_rate_hz': window['sample_rate_hz']}
+            'sample_rate_hz': window['sample_rate_hz'],
+            # slowest / fastest turn in the window (schema 3; None before)
+            'rpm_min': window['health'].get('rpm_min'), 'rpm_max': window['health'].get('rpm_max'),
+            # node health (schema 3; None before): counters, Wi-Fi link and signal
+            'node_health': ({name: window['health'][name] for name in
+                             host_receiver.HEALTH_COUNTERS + ['wifi_link', 'wifi_rssi_dbm']}
+                            if window['health'] else None)}
     for index, probe in enumerate(host_receiver.PROBES):
         values = {name: window['shaft'].get(f'{probe}_{name}') for name in host_receiver.PROBE_VALUES}
         view[probe] = dict(values, valid=bool(flags & (2 << index)), x1_valid=bool(flags & (8 << index)))
@@ -108,6 +114,8 @@ class WindowSink:
             'shaft': {name: message[name] for name in host_receiver.SHAFT_FIELDS if name in message},
             # ADC samples per second per channel (schema 3 firmware; None before), e.g. 29998.5
             'sample_rate_hz': message.get('sample_rate_hz'),
+            # Speed range and node health (schema 3; {} before), see host_receiver.NODE_FIELDS
+            'health': {name: message[name] for name in host_receiver.NODE_FIELDS if name in message},
             # End-to-end latency chain (schema 3 firmware; None before). host_started is when
             # this laptop got the POST; the worker adds its own time to the node's part.
             'latency': node_latency(message),
@@ -216,6 +224,20 @@ def run_model(windows, stats, stop):
                        f" + Wi-Fi {node['wifi_ms']:.0f} + laptop {host_ms:.0f})")
         print(f"{window['received_at'][11:23]}  window {window['window_id']:>6}  "
               f"{shaft_text(window)}  ->  {result}   (model {took_ms:.0f} ms; {latency})", flush=True)
+        health_warning(window['health'], stats)
+
+
+def health_warning(health, stats):
+    """Print a line when a node health counter goes up (counts restart when the node restarts)."""
+    if not health:
+        return
+    last = stats.get('health_last') or {}
+    rising = [f"{name.replace('_', ' ')} {health[name]}" for name in host_receiver.HEALTH_COUNTERS
+              if health[name] > last.get(name, 0)]
+    stats['health_last'] = health
+    if rising:
+        print(f"NODE HEALTH: {', '.join(rising)} (counts since the node started; Wi-Fi "
+              f"{health['wifi_link']}, signal {health['wifi_rssi_dbm']} dBm)", flush=True)
 
 
 def local_ipv4s():

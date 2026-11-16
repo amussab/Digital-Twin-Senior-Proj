@@ -19,6 +19,11 @@ SHAFT_FIELDS = [f'{probe}_{value}' for probe in PROBES for value in PROBE_VALUES
 # the other four. The host adds its own time (receive -> AI result) to node_latency_us.
 LATENCY_FIELDS = ['stm_latency_us', 'uart_latency_us', 'esp_latency_us', 'wifi_latency_us',
                   'node_latency_us']
+# Schema 3: speed range in the window and node health. Counters: STM32 since LIVE started
+# (B1), ESP32 since it started. wifi_link 'node' (laptop on COE-NODE), 'hotspot' or 'none';
+# wifi_rssi_dbm is its signal (null when 'none').
+HEALTH_COUNTERS = ['adc_gaps', 'unsteady_windows', 'stm_send_failures', 'esp_rx_rejected', 'esp_dropped']
+NODE_FIELDS = ['sample_rate_hz', 'rpm_min', 'rpm_max'] + HEALTH_COUNTERS + ['wifi_link', 'wifi_rssi_dbm']
 
 
 def number(message, name):
@@ -74,6 +79,20 @@ def validate_latency(message):
         raise ValueError('node_latency_us must be the sum of the other four')
     if not 1000 <= number(message, 'sample_rate_hz') <= 200000:
         raise ValueError('sample_rate_hz must be 1000..200000')
+    low, high = number(message, 'rpm_min'), number(message, 'rpm_max')
+    if message['shaft_flags'] & 1:
+        if not 0 < low <= high <= 8000:
+            raise ValueError('rpm_min/rpm_max must be 0 < min <= max <= 8000')
+    elif low != 0 or high != 0:
+        raise ValueError('rpm_min/rpm_max must be 0 without a measured speed')
+    for name in HEALTH_COUNTERS:
+        if type(message.get(name)) is not int or not 0 <= message[name] <= 0xFFFFFFFF:
+            raise ValueError(f'{name} must be a counter')
+    link, rssi = message.get('wifi_link'), message.get('wifi_rssi_dbm', 0)
+    if link not in ('none', 'node', 'hotspot'):
+        raise ValueError('wifi_link must be none, node or hotspot')
+    if (rssi is not None) if link == 'none' else (type(rssi) is not int or not -127 <= rssi <= 0):
+        raise ValueError('wifi_rssi_dbm must be -127..0 dBm (null without a link)')
 
 
 def validate_vector(message):

@@ -33,7 +33,7 @@ counted). The node now sends its part in the JSON, in whole microseconds:
 | Field | Part |
 |---|---|
 | `stm_latency_us` | STM32: DSP, features, packet |
-| `uart_latency_us` | STM32 -> ESP32 wire (fixed 19271) |
+| `uart_latency_us` | STM32 -> ESP32 wire (fixed 21007) |
 | `esp_latency_us` | ESP32 queue |
 | `wifi_latency_us` | Wi-Fi: the previous request's round trip (0 for the first) |
 | `node_latency_us` | the sum of the four |
@@ -45,6 +45,9 @@ counted). The node now sends its part in the JSON, in whole microseconds:
 Also new in schema 3: `sample_rate_hz`, the ADC samples per second per channel (29998.5 on this
 board). With `revolutions` (whole shaft turns in the window, already sent since schema 2) and
 `measured_rpm` you have the window's timing: about `revolutions / measured_rpm * 60` seconds.
+`rpm_min` / `rpm_max` are the slowest and fastest turn in the window. Node health counters
+(`adc_gaps`, `unsteady_windows`, `stm_send_failures`, `esp_rx_rejected`, `esp_dropped`) and the
+Wi-Fi link (`wifi_link`, `wifi_rssi_dbm`) are for the user interface; see `COE/inference/README.md`.
 
 ## 3. What to change in your code (fpr branch)
 
@@ -57,7 +60,7 @@ receiver currently accepts only `schema_version` 1 and `bearing_profile` 1–2, 
 - Accept `bearing_profile` 1–4.
 - Accept `rpm` 60–4000 (the node measures the speed; it is not exactly 1750 or 3600).
 - Ignore extra fields you don't use (`measured_rpm`, `revolutions`, `prox1_*`, `prox3_*`,
-  `*_latency_us`, `sample_rate_hz`), or
+  `*_latency_us`, `sample_rate_hz`, `rpm_min`, `rpm_max`, the health counters, `wifi_*`), or
   use them. The 32 `features` are in the same order as before.
 - For the latency: note `time.perf_counter()` when the POST arrives, and after `predict()`
   add `(now - arrival) * 1000` ms to `node_latency_us / 1000`.

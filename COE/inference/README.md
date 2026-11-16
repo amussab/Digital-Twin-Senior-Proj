@@ -45,9 +45,12 @@ so ask about once per second. Any program or web page can read it (CORS is open)
 ```json
 {"available": true, "age_s": 0.4, "window_id": 1356, "received_at": "2026-11-16T01:58:12.411+03:00",
  "rpm": 1747, "measured_rpm": 1749.3, "revolutions": 20, "shaft_flags": 31, "sample_rate_hz": 29998.5,
+ "rpm_min": 1748.9, "rpm_max": 1749.8,
+ "node_health": {"adc_gaps": 0, "unsteady_windows": 2, "stm_send_failures": 0, "esp_rx_rejected": 0,
+                 "esp_dropped": 0, "wifi_link": "node", "wifi_rssi_dbm": -52},
  "prox1": {"gap_um": 1225.9, "pkpk_um": 24.9, "x1_um_pp": 16.4, "x1_phase_deg": 63.5, "valid": true, "x1_valid": true},
  "prox3": {"gap_um": 1024.0, "pkpk_um": 26.8, "x1_um_pp": 19.3, "x1_phase_deg": 70.3, "valid": true, "x1_valid": true},
- "node_latency": {"stm_ms": 4.2, "uart_ms": 19.271, "esp_ms": 0.15, "wifi_ms": 35.0, "node_ms": 58.274},
+ "node_latency": {"stm_ms": 4.2, "uart_ms": 21.007, "esp_ms": 0.15, "wifi_ms": 35.0, "node_ms": 58.274},
  "ai_result": {"window_id": 1356, "result": "healthy", "host_latency_ms": 3.8, "end_to_end_ms": 62.1,
                "latency_limit_ms": 500.0, "within_limit": true}}
 ```
@@ -55,7 +58,14 @@ so ask about once per second. Any program or web page can read it (CORS is open)
 - `measured_rpm`: machine speed measured by the node from the Keyphasor (ADC channel 7); `null` if
   the node has no steady speed. `rpm` is the whole-RPM speed the features were computed for.
 - `revolutions`: whole shaft turns in the window. `sample_rate_hz`: ADC samples per second per
-  channel (29998.5; `null` with older firmware).
+  channel (29998.5; `null` with older firmware). `rpm_min` / `rpm_max`: slowest and fastest turn in
+  the window (a wide range means the machine was speeding up or slowing down).
+- `node_health` (`null` with older firmware): counts of problems since the node started; all 0 means
+  nothing was lost. `adc_gaps` (ADC samples missed, the window restarted), `unsteady_windows`
+  (windows held back because the speed moved), `stm_send_failures` (STM32 could not send),
+  `esp_rx_rejected` (ESP32 got a damaged packet), `esp_dropped` (ESP32 could not deliver a window).
+  `wifi_link` is `node` (laptop on COE-NODE), `hotspot` or `none`; `wifi_rssi_dbm` its signal
+  (-60 or better good, below -75 weak). The terminal prints `NODE HEALTH: ...` when a count goes up.
 - `prox1` (ADC channel 5) and `prox3` (channel 6): each probe measures the **distance between its tip
   and the shaft**, in µm. `gap_um` = average distance (where the shaft sits), `pkpk_um` = how much it
   swings while turning (vibration, peak to peak), `x1_um_pp` = the part that repeats once per turn,
