@@ -14,6 +14,11 @@ Files in the data folder, one pair per run:
     run_YYYYMMDD_HHMMSS.jsonl  one line per window: {"received_at": ..., "message": {...}}
 While running it also broadcasts a UDP beacon "COE-HOST <http_port>" to port 8001
 every 2 s, so the ESP32 can find this laptop without a fixed IP.
+
+The machine speed is not chosen here: the node measures it from the Keyphasor
+(ADC channel 7) and computes the features for that speed. Each window also carries
+the measured speed and the two proximity probe values (gap, pk-pk, 1X amplitude and
+phase); the page shows them and the CSV has them as columns.
 Standard library only.
 """
 import argparse
@@ -64,8 +69,11 @@ POSITIONS = [('both', 'Both bearings'), ('b1', 'Bearing 1 (B1 sensors)'), ('b2',
 CHANNELS = ('B1X', 'B1Y', 'B2X', 'B2Y')
 FEATURES = ('rms', 'kurtosis', 'crest', 'envelope_rms', 'ftf', 'bsf', 'bpfo', 'bpfi')
 FEATURE_COLUMNS = [f'{channel}_{feature}' for channel in CHANNELS for feature in FEATURES]
+# Shaft columns come after the features, so the feature columns keep their place.
+# They are empty for windows from old firmware (schema 1).
+SHAFT_COLUMNS = ['schema_version', 'measured_rpm', 'revolutions', 'shaft_flags'] + host_receiver.SHAFT_FIELDS
 CSV_COLUMNS = ['run_id', 'label', 'note', 'received_at', 'rpm', 'window_id', 'sequence',
-               'device_id', 'valid_channels'] + FEATURE_COLUMNS
+               'device_id', 'valid_channels'] + FEATURE_COLUMNS + SHAFT_COLUMNS
 # Added later: appended at the END so older readers/CSVs keep working (read by header name).
 EXTRA_COLUMNS = ['severity', 'bearing_id', 'position', 'is_baseline']
 CSV_COLUMNS = CSV_COLUMNS + EXTRA_COLUMNS
@@ -73,6 +81,8 @@ META_KEYS = ('run_id', 'label', 'note', 'started_at', 'stopped_at') + tuple(EXTR
 
 BEACON_PORT = 8001
 BEACON_PERIOD_S = 2.0
+
+FRESH_S = 5.0  # a packet younger than this counts as "data arriving"
 RUN_ID = re.compile(r'run_\d{8}_\d{6}(_\d{1,3})?')
 
 
@@ -84,6 +94,41 @@ def epoch(iso):
     return datetime.fromisoformat(iso).timestamp()
 
 
+def window_rpm(message):
+    """Speed of a window: the Keyphasor-measured speed, or the header RPM for old firmware."""
+    if message.get('schema_version') == 2 and message.get('shaft_flags', 0) & 1:
+        return message.get('measured_rpm')
+    return message.get('rpm')
+
+
+def add_rpm(meta, message):
+    rpm = window_rpm(message)
+    if isinstance(rpm, (int, float)) and not isinstance(rpm, bool):
+        low, high = meta['rpm_range'] or (rpm, rpm)
+        meta['rpm_range'] = (min(low, rpm), max(high, rpm))
+
+
+def rpm_text(rpm_range):
+    if not rpm_range:
+        return ''
+    low, high = (round(value) for value in rpm_range)
+    return str(low) if low == high else f'{low}-{high}'
+
+
+def shaft_view(message):
+    """Keyphasor speed and probe values of a window for the page (None for old firmware)."""
+    if message.get('schema_version') != 2:
+        return {'measured_rpm': None}
+    flags = message.get('shaft_flags', 0)
+    probes = []
+    for index, probe in enumerate(host_receiver.PROBES):
+        values = {name: message.get(f'{probe}_{name}') for name in host_receiver.PROBE_VALUES}
+        probes.append(dict(values, name=probe.replace('prox', 'PROX '),
+                           valid=bool(flags & (2 << index)), x1=bool(flags & (8 << index))))
+    return {'measured_rpm': message.get('measured_rpm'), 'revolutions': message.get('revolutions'),
+            'speed_measured': bool(flags & 1), 'probes': probes}
+
+
 class Recorder:
     """Owns the runs on disk and the recording state. All changes go through self.lock."""
 
@@ -91,7 +136,7 @@ class Recorder:
         self.dir = Path(data_dir)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.lock = threading.Lock()
-        self.runs = {}            # run_id -> meta dict plus 'windows' and 'rpms'
+        self.runs = {}            # run_id -> meta dict plus 'windows' and 'rpm_range'
         self.active = None        # run_id being recorded, or None
         self.last_packet = None   # (time.monotonic(), message) of the last new valid window
         self.rpm_busy = False     # a speed change is waiting for the node's reply
@@ -144,11 +189,13 @@ class Recorder:
                 meta['position'] = meta.get('position') if meta.get('position') in dict(POSITIONS) else 'both'
                 meta['is_baseline'] = bool(meta.get('is_baseline'))
                 windows, rpms, last, rpm_windows = 0, set(), None, {}
+                meta['rpm_range'] = None
                 for row in self.rows(run_id):
                     windows += 1
                     rpm = row['message'].get('rpm')
                     rpms.add(rpm)
                     rpm_windows[rpm] = rpm_windows.get(rpm, 0) + 1
+                    add_rpm(meta, row['message'])
                     last = row.get('received_at')
                 if not meta.get('stopped_at'):
                     # The script was closed while this run was recording: close it now.
@@ -193,6 +240,7 @@ class Recorder:
             self._write_meta(meta)
             self._rows_path(run_id).touch()
             meta['windows'], meta['rpms'], meta['rpm_windows'] = 0, set(), {}
+            meta['rpm_range'] = None
             self.runs[run_id] = meta
             self.active = run_id
             print(f'Recording started: {run_id} label={label}', flush=True)
@@ -256,6 +304,7 @@ class Recorder:
             meta['windows'] += 1
             meta['rpms'].add(message['rpm'])
             meta['rpm_windows'][message['rpm']] = meta['rpm_windows'].get(message['rpm'], 0) + 1
+            add_rpm(meta, message)
 
     def status(self):
         with self.lock:
@@ -269,7 +318,7 @@ class Recorder:
                     'label_name': LABEL_NAMES[meta['label']], 'note': meta['note'],
                     'started': datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M:%S'),
                     'duration_s': round(max(0.0, end - start), 1), 'windows': meta['windows'],
-                    'rpm': ', '.join(str(r) for r in sorted(r for r in meta['rpms'] if r is not None)),
+                    'rpm': rpm_text(meta['rpm_range']),
                     'recording': meta['run_id'] == self.active,
                     'severity': meta['severity'], 'bearing_id': meta['bearing_id'],
                     'position': meta['position'], 'is_baseline': meta['is_baseline'],
@@ -299,6 +348,7 @@ class Recorder:
                 last = {'age_s': round(time.monotonic() - seen, 1), 'rpm': message.get('rpm'),
                         'valid_channels': message.get('valid_channels'),
                         'device_id': message.get('device_id')}
+                last.update(shaft_view(message))
             active = next((run for run in runs if run['recording']), None)
             return {'recording': active, 'last_packet': last, 'runs': runs, 'summary': summary, 'coverage': coverage,
                     'beacon_ips': list(self.beacon_ips), 'rpm_busy': self.rpm_busy}
@@ -317,6 +367,7 @@ class Recorder:
                                  message.get('rpm'), message.get('window_id'), message.get('sequence'),
                                  message.get('device_id'), message.get('valid_channels')]
                                 + list(message.get('features', []))
+                                + [message.get(name) for name in SHAFT_COLUMNS]
                                 + ['' if meta.get('severity') is None else meta['severity'],
                                    meta.get('bearing_id', ''), meta.get('position', 'both'),
                                    int(bool(meta.get('is_baseline')))])
@@ -455,10 +506,10 @@ def local_ipv4s():
 
 def run_beacon(http_port, recorder, stop):
     """Every 2 s send b'COE-HOST <port>' to 255.255.255.255 and each x.y.z.255, UDP port 8001."""
-    payload = f'COE-HOST {http_port}'.encode('ascii')
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         while not stop.is_set():
+            payload = f'COE-HOST {http_port}'.encode('ascii')
             ips = local_ipv4s()
             recorder.beacon_ips = ips
             targets = ['255.255.255.255'] + sorted({ip.rsplit('.', 1)[0] + '.255' for ip in ips})
@@ -505,6 +556,15 @@ h2 { margin:0 0 14px; font-size:17px; font-weight:600; color:var(--muted); }
 .mode.sel { background:var(--c); border-color:var(--c); color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.18); }
 .mode:disabled { cursor:not-allowed; }
 .mode:disabled:not(.sel) { opacity:.35; }
+.shaft { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; margin-top:12px; }
+.probe { border:1px solid var(--line); border-radius:10px; padding:10px 14px; }
+.probe h3 { margin:0 0 6px; font-size:15px; }
+.probe div { display:flex; justify-content:space-between; gap:12px; font-size:15px; }
+.probe div span { color:var(--muted); }
+.probe.off { opacity:.55; }
+.speedstate { margin-top:14px; padding:10px 14px; border-radius:10px; font-weight:600; background:#e9edf1; color:var(--muted); }
+.speedstate.ok { background:#e3f4ea; color:var(--go); }
+.speedstate.wait { background:#fdf0e1; color:#a8590b; }
 .selected { margin-top:14px; font-size:18px; }
 .selected b { color:var(--c); }
 .hint { color:var(--muted); font-size:14px; margin-left:8px; }
@@ -555,7 +615,7 @@ td.num { text-align:right; font-variant-numeric:tabular-nums; }
 td a { color:#1f5fa8; font-weight:600; }
 .del { padding:5px 12px; border:1px solid var(--stop); border-radius:8px; background:#fff; color:var(--stop); font-weight:600; cursor:pointer; }
 .empty { color:var(--muted); padding:16px 4px; }
-@media (max-width:900px) { .modes, .summary { grid-template-columns:repeat(2, 1fr); } .rec-row { flex-direction:column; align-items:stretch; } }
+@media (max-width:900px) { .modes, .summary, .shaft { grid-template-columns:repeat(2, 1fr); } .rec-row { flex-direction:column; align-items:stretch; } }
 </style>
 </head>
 <body>
@@ -571,25 +631,21 @@ td a { color:#1f5fa8; font-weight:600; }
   </section>
 
   <section class="card">
-    <h2>Shaft speed</h2>
-    <div class="rpm-row">
-      <input id="rpm" type="number" min="60" max="3600" step="1" value="1800">
-      <button class="preset" data-rpm="1800">1800</button>
-      <button class="preset" data-rpm="3600">3600</button>
-      <button id="rpmset" class="btn">Set</button>
-      <span>Latest window: <b id="rpmnow">-</b> RPM</span>
-    </div>
-    <div id="rpmmsg" class="hint" style="margin:8px 0 0">The node has no tachometer: type the speed the VFD is set to. Needs the STM32 USB cable in this laptop. The node starts at 1800 after a reset.</div>
+    <h2>1. Machine speed and shaft (measured by the node)</h2>
+    <div class="hint" style="margin:0 0 12px">Nothing to set here: the node measures the speed itself from the Keyphasor
+      (ADC channel 7) and the shaft position from the two proximity probes. Every saved window keeps these values.</div>
+    <div id="speedstate" class="speedstate"></div>
+    <div id="shaft" class="shaft"></div>
   </section>
 
   <section class="card">
-    <h2>1. Choose the bearing condition</h2>
+    <h2>2. Choose the bearing condition</h2>
     <div id="modes" class="modes"></div>
     <div id="selected" class="selected"></div>
   </section>
 
   <section class="card">
-    <h2>2. Record</h2>
+    <h2>3. Record</h2>
     <div class="opts">
       <label>Health level of the mounted bearing<select id="sev"></select></label>
       <label>Bearing ID (what is mounted, e.g. B-03)<input id="bid" maxlength="40" placeholder="B-03"></label>
@@ -614,7 +670,7 @@ td a { color:#1f5fa8; font-weight:600; }
 
   <section class="card">
     <div class="head">
-      <h2>3. Recorded runs</h2>
+      <h2>4. Recorded runs</h2>
       <a id="all" class="btn" href="/export/all.csv">Download all runs (CSV)</a>
     </div>
     <div class="hint" style="margin:0 0 8px">Windows saved per label (check the classes are balanced)</div>
@@ -667,6 +723,33 @@ $('bid').onchange = () => lsSet('bid', $('bid').value);
 $('pos').onchange = () => lsSet('pos', $('pos').value);
 $('sev').onchange = () => { if ($('sev').value === '0' && selected !== 'healthy') { /* keep: start() validates */ } };
 $('base').onchange = () => { if ($('base').checked) { selected = 'healthy'; $('sev').value = '0'; render(); } };
+function num(value, digits) { return value == null ? '-' : Number(value).toFixed(digits); }
+
+function renderSpeed() {
+  const s = $('speedstate'), lp = state.last_packet;
+  if (!lp || lp.age_s > 5) {
+    s.className = 'speedstate'; s.textContent = 'Speed: no data from the node yet.';
+    $('shaft').innerHTML = ''; return;
+  }
+  if (lp.measured_rpm == null) {
+    s.className = 'speedstate wait';
+    s.textContent = 'The node runs old firmware (no Keyphasor speed or probe values in its data): flash the new firmware.';
+    $('shaft').innerHTML = ''; return;
+  }
+  if (lp.speed_measured) {
+    s.className = 'speedstate ok';
+    s.textContent = 'Speed (Keyphasor): ' + num(lp.measured_rpm, 1) + ' RPM, ' + lp.revolutions + ' turns in the last window';
+  } else {
+    s.className = 'speedstate wait';
+    s.textContent = 'Speed: the Keyphasor gives no steady speed (check the Keyphasor probe on channel 7).';
+  }
+  $('shaft').innerHTML = lp.probes.map(p => '<div class="probe' + (p.valid ? '' : ' off') + '"><h3>' + esc(p.name) +
+    (p.valid ? '' : ' (not valid: check the probe and its wiring)') + '</h3>' +
+    '<div><span>Gap</span><b>' + (p.valid ? num(p.gap_um, 1) + ' &micro;m' : '-') + '</b></div>' +
+    '<div><span>Vibration pk-pk</span><b>' + (p.valid ? num(p.pkpk_um, 1) + ' &micro;m' : '-') + '</b></div>' +
+    '<div><span>1X (once per turn)</span><b>' + (p.x1 ? num(p.x1_um_pp, 1) + ' &micro;m pp at ' + num(p.x1_phase_deg, 0) + '&deg;' : '-') +
+    '</b></div></div>').join('');
+}
 
 $('toggle').onclick = async () => {
   if (!state || busy) return;
@@ -677,19 +760,6 @@ $('toggle').onclick = async () => {
       bearing_id:$('bid').value, position:$('pos').value, is_baseline:$('base').checked});
   } catch (e) { $('msg').textContent = e.message; }
   busy = false; $('toggle').disabled = false;
-  refresh();
-};
-
-for (const b of document.querySelectorAll('.preset')) b.onclick = () => { $('rpm').value = b.dataset.rpm; };
-$('rpmset').onclick = async () => {
-  const v = parseInt($('rpm').value, 10);
-  if (!(v >= 60 && v <= 3600)) { $('rpmmsg').textContent = 'Enter a whole number from 60 to 3600.'; return; }
-  $('rpmset').disabled = true; $('rpmmsg').textContent = 'Sent. Waiting for the node (it applies the speed at the next window end)...';
-  try {
-    const d = await post('/api/rpm', {rpm:v});
-    $('rpmmsg').textContent = 'Node replied: ' + d.reply + (d.ok ? '' : ' (not accepted)');
-  } catch (e) { $('rpmmsg').textContent = e.message; }
-  $('rpmset').disabled = false;
   refresh();
 };
 
@@ -710,15 +780,12 @@ function render() {
   $('selected').innerHTML = 'Selected: <b>' + esc(NAME[shown]) + '</b>' +
     (rec ? '<span class="hint">Stop recording to change the condition.</span>' : '');
   if (!state) return;
+  renderSpeed();
 
   $('beacon').textContent = state.beacon_ips.length
     ? 'Announcing this laptop as ' + state.beacon_ips.map(ip => ip + ':' + (location.port || '80')).join(', ')
     : 'Beacon: no network address found';
   const t = $('toggle');
-  const rpmBusy = !!state.rpm_busy;
-  $('rpmnow').textContent = state.last_packet && state.last_packet.age_s <= 5 ? state.last_packet.rpm : '-';
-  $('rpmset').disabled = rpmBusy || !!rec;
-  t.disabled = rpmBusy && !rec;
   t.textContent = rec ? 'Stop recording' : 'Start recording';
   t.className = 'toggle ' + (rec ? 'stop' : 'start');
   $('note').disabled = !!rec;
@@ -739,7 +806,7 @@ function render() {
     last.className = 'bad'; last.textContent = dur(lp.age_s) + ' ago';
   } else {
     feed.className = 'feed ok';
-    feed.textContent = 'Data arriving: ' + lp.rpm + ' RPM, ' + (lp.valid_channels.toString(2).split('1').length - 1) + ' of 4 channels OK';
+    feed.textContent = 'Data arriving: ' + (lp.speed_measured ? num(lp.measured_rpm, 0) : lp.rpm) + ' RPM, ' + (lp.valid_channels.toString(2).split('1').length - 1) + ' of 4 channels OK';
     last.className = ''; last.textContent = lp.age_s.toFixed(1) + ' s ago';
   }
 

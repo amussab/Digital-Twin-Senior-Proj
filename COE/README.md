@@ -2,8 +2,11 @@
 
 This folder holds everything from the COE side. The AI code lives in `AI-engine/`, and it doesn't depend on anything here.
 
+**ICS team, start here: [ICS_START_HERE.md](ICS_START_HERE.md)** (update the node's firmware once, then record
+training data). For your AI assistant: [AI_HELPER_PROMPT.md](AI_HELPER_PROMPT.md).
+
 The **node** (sensors → filter → AD7606 ADC → STM32 → ESP32) measures the two bearings and
-sends **one window of 32 features about every 0.72 s** (250 RPM) over its own Wi-Fi.
+sends **one window of 32 features** over its own Wi-Fi: every 0.69 s at 1750 RPM, every 0.33 s at 3600 RPM.
 The two scripts below receive those windows on a laptop:
 
 | Folder | Use it to | Run |
@@ -56,8 +59,21 @@ Allowed: 60..3600, where the bearing bands still fit (3600 is the top).
 - 32 features, always in this order: for each channel `B1X, B1Y, B2X, B2Y`, the features
   `rms, kurtosis, crest, envelope_rms, ftf, bsf, bpfo, bpfi`. Names: `B1X_rms` … `B2Y_bpfi`.
 - rms, envelope_rms and the four band values are in **g**; kurtosis and crest are ratios.
-- **B2X is a copy of B1Y**: the 4th sensor has no cable, so don't treat B2X as independent.
-- Speed and bearing orders are set at run time over the ST-LINK USB (`python training/node_config.py --rpm N` / `--bearing ftf bsf bpfo bpfi [hw]` / `--query`); defaults at power-up 1800 RPM and the 12 Nov bearing; no reflash needed.
+- **Firmware generations.** The Keyphasor firmware below is what `origin/main` builds. The older runtime-config firmware (release `rig_runtime_config`, flashed on rig day 2026-11-14; profile 2, rpm typed with `training/node_config.py --rpm N`, B2X a copy of B1Y) is still on the rig until it is reflashed; its windows are schema 1 and the receivers accept them. `node_config.py` has no effect on the Keyphasor firmware.
+- All four channels are independent sensors (since 15 Nov 2026; before that B2X was a copy of B1Y).
+- **Bearing profile 3** (since 16 Nov 2026, new RK4 bearings, S6700): the band features are at
+  FTF 0.452, **bsf = 2 × BSF = 10.28**, BPFO 4.970, BPFI 6.030 times the shaft speed. Each packet
+  carries `bearing_profile`; never mix profile-1 (old bearing) data with profile-3 data.
+- **Machine speed: measured by the node** (since 16 Nov 2026). Nobody sets it: the node reads the
+  Keyphasor on ADC channel 7 and computes the features for the speed it measures (any 60–4000 RPM;
+  the rig runs 1750 and 3600). `rpm` is that speed in whole RPM; `measured_rpm` is the exact mean
+  speed of the window. A window is sent only while the speed is steady (within 1 %).
+- **Shaft values for the digital twin** (same JSON, `schema_version` 2): `measured_rpm`,
+  `revolutions`, `shaft_flags`, and per proximity probe (`prox1` = AIN5, `prox3` = AIN6):
+  `_gap_um` (mean gap), `_pkpk_um` (pk-pk vibration), `_x1_um_pp` and `_x1_phase_deg`
+  (once-per-turn vibration and its phase lag from the Keyphasor notch). `shaft_flags` bits:
+  0 speed measured, 1 PROX 1 valid, 2 PROX 3 valid, 3 PROX 1 1X valid, 4 PROX 3 1X valid; a
+  value whose bit is clear is 0. The AI model uses the 32 features; these are extra.
 
 `host_receiver.py` (in both folders, same file) is the node's protocol: the node sends an
 HTTP POST of JSON to `/features` and waits for `200 {"accepted": true}`.

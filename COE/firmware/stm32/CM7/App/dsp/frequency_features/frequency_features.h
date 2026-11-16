@@ -9,17 +9,18 @@
 #include <stdint.h>
 
 enum { COE_FTF = 0, COE_BSF, COE_BPFO, COE_BPFI, COE_BEARING_FAMILIES };
-enum { COE_PROJECT_BEARING = 1, COE_CWRU_DRIVE_END_BEARING = 2 };
+enum { COE_PROJECT_BEARING = 1, COE_CWRU_DRIVE_END_BEARING = 2, COE_RK4_S6700_BEARING = 3 };
 
 /** Explicit bearing identity and order configuration; keep it alive for the stream. */
 typedef struct
 {
     uint32_t id;
-    float orders[COE_BEARING_FAMILIES]; /* FTF, single BSF, BPFO, BPFI. */
+    float orders[COE_BEARING_FAMILIES]; /* FTF, ball (BSF or 2xBSF, per profile), BPFO, BPFI. */
     float half_width_order;
 } BearingFeatureProfile;
 
-extern const BearingFeatureProfile coe_project_bearing; /* Provisional supplied orders. */
+extern const BearingFeatureProfile coe_project_bearing; /* Old provisional orders (before 16 Nov). */
+extern const BearingFeatureProfile coe_rk4_s6700_bearing; /* RK4 rotor kit since 16 Nov 2026. */
 extern const BearingFeatureProfile coe_cwru_drive_end_bearing;
 
 /** Five g-valued features, using envelope samples before mean removal for the first. */

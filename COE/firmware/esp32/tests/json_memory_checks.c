@@ -12,8 +12,15 @@ int main(void)
     for (unsigned index = 0U; index < 32U; ++index)
         packet.features[index] = index % 2U == 0U ? FLT_MAX : FLT_MIN;
     unsigned char storage[FEATURE_JSON_BYTES + 32U];
+    for (unsigned schema = 1U; schema <= 2U; ++schema)
     for (size_t capacity = 0U; capacity <= FEATURE_JSON_BYTES; ++capacity)
     {
+        packet.schema = schema; /* 2: also the Keyphasor and probe fields, longest values */
+        packet.measured_rpm = FLT_MAX;
+        packet.revolutions = UINT32_MAX;
+        packet.shaft_flags = UINT32_MAX;
+        for (unsigned index = 0U; index < 8U; ++index)
+            packet.probes[index / 4U][index % 4U] = -FLT_MAX;
         memset(storage, 0xCC, sizeof(storage));
         char *output = (char *)storage + 16U;
         const size_t length = feature_packet_to_json(&packet, "coe-memory-check", 42U, 1U,
@@ -28,6 +35,6 @@ int main(void)
         else if (capacity != 0U)
             assert(output[0] == '\0');
     }
-    puts("PASS JSON bounds: 2049 capacities, address/undefined-behavior sanitizers");
+    puts("PASS JSON bounds: 2 schemas x 2049 capacities, address/undefined-behavior sanitizers");
     return 0;
 }

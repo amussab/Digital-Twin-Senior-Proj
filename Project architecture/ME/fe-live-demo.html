@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FE digital twin of the RK4 rig: live bearing stiffness</title>
+<style>
+:root{
+  --bg:#EEF2F5; --panel:#FFFFFF; --ink:#17212B; --muted:#5A6878; --line:#CBD4DC;
+  --shaft:#2B5C8A; --spring:#C98210; --probe:#16836B; --pass:#1F7A4D; --fail:#B3261E; --ghost:#9AA8B6;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11171D; --panel:#1A222B; --ink:#E4EAF0; --muted:#98A6B4; --line:#2E3A46;
+    --shaft:#6FA3D6; --spring:#E3A33A; --probe:#3DBE9C; --pass:#4CC08A; --fail:#EF6B60; --ghost:#4E5D6C;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11171D; --panel:#1A222B; --ink:#E4EAF0; --muted:#98A6B4; --line:#2E3A46;
+  --shaft:#6FA3D6; --spring:#E3A33A; --probe:#3DBE9C; --pass:#4CC08A; --fail:#EF6B60; --ghost:#4E5D6C;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5}
+main{max-width:1180px;margin:0 auto;padding:28px 20px 48px}
+h1{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;font-weight:600;
+  font-size:clamp(1.6rem,3.2vw,2.3rem);line-height:1.15;margin:0 0 6px;letter-spacing:-0.01em}
+.sub{color:var(--muted);margin:0 0 20px;max-width:75ch}
+.rotor{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px 4px;overflow-x:auto}
+.rotor svg{display:block;width:100%;min-width:640px;height:auto}
+.grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(300px,1.15fr);gap:18px;margin-top:18px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+section.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+h2{font-size:1.05rem;font-weight:600;margin:0 0 12px}
+.ctl{margin-bottom:16px}
+.ctl label{display:flex;justify-content:space-between;gap:10px;font-size:.93rem}
+.ctl label b{font-weight:600;font-variant-numeric:tabular-nums}
+.ctl small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+input[type=range]{width:100%;accent-color:var(--shaft);margin:6px 0 0}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+button{font:inherit;font-size:.93rem;font-weight:500;padding:9px 14px;border-radius:7px;cursor:pointer;
+  border:1px solid var(--shaft);background:var(--shaft);color:#fff}
+button.alt{background:transparent;color:var(--shaft)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--spring);outline-offset:2px}
+.verdict{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:8px;margin-bottom:14px;
+  border:2px solid var(--pass)}
+.verdict.fail{border-color:var(--fail)}
+.verdict .big{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;font-size:2.4rem;font-weight:600;
+  line-height:1;font-variant-numeric:tabular-nums}
+.verdict .tag{font-weight:600;color:var(--pass)}
+.verdict.fail .tag{color:var(--fail)}
+table{width:100%;border-collapse:collapse;font-size:.93rem}
+td{padding:6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:12px}
+tr:last-child td{border-bottom:0}
+.note{color:var(--muted);font-size:.86rem;margin:10px 0 0}
+.plot{margin-top:18px}
+.plot svg{display:block;width:100%;height:auto}
+.plotwrap{overflow-x:auto}
+.plotwrap svg{min-width:560px}
+details{margin-top:18px}
+summary{cursor:pointer;font-weight:600}
+.params{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px}
+.params label{font-size:.88rem;color:var(--muted);display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.params input{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.foot{color:var(--muted);font-size:.86rem;margin-top:22px;max-width:90ch}
+.foot ol{padding-left:1.2em;margin:6px 0}
+.form{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin-bottom:18px}
+.form h2{margin-bottom:10px}
+.form dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0;font-size:.93rem}
+.form dt{font-weight:600}
+.form dd{margin:0;color:var(--ink)}
+.form code{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace;font-size:.9em;background:var(--bg);padding:1px 5px;border-radius:4px}
+@media (max-width:600px){.form dl{grid-template-columns:1fr}.form dd{margin-bottom:6px}}
+.hand{margin-top:18px}
+.hand h3{font-size:1rem;font-weight:600;margin:22px 0 6px;padding-top:12px;border-top:1px solid var(--line)}
+.hand h3:first-of-type{border-top:0;padding-top:0;margin-top:4px}
+.hand p{margin:10px 0 4px;font-size:.93rem}
+.hand .eq{overflow-x:auto;padding:4px 0}
+.hand math{font-size:1.08em}
+.hand math[display="block"]{margin:2px 0}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Bearing stiffness from shaft displacement: live rig</h1>
+  <p class="sub">Finite-element digital twin of the team's Bently Nevada RK4 rig: two 800 g disks, S6700 bearings in PLA rings. Geometry measured on the rig on 16 Nov 2026. The model takes the PROX 1 and PROX 3 readings sent by the edge node and finds the bearing stiffness K, then reports how far K has dropped from the healthy bearing.</p>
+
+  <section class="form" aria-labelledby="h-form">
+    <h2 id="h-form">Formulation</h2>
+    <dl>
+      <dt>Method</dt><dd>Finite element method (FEM), 1D beam model of the shaft</dd>
+      <dt>Element type</dt><dd>Euler–Bernoulli beam elements (bending only, shear ignored)</dd>
+      <dt>Mesh</dt><dd id="fMesh">Elements of 10 mm or less, a node at every bearing, probe and disk and at mid-span, 2 degrees of freedom per node (deflection and slope)</dd>
+      <dt>Shaft</dt><dd>Steel, E = 200 GPa, ρ = 7850 kg/m³, diameter 9.9 mm, 550 mm long, bearings at 20 and 530 mm (span 510 mm), 20 mm overhang past each bearing</dd>
+      <dt>Bearings</dt><dd>S6700 deep-groove ball bearings (10 × 15 × 4 mm) in PLA rings, as linear springs of stiffness K</dd>
+      <dt>Disks</dt><dd>Two 800 g disks (75 mm diameter, 25.5 mm wide) at 190 and 355 mm, as point masses with diametral inertia</dd>
+      <dt>Load</dt><dd>Unbalance force <code>F = m·e·ω²</code>, shared equally by the two disks</dd>
+      <dt>Equation solved</dt><dd><code>[K(1 + iη) − ω²M]·x = F</code>, η = shaft loss factor (damping)</dd>
+      <dt>Live input</dt><dd>Per 20-turn window from the node: Keyphasor speed and the 1X amplitude and phase of PROX 1 and PROX 3</dd>
+      <dt>Baseline</dt><dd>With the healthy bearing, the unknown rig unbalance m·e is set so the model matches the probes at the Hertz stiffness K₀</dd>
+      <dt>Identification</dt><dd>Each new window: try 1,200 values of K, keep the one whose predicted reading matches the probes. Stiffness loss = (K₀ − K)/K₀</dd>
+      <dt>Physics RUL</dt><dd>Fit a straight line to ln(K/K₀) against time over the last 200 windows and extend it to the failure point (25% stiffness drop). RUL = time from now to that point (hand calculation D)</dd>
+      <dt>Check</dt><dd>Rigid bearings + 10 N at mid-span reproduces <code>PL³/48EI</code></dd>
+    </dl>
+    <h2 style="margin-top:16px">Assumptions</h2>
+    <ol style="margin:0;padding-left:1.3em;font-size:.93rem">
+      <li>Bearings are linear springs. Damping is a small shaft loss factor η = 0.02 (assumed; fit it from a run-up).</li>
+      <li>The rig's unbalance is not known; it is found once from the healthy baseline and then held fixed.</li>
+      <li>One K for both bearings (their loads differ by under 2%).</li>
+      <li>Probe readings are the 1X response, with phase from the Keyphasor. Shaft runout can be removed with a slow-roll reading.</li>
+      <li>The flexible coupling carries no load; the shaft overhang past each bearing is included.</li>
+      <li>Probe scale 200 mV/mil (127 µm/V), node divider 0.170, as set in the node firmware.</li>
+      <li>Healthy stiffness K₀ from a Hertz contact calculation for the S6700 (hand calculation B), in series with the PLA ring (from the CAD file adapter_6f.step). A calculation, not a measurement.</li>
+    </ol>
+  </section>
+
+  <div class="rotor" aria-label="Rotor schematic with deflected shaft shape">
+    <svg id="rotor" viewBox="0 0 1000 352" role="img"></svg>
+  </div>
+
+  <section class="box live" aria-labelledby="h-live" style="margin-top:18px">
+    <h2 id="h-live">Live rig</h2>
+    <p class="note" style="margin:0 0 6px">Feed address <input autocomplete="off" id="feedUrl" value="http://localhost:8000" style="font:inherit;padding:2px 6px;width:16em"> (the laptop running the COE inference receiver)</p>
+    <p class="note" id="liveSrc" style="margin:0 0 10px"></p>
+    <div class="grid" style="margin-top:0">
+      <div>
+        <table>
+          <tr><td>Speed (Keyphasor)</td><td id="lRpm">–</td></tr>
+          <tr><td>PROX 1, 1X</td><td id="lP1">–</td></tr>
+          <tr><td>PROX 3, 1X</td><td id="lP3">–</td></tr>
+          <tr><td>Reading used (both probes averaged, runout removed)</td><td id="lAmp">–</td></tr>
+          <tr><td>Windows received</td><td id="lN">0</td></tr>
+          <tr><td>Slow roll (runout)</td><td id="lSlow">not captured</td></tr>
+          <tr><td>Healthy baseline</td><td id="lBase">not set</td></tr>
+        </table>
+        <div class="btns" style="margin-top:12px">
+          <button id="bSlow" class="alt">Capture slow roll (next window)</button>
+          <button id="bBase">Set healthy baseline (next 10 windows)</button>
+          <button id="bReset" class="alt">Reset</button>
+        </div>
+        <details style="margin-top:14px">
+          <summary>Type a reading by hand</summary>
+          <p class="note">For when the node is not streaming. Phase is optional (needed only for the slow-roll correction).</p>
+          <div class="params">
+            <label>Speed, rpm<input autocomplete="off" id="mRpm" type="number" value="1750"></label>
+            <label>PROX 1 1X, µm pp<input autocomplete="off" id="mP1" type="number" step="0.1"></label>
+            <label>PROX 1 phase, deg<input autocomplete="off" id="mPh1" type="number" step="1"></label>
+            <label>PROX 3 1X, µm pp<input autocomplete="off" id="mP3" type="number" step="0.1"></label>
+            <label>PROX 3 phase, deg<input autocomplete="off" id="mPh3" type="number" step="1"></label>
+          </div>
+          <div class="btns"><button id="bManual" class="alt">Add this reading</button></div>
+        </details>
+      </div>
+      <div>
+        <div id="lVerdict" class="verdict">
+          <span class="big" id="lLoss">–</span>
+          <span><span class="tag" id="lTag">Stiffness loss</span><br><span id="lText" class="note" style="margin:0">Set the healthy baseline first.</span></span>
+        </div>
+        <table>
+          <tr><td>K identified now</td><td id="lK">–</td></tr>
+          <tr><td>K₀, healthy (Hertz)</td><td id="lK0">–</td></tr>
+          <tr><td>Rig unbalance m·e found at baseline</td><td id="lMe">–</td></tr>
+          <tr><td>Probe change if K drops 10%</td><td id="lSens">–</td></tr>
+          <tr><td>Scatter of one window (and of the 10-window average)</td><td id="lScat">–</td></tr>
+          <tr><td>Physics RUL (time to <span id="lFailPct">25</span>% stiffness drop)</td><td id="lRul" style="white-space:normal">–</td></tr>
+        </table>
+        <p class="note" id="lNote"></p>
+      </div>
+    </div>
+    <div class="plotwrap" style="margin-top:12px"><svg id="trend" viewBox="0 0 960 240" role="img" aria-label="Stiffness loss over time"></svg></div>
+  </section>
+
+  <section class="box" aria-labelledby="h-run" style="margin-top:18px">
+    <h2 id="h-run">Run-up: critical speed on the rig</h2>
+    <p class="note" style="margin:0 0 8px">Set the rig's speed ramp to 5 rpm/s or slower (the node only sends a reading while the speed is steady within 1%), from about 500 to 2500 rpm. Press Start before the ramp and Stop after it. No test screw. The page finds the speed where the probes peak and compares it with the model.</p>
+    <div class="btns"><button id="ruStart">Start recording</button><button id="ruStop" class="alt">Stop</button><button id="ruCsv" class="alt">Download data (CSV)</button><button id="ruClear" class="alt">Clear</button></div>
+    <p class="note" id="ruInfo">Not recording.</p>
+    <div id="ruVerdict" class="verdict" style="display:none"><span class="big" id="ruPeak">–</span><span><span class="tag" id="ruTag"></span><br><span id="ruText" class="note" style="margin:0"></span></span></div>
+    <div class="plotwrap"><svg id="runup" viewBox="0 0 960 330" role="img" aria-label="Probe amplitude against speed, measured and model"></svg></div>
+  </section>
+
+  <div class="grid">
+    <section class="box" aria-labelledby="h-ctl">
+      <h2 id="h-ctl">Simulated test (Spec 2 check)</h2>
+      <div class="ctl">
+        <label for="kTrue">Reference bearing stiffness K <b id="kTrueV"></b></label>
+        <input autocomplete="off" id="kTrue" type="range" min="4" max="8" step="0.001" value="6.8">
+        <small>The "known case". Starts at the Hertz value for the S6700. The model does not see this number.</small>
+      </div>
+      <div class="ctl">
+        <label for="rpm">Shaft speed <b id="rpmV"></b></label>
+        <input autocomplete="off" id="rpm" type="range" min="1000" max="3600" step="10" value="1750">
+      </div>
+      <div class="ctl">
+        <label for="noise">Probe noise per window <b id="noiseV"></b></label>
+        <input autocomplete="off" id="noise" type="range" min="0" max="1" step="0.01" value="0.20">
+      </div>
+      <div class="ctl">
+        <label for="avg">Windows averaged <b id="avgV"></b></label>
+        <input autocomplete="off" id="avg" type="range" min="1" max="200" step="1" value="50">
+        <small>Each window is 20 shaft revolutions.</small>
+      </div>
+      <div class="btns">
+        <button id="measure">Take a measurement</button>
+        <button id="trials" class="alt">Run 2000 measurements</button>
+      </div>
+    </section>
+
+    <section class="box" aria-labelledby="h-res" aria-live="polite">
+      <h2 id="h-res">Simulated result</h2>
+      <div id="verdict" class="verdict">
+        <span class="big" id="errBig">–</span>
+        <span><span class="tag" id="tag">–</span><br><span id="verdictText" class="note" style="margin:0"></span></span>
+      </div>
+      <table>
+        <tr><td>Probe reading (both probes, averaged)</td><td id="rMeas">–</td></tr>
+        <tr><td>Same reading at the Proximitor output (200 mV/mil)</td><td id="rMv">–</td></tr>
+        <tr><td>K identified by the model</td><td id="rKid">–</td></tr>
+        <tr><td>K reference (known case)</td><td id="rKtrue">–</td></tr>
+        <tr><td>Probe change if K drops 10%</td><td id="rSens">–</td></tr>
+        <tr><td>Noise left after averaging</td><td id="rNoise">–</td></tr>
+        <tr><td>2000 repeated measurements<br><span style="color:var(--muted);font-size:.8rem">Pass = 99% of trials within 10%</span></td><td id="rTrials" style="white-space:normal">not run</td></tr>
+        <tr><td>Model's first critical speed at this K</td><td id="rCrit">–</td></tr>
+      </table>
+      <p class="note" id="sensNote"></p>
+    </section>
+  </div>
+
+  <section class="box plot" aria-labelledby="h-plot">
+    <h2 id="h-plot">How the model finds K</h2>
+    <p class="note" style="margin:0 0 8px">It tries 1,200 stiffness values. For each one it predicts the probe readings, compares them with the measurement, and keeps the value with the smallest mismatch. Shows the last live window once a baseline is set, otherwise the simulated test.</p>
+    <div class="plotwrap"><svg id="plot" viewBox="0 0 960 300" role="img" aria-label="Mismatch between predicted and measured probe reading versus trial stiffness"></svg></div>
+  </section>
+
+  <details open>
+    <summary>Rig and bearing parameters</summary>
+    <p class="note">Positions are from the shaft end at the coupling, measured on the rig on 16 Nov 2026. Change any value here and the whole page updates.</p>
+    <div class="params">
+      <label>Shaft diameter, mm<input autocomplete="off" id="pD" type="number" value="9.9" step="0.1"></label>
+      <label>Shaft length, mm<input autocomplete="off" id="pLs" type="number" value="550" step="5"></label>
+      <label>Bearing A (block A) at, mm<input autocomplete="off" id="pBa" type="number" value="20" step="1"></label>
+      <label>Bearing D (block D) at, mm<input autocomplete="off" id="pBd" type="number" value="530" step="1"></label>
+      <label>Disk 1 at, mm<input autocomplete="off" id="pD1" type="number" value="190" step="1"></label>
+      <label>Disk 2 at, mm<input autocomplete="off" id="pD2" type="number" value="355" step="1"></label>
+      <label>Mass of each disk, g<input autocomplete="off" id="pM" type="number" value="800" step="5"></label>
+      <label>PROX 1 (block B) at, mm<input autocomplete="off" id="pP1" type="number" value="78" step="1"></label>
+      <label>PROX 3 (block C) at, mm<input autocomplete="off" id="pP3" type="number" value="470" step="1"></label>
+      <label>Test mass in balance hole, g (5 g = PPR test condition)<input autocomplete="off" id="pTm" type="number" value="5" step="0.1"></label>
+      <label>Balance hole radius, mm<input autocomplete="off" id="pR" type="number" value="30" step="0.5"></label>
+      <label>Failure point: stiffness drop, %<input autocomplete="off" id="pFail" type="number" value="25" step="1"></label>
+      <label>Shaft loss factor η<input autocomplete="off" id="pEta" type="number" value="0.02" step="0.005"></label>
+      <label>Number of balls Z<input autocomplete="off" id="bZ" type="number" value="11" step="1"></label>
+      <label>Ball diameter, mm<input autocomplete="off" id="bDw" type="number" value="1.2" step="0.05"></label>
+      <label>Pitch diameter, mm<input autocomplete="off" id="bDm" type="number" value="12.45" step="0.05"></label>
+      <label>Groove radius / ball diameter<input autocomplete="off" id="bGr" type="number" value="0.52" step="0.01"></label>
+      <label>PLA ring OD / bore / width, mm<input autocomplete="off" id="bRing" type="text" value="17.2 / 15.3 / 3.4"></label>
+    </div>
+  </details>
+
+  <section class="box hand" aria-labelledby="h-hand">
+    <h2 id="h-hand">Hand calculations</h2>
+    <h3>A. FE model checked by hand</h3>
+    <div class="eq" id="hA"></div>
+    <h3>B. S6700 bearing stiffness by Hertz contact theory</h3>
+    <p>Hamrock &amp; Brewe (1983): Z balls of diameter D<sub>w</sub>, pitch diameter d<sub>m</sub>, groove radius r<sub>g</sub>, steel E′ = E/(1 − ν²) = 226.4 GPa.</p>
+    <div class="eq" id="hB"></div>
+<h3>D. Physics RUL from K</h3>
+    <p>Each live window gives a stiffness K at time t (hours since the baseline). Over the last 200 windows:</p>
+    <div class="eq">y = ln(K/K₀) &nbsp;&nbsp; fit y = a + b·t by least squares &nbsp;&nbsp; b = Σ(t − t̄)(y − ȳ) / Σ(t − t̄)²<br>
+    Failure when K has dropped by the failure fraction f (25%): y<sub>fail</sub> = ln(1 − f) = ln(0.75) = −0.288<br>
+    Time of failure t<sub>f</sub> = t̄ + (y<sub>fail</sub> − ȳ)/b, &nbsp; RUL = t<sub>f</sub> − t<sub>now</sub><br>
+    Range: repeat with b ± 1.96·se(b), se(b) = √(Σ residual² / (n − 2) / Σ(t − t̄)²)<br>
+    No RUL is given until there are 8 windows and the line is clearly going down (b + 1.96·se(b) &lt; 0). A healthy bearing gives no RUL.</div>
+    <h3>C. Probe noise</h3>
+    <p>Worst published eddy-current sensor resolution: 3 µm (Sensors, MDPI, 2022). Samples in one 20-revolution window at 1750 rpm and 25 kS/s:</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>N</mi><mo>=</mo><msub><mi>f</mi><mi>s</mi></msub><mtext> </mtext><msub><mi>t</mi><mrow><mi>w</mi><mi>i</mi><mi>n</mi><mi>d</mi><mi>o</mi><mi>w</mi></mrow></msub><mo>=</mo><mn>25,000</mn><mo>×</mo><mfrac><mrow><mn>20</mn><mo>×</mo><mn>60</mn></mrow><mn>1750</mn></mfrac><mo>=</mo><mn>17,143</mn></mrow><annotation encoding="application/x-tex">N = f_s\,t_{window} = 25{,}000 \times \frac{20 \times 60}{1750} = 17{,}143</annotation></semantics></math></span></div>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>σ</mi><mrow><mn>1</mn><mo>×</mo></mrow></msub><mo>=</mo><msub><mi>σ</mi><mrow><mi>r</mi><mi>a</mi><mi>w</mi></mrow></msub><msqrt><mfrac><mn>2</mn><mi>N</mi></mfrac></msqrt><mo>=</mo><mn>3</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext><mo>×</mo><msqrt><mfrac><mn>2</mn><mn>17,143</mn></mfrac></msqrt><mo>=</mo><mn>0.032</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext></mrow><annotation encoding="application/x-tex">\sigma_{1\times} = \sigma_{raw}\sqrt{\frac{2}{N}} = 3\ \mu\text{m}\times\sqrt{\frac{2}{17{,}143}} = 0.032\ \mu\text{m}</annotation></semantics></math></span></div>
+    <p>The demo uses 0.2 µm per window, about 6 times larger, then averages 50 windows and 2 probes:</p>
+    <div class="eq"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>σ</mi><mrow><mi>a</mi><mi>v</mi><mi>g</mi></mrow></msub><mo>=</mo><mfrac><mrow><mn>0.2</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext></mrow><msqrt><mrow><mn>50</mn><mo>×</mo><mn>2</mn></mrow></msqrt></mfrac><mo>=</mo><mn>0.020</mn><mtext> </mtext><mi>μ</mi><mtext>m</mtext></mrow><annotation encoding="application/x-tex">\sigma_{avg} = \frac{0.2\ \mu\text{m}}{\sqrt{50 \times 2}} = 0.020\ \mu\text{m}</annotation></semantics></math></span></div>
+    </section>
+
+  <div class="foot">
+    <p id="valid"></p>
+    <p>Live data: run the COE inference receiver (COE/inference). It serves the newest speed and probe readings at http://localhost:8000/digital-twin. Open this page on the same laptop, or put that laptop's IP in the feed address.</p>
+    <p>Sources: Bently Nevada RK4 Rotor Kit datasheet 141592 Rev. P (10 mm shaft, Proximitor output 200 mV/mil). Rig dimensions measured by ME on 16 Nov 2026; PLA ring from adapter_6f.step. Hamrock &amp; Brewe, NASA TM-83084, 1983 (ball bearing contact). COE node firmware README (probe scale, S6700 profile 3).</p>
+  </div>
+</main>
+
+<script>
+(function(){
+  const E = 200e9, RHO = 7850, G = 9.81, DISK_R = 0.0375, DISK_W = 0.0255, E_PLA = 3.5e9;
+  const $ = id => document.getElementById(id);
+  let P = {}, Ks = null, Ms = null, X = [], NE = 0, grid = [], preds = [], last = null, lastLive = null;
+  let rng = mulberry32(7);
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  function gauss(){let u=0,v=0;while(!u)u=rng();v=rng();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+
+  // ---------- Hertz contact stiffness of the bearing (hand calculation B) ----------
+  function contact(rb, rr, sign, rg, Ep){
+    const Rx = 1/(1/rb + sign/rr), Ry = 1/(1/rb - 1/rg), a = Ry/Rx;
+    const k = 1.0339*a**0.636, eps = 1.0003 + 0.5968/a, phi = 1.5277 + 0.6023*Math.log(a);
+    const Rp = 1/(1/Rx + 1/Ry), Kc = Math.PI*k*Ep*Math.sqrt(2*eps*Rp/9)*phi**-1.5;
+    return {Rx, Ry, a, k, eps, phi, Rp, Kc};
+  }
+  function hertz(){
+    const Ep = 206e9/(1-0.3**2), rb = P.Dw/2, ri = (P.dm-P.Dw)/2, ro = (P.dm+P.Dw)/2, rg = P.gr*P.Dw;
+    const ci = contact(rb, ri, +1, rg, Ep), co = contact(rb, ro, -1, rg, Ep);
+    const Kn = (ci.Kc**(-2/3) + co.Kc**(-2/3))**-1.5;
+    // bearing loads from the shaft and disk weights (sum of moments about the coupling end)
+    const ws = RHO*P.A*G, total = ws*P.Ls + 2*P.md*G, mom = ws*P.Ls*P.Ls/2 + P.md*G*(P.xd1+P.xd2);
+    const RD = (mom - total*P.xa)/(P.xd - P.xa), RA = total - RD, W = (RA + RD)/2;
+    const delta = (W/Kn)**(2/3), Kb = 1.5*W/delta;
+    const kRing = E_PLA*P.ring.bore*P.ring.w/((P.ring.od - P.ring.bore)/2);
+    const K0 = 1/(1/Kb + 1/kRing);
+    return {Ep, rb, ri, ro, rg, ci, co, Kn, RA, RD, W, delta, Kb, kRing, K0};
+  }
+
+  function readParams(){
+    const mm = id => (+$(id).value)/1000;
+    P.d = mm('pD') || 0.0099; P.Ls = mm('pLs') || 0.55;
+    P.xa = mm('pBa'); P.xd = mm('pBd'); P.xd1 = mm('pD1'); P.xd2 = mm('pD2');
+    P.xp1 = mm('pP1'); P.xp3 = mm('pP3');
+    P.md = (+$('pM').value || 800)/1000;
+    P.me = (+$('pTm').value || 0)*1e-3 * (+$('pR').value || 30)*1e-3;
+    P.eta = +$('pEta').value; if(!(P.eta >= 0)) P.eta = 0.02;
+    P.I = Math.PI*P.d**4/64; P.A = Math.PI*P.d**2/4; P.EI = E*P.I;
+    P.Id = P.md*(3*DISK_R**2 + DISK_W**2)/12;
+    P.xm = (P.xa + P.xd)/2;
+    // mesh: a node at every bearing, probe and disk and at mid-span, elements of 10 mm or less
+    const key = [0, P.Ls, P.xa, P.xd, P.xm, P.xp1, P.xp3, P.xd1, P.xd2].map(v => Math.min(P.Ls, Math.max(0, +v.toFixed(6))));
+    const pts = [...new Set(key)].sort((a, b) => a - b);
+    X = [pts[0]];
+    for(let i=0;i+1<pts.length;i++){ const a=pts[i], b=pts[i+1], n=Math.max(1, Math.ceil((b-a)/0.010 - 1e-9));
+      for(let k=1;k<=n;k++) X.push(a+(b-a)*k/n); }
+    NE = X.length - 1;
+    const node = p => { let b=0; for(let i=1;i<X.length;i++) if(Math.abs(X[i]-p)<Math.abs(X[b]-p)) b=i; return b; };
+    P.ja = node(P.xa); P.jd = node(P.xd); P.j1 = node(P.xp1); P.j3 = node(P.xp3);
+    P.jd1 = node(P.xd1); P.jd2 = node(P.xd2); P.jm = node(P.xm);
+    P.Z = +$('bZ').value; P.Dw = +$('bDw').value/1000; P.dm = +$('bDm').value/1000; P.gr = +$('bGr').value || 0.52;
+    const ring = ($('bRing').value.match(/[\d.]+/g) || []).map(Number);
+    P.ring = {od: (ring[0] || 17.2)/1000, bore: (ring[1] || 15.3)/1000, w: (ring[2] || 3.4)/1000};
+    P.H = hertz(); P.K0 = P.H.K0;
+  }
+
+  function assemble(){
+    const n = 2*(NE+1);
+    Ks = Array.from({length:n},()=>new Float64Array(n));
+    Ms = Array.from({length:n},()=>new Float64Array(n));
+    for(let e=0;e<NE;e++){ const le=X[e+1]-X[e], c=P.EI/le**3, m=RHO*P.A*le/420, i=2*e;
+      const k = [[12,6*le,-12,6*le],[6*le,4*le*le,-6*le,2*le*le],[-12,-6*le,12,-6*le],[6*le,2*le*le,-6*le,4*le*le]];
+      const mm = [[156,22*le,54,-13*le],[22*le,4*le*le,13*le,-3*le*le],[54,13*le,156,-22*le],[-13*le,-3*le*le,-22*le,4*le*le]];
+      for(let a=0;a<4;a++)for(let b=0;b<4;b++){Ks[i+a][i+b]+=c*k[a][b];Ms[i+a][i+b]+=m*mm[a][b];}}
+    for(const j of [P.jd1, P.jd2]){ Ms[2*j][2*j] += P.md; Ms[2*j+1][2*j+1] += P.Id; }
+  }
+
+  // [K(1 + i eta) - w^2 M] x = F, banded complex Gaussian elimination (each node couples only to its neighbours)
+  function responseC(Kb, rpm, force, opt){
+    const n=2*(NE+1), hb=3, w=rpm*2*Math.PI/60, eta=(opt&&opt.eta!==undefined)?opt.eta:P.eta;
+    const re=Array.from({length:n},()=>new Float64Array(n)), im=Array.from({length:n},()=>new Float64Array(n));
+    for(let i=0;i<n;i++)for(let j=Math.max(0,i-hb);j<=Math.min(n-1,i+hb);j++){
+      re[i][j]=Ks[i][j]-w*w*Ms[i][j]; im[i][j]=eta*Ks[i][j];}
+    re[2*P.ja][2*P.ja]+=Kb; re[2*P.jd][2*P.jd]+=Kb;
+    const br=new Float64Array(n), bi=new Float64Array(n);
+    if(opt&&opt.at!==undefined) br[2*opt.at]=force; else { br[2*P.jd1]+=force/2; br[2*P.jd2]+=force/2; }
+    for(let k=0;k<n;k++){ const last=Math.min(n-1,k+hb), pr=re[k][k], pi=im[k][k], d=pr*pr+pi*pi;
+      for(let i=k+1;i<=last;i++){ const ar=re[i][k], ai=im[i][k]; if(!ar&&!ai) continue;
+        const fr=(ar*pr+ai*pi)/d, fi=(ai*pr-ar*pi)/d;
+        for(let j=k;j<=last;j++){ const sr=re[k][j], si=im[k][j]; re[i][j]-=fr*sr-fi*si; im[i][j]-=fr*si+fi*sr; }
+        br[i]-=fr*br[k]-fi*bi[k]; bi[i]-=fr*bi[k]+fi*br[k]; } }
+    const xr=new Float64Array(n), xi=new Float64Array(n);
+    for(let i=n-1;i>=0;i--){ let sr=br[i], si=bi[i];
+      for(let j=i+1;j<=Math.min(n-1,i+hb);j++){ sr-=re[i][j]*xr[j]-im[i][j]*xi[j]; si-=re[i][j]*xi[j]+im[i][j]*xr[j]; }
+      const pr=re[i][i], pi=im[i][i], d=pr*pr+pi*pi; xr[i]=(sr*pr+si*pi)/d; xi[i]=(si*pr-sr*pi)/d; }
+    const out=[]; for(let i=0;i<=NE;i++) out.push([xr[2*i], xi[2*i]]); return out;
+  }
+  function response(Kb, rpm, force){ // deflection amplitude at every node
+    const w=rpm*2*Math.PI/60; return responseC(Kb, rpm, force!==undefined?force:P.me*w*w).map(c=>Math.hypot(c[0],c[1]));
+  }
+  // average of the two probe amplitudes (zero-peak, m)
+  function probeReading(Kb,rpm,me){const w=rpm*2*Math.PI/60, r=response(Kb,rpm,(me===undefined?P.me:me)*w*w);
+    return (r[P.j1]+r[P.j3])/2;}
+
+  const KGRID = Array.from({length:1200},(_,i)=>10**(3.5+i*(9-3.5)/1199));
+  function buildGrid(){
+    const rpm=+$('rpm').value; grid=KGRID; preds=grid.map(K=>probeReading(K,rpm));
+  }
+  function identifyIn(pr, meas){let best=0,bv=Infinity,mis=[];
+    for(let i=0;i<pr.length;i++){const d=Math.abs(pr[i]-meas);mis.push(d);if(d<bv){bv=d;best=i;}}
+    return {K:KGRID[best],mis,i:best};}
+  const identify = meas => identifyIn(preds, meas);
+
+  const sigma = () => (+$('noise').value*1e-6)/Math.sqrt(+$('avg').value)/Math.SQRT2;
+  function measureOnce(Ktrue,rpm){return probeReading(Ktrue,rpm)+gauss()*sigma();}
+
+  const fmtK = K => K>=1e6 ? (K/1e6).toFixed(2)+' MN/m' : (K/1e3).toFixed(0)+' kN/m';
+  const fmtUm = x => (x*1e6).toFixed(3)+' µm';
+
+  // ---------- simulated test (unchanged method) ----------
+  function measure(){
+    const Kt=10**+$('kTrue').value, rpm=+$('rpm').value;
+    const meas=measureOnce(Kt,rpm), id=identify(meas), err=Math.abs(id.K-Kt)/Kt*100;
+    last={Kt,rpm,meas,id,err}; showResult(); drawPlot(); drawRotor();
+  }
+  function showResult(){
+    const {Kt,rpm,meas,id,err}=last, ok=err<=10;
+    $('errBig').textContent=err.toFixed(1)+'%';
+    $('tag').textContent= ok?'Within 10%: pass':'Over 10%: fail';
+    $('verdictText').textContent='Identification error for this simulated measurement';
+    $('verdict').className='verdict'+(ok?'':' fail');
+    $('rMeas').textContent=fmtUm(Math.abs(meas));
+    $('rMv').textContent=(Math.abs(meas)*1e6*200/25.4).toFixed(1)+' mV';
+    $('rCrit').textContent=critSpeed(Kt)+' rpm';
+    $('rKid').textContent=fmtK(id.K);
+    $('rKtrue').textContent=fmtK(Kt);
+    const p0=probeReading(Kt,rpm), p9=probeReading(0.9*Kt,rpm), s=Math.abs(p9/p0-1)*100;
+    $('rSens').textContent=s.toFixed(2)+'% ('+fmtUm(Math.abs(p9-p0))+')';
+    $('rNoise').textContent=fmtUm(sigma());
+    const ratio=Math.abs(p9-p0)/sigma();
+    $('sensNote').textContent = ratio<5
+      ? `A 10% change in K moves the reading by only ${ratio.toFixed(1)}× the noise, so K is hard to pin down.`
+      : `A 10% change in K moves the reading by ${ratio.toFixed(0)}× the noise, so the model can tell K apart.`;
+  }
+  const critCache={};
+  function critSpeed(K){ // speed where the probe response peaks
+    const key=K.toPrecision(4)+'|'+X.length+'|'+P.d+P.md+P.eta+P.xa+P.xd+P.xd1+P.xd2; if(critCache[key])return critCache[key];
+    const amp=r=>{const x=response(K,r,1);return x[P.j1]+x[P.j3];};
+    let best=0,bv=0;
+    for(let r=300;r<=10000;r+=25){const v=amp(r);if(v>bv){bv=v;best=r;}}
+    for(let r=best-25;r<=best+25;r+=1){const v=amp(r);if(v>bv){bv=v;best=r;}}
+    return critCache[key]=best;
+  }
+  function runTrials(){
+    const Kt=10**+$('kTrue').value, rpm=+$('rpm').value, N=2000;
+    const saved=rng; rng=mulberry32(12345);
+    const errs=[];
+    for(let t=0;t<N;t++)errs.push(Math.abs(identify(measureOnce(Kt,rpm)).K-Kt)/Kt*100);
+    rng=saved; errs.sort((x,y)=>x-y);
+    const mean=errs.reduce((x,y)=>x+y,0)/N, p99=errs[Math.floor(0.99*N)-1], worst=errs[N-1];
+    const within=errs.filter(e=>e<=10).length/N*100;
+    $('rTrials').innerHTML=`mean ${mean.toFixed(1)}%, worst ${worst.toFixed(1)}%<br>${within.toFixed(1)}% of trials within 10%<br>99% of trials under ${p99.toFixed(1)}% `+(p99<=10?'(pass)':'(fail)');
+  }
+
+  // ---------- live rig ----------
+  const L = {me:null, baseRpm:null, slow:null, wantSlow:false, baseBuf:null, n:0, recent:[], hist:[], cache:{}, t0:null, rul:null};
+  // physics RUL: straight line through ln(K/K0) against time, extended to the failure point (hand calculation D)
+  function fitRul(h, fail){
+    const n=h.length; if(n<8) return {why:`collecting windows (${n} of 8)`};
+    const t=h.map(p=>p.t), y=h.map(p=>Math.log(p.K/P.K0));
+    const tm=t.reduce((a,b)=>a+b,0)/n, ym=y.reduce((a,b)=>a+b,0)/n;
+    let sxx=0,sxy=0; for(let i=0;i<n;i++){sxx+=(t[i]-tm)**2; sxy+=(t[i]-tm)*(y[i]-ym);}
+    if(sxx<=0) return {why:'no time spread yet'};
+    const b=sxy/sxx, a=ym-b*tm; let ss=0; for(let i=0;i<n;i++) ss+=(y[i]-(a+b*t[i]))**2;
+    const se=Math.sqrt(ss/Math.max(n-2,1)/sxx);
+    if(!(b<0) || b+1.96*se>=0) return {a,b,se,why:'no clear downward trend in K, so no RUL (bearing reads healthy)'};
+    const yF=Math.log(1-fail), tNow=t[n-1], R=s=>Math.max(tm+(yF-ym)/s-tNow,0);
+    return {a,b,se,rul:R(b),lo:R(b-1.96*se),hi:R(b+1.96*se),tF:tm+(yF-ym)/b};
+  }
+  const fmtH = h => h<1/60 ? (h*3600).toFixed(0)+' s' : h<1 ? (h*60).toFixed(1)+' min' : h.toFixed(1)+' h';
+  function unitPreds(rpm){ // probe reading per unit m·e (kg·m) for every trial K, cached by whole rpm
+    const key=Math.round(rpm); if(!L.cache[key]){L.cache[key]=KGRID.map(K=>probeReading(K,key,1));
+      const ks=Object.keys(L.cache); if(ks.length>40) delete L.cache[ks[0]];}
+    return L.cache[key];
+  }
+  // ---------- run-up: measured critical speed ----------
+  const RU={on:false, pts:[]};
+  function runupFit(){ // bin by 25 rpm, fit the model's shape (K = K0) with the unbalance and damping free
+    const bins=new Map();
+    for(const q of RU.pts){ const a=[q.p1,q.p3].filter(v=>v!=null); if(!a.length) continue;
+      const k=Math.round(q.rpm/25)*25; if(!bins.has(k)) bins.set(k,[]); bins.get(k).push(a.reduce((x,y)=>x+y,0)/a.length); }
+    const B=[...bins].sort((x,y)=>x[0]-y[0]).map(([k,v])=>{v.sort((x,y)=>x-y); return {rpm:k, a:v[Math.floor(v.length/2)]*1e-6};});
+    if(B.length<4) return {B};
+    let ip=0; B.forEach((b,i)=>{ if(b.a>B[ip].a) ip=i; });
+    const before=Math.min(...B.slice(0,ip+1).map(b=>b.a)), after=Math.min(...B.slice(ip).map(b=>b.a));
+    const passed = ip>0 && ip<B.length-1 && before<0.7*B[ip].a && after<0.7*B[ip].a;
+    const unit=(eta,rpm)=>{const w=rpm*Math.PI/30, c=responseC(P.K0,rpm,w*w,{eta}); return (Math.hypot(...c[P.j1])+Math.hypot(...c[P.j3]))/2;};
+    let best=null;
+    for(const eta of [0.01,0.02,0.03,0.05,0.07,0.1,0.15,0.2,0.3]){
+      const u=B.map(b=>unit(eta,b.rpm)); let su=0,sm=0; u.forEach((x,i)=>{su+=x*x; sm+=x*B[i].a;});
+      const me=sm/su; let e=0; u.forEach((x,i)=>{e+=((me*x-B[i].a)/B[ip].a)**2;});
+      if(!best||e<best.e) best={eta,me,e:Math.sqrt(e/B.length)};
+    }
+    return {B, ip, peak:B[ip].rpm, passed, best, unit};
+  }
+  function drawRunup(){
+    const svg=$('runup'), F=runupFit(), B=F.B||[];
+    const mu=css('--muted'),ln=css('--line'),sh=css('--shaft'),pr=css('--probe'),fl=css('--fail'),ink=css('--ink');
+    $('ruInfo').textContent=(RU.on?'Recording. ':'Not recording. ')+`${RU.pts.length} readings`+(RU.pts.length?`, ${Math.round(Math.min(...RU.pts.map(q=>q.rpm)))} to ${Math.round(Math.max(...RU.pts.map(q=>q.rpm)))} rpm`:'')+'.';
+    const crit=critSpeed(P.K0);
+    if(!B.length){ svg.innerHTML=`<text x="60" y="160" font-family="system-ui, sans-serif" font-size="14" fill="${mu}">Probe amplitude against speed appears here while recording. The model predicts the peak at ${crit} rpm.</text>`; $('ruVerdict').style.display='none'; return; }
+    const r0=Math.min(400,B[0].rpm), r1=Math.max(2600,B[B.length-1].rpm), Lx=70,R=940,T=20,Bt=270;
+    const model=[]; if(F.best) for(let r=r0;r<=r1;r+=10) model.push([r,F.best.me*F.unit(F.best.eta,r)*2e6]);
+    const ymax=Math.max(...B.map(b=>b.a*2e6), ...model.map(m=>m[1]).slice(0))*1.1||1;
+    const X=r=>Lx+(R-Lx)*(r-r0)/(r1-r0), Y=v=>Bt-(Bt-T)*Math.min(v,ymax)/ymax;
+    let ticks=''; for(let r=Math.ceil(r0/500)*500;r<=r1;r+=500) ticks+=`<line x1="${X(r)}" x2="${X(r)}" y1="${T}" y2="${Bt}" stroke="${ln}"/><text x="${X(r)}" y="${Bt+18}" text-anchor="middle">${r}</text>`;
+    for(let i=0;i<=4;i++){const v=ymax*i/4; ticks+=`<text x="${Lx-6}" y="${Y(v)+4}" text-anchor="end">${v.toFixed(v<10?1:0)}</text>`;}
+    const mpath=model.map((m,i)=>(i?'L':'M')+X(m[0]).toFixed(1)+' '+Y(m[1]).toFixed(1)).join(' ');
+    svg.innerHTML=`<g font-family="system-ui, sans-serif" font-size="13" fill="${mu}">${ticks}
+      <line x1="${X(crit)}" x2="${X(crit)}" y1="${T}" y2="${Bt}" stroke="${pr}" stroke-dasharray="6 4"/><text x="${X(crit)+6}" y="${T+14}" fill="${pr}">model ${crit} rpm</text>
+      ${model.length?`<path d="${mpath}" fill="none" stroke="${pr}" stroke-width="2.5"/>`:''}
+      ${B.map(b=>`<circle cx="${X(b.rpm)}" cy="${Y(b.a*2e6)}" r="4" fill="${sh}"/>`).join('')}
+      ${F.passed?`<line x1="${X(F.peak)}" x2="${X(F.peak)}" y1="${T}" y2="${Bt}" stroke="${ink}" stroke-width="1.5"/><text x="${X(F.peak)-6}" y="${T+30}" text-anchor="end" fill="${ink}">measured ${F.peak} rpm</text>`:''}
+      <text x="${(Lx+R)/2}" y="${Bt+40}" text-anchor="middle">Shaft speed (rpm). Dots: measured 1X, both probes averaged, µm pk-pk (25 rpm bins). Line: FE model fitted to the dots.</text></g>`;
+    const v=$('ruVerdict');
+    if(F.passed){ const d=(F.peak-crit)/crit*100; v.style.display='flex'; v.className='verdict';
+      $('ruPeak').textContent=F.peak+' rpm'; $('ruTag').textContent=`Measured critical speed (model ${crit} rpm, difference ${d>=0?'+':''}${d.toFixed(1)}%)`;
+      $('ruText').textContent=`Fitted damping η ≈ ${F.best.eta}, rig unbalance ≈ ${(F.best.me*1e6).toFixed(1)} g·mm. Bins are 25 rpm wide, so the peak is known to about ±13 rpm.`; }
+    else { v.style.display='none'; }
+  }
+  function runupCsv(){
+    const rows=['time,rpm,prox1_1x_um_pp,prox3_1x_um_pp'].concat(RU.pts.map(q=>[q.t,q.rpm.toFixed(1),q.p1==null?'':(2*q.p1).toFixed(3),q.p3==null?'':(2*q.p3).toFixed(3)].join(',')));
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([rows.join('\n')+'\n'],{type:'text/csv'}));
+    a.download='runup_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv'; a.click();
+  }
+
+  function vec(pp,ph){const a=pp/2, t=(ph||0)*Math.PI/180; return [a*Math.cos(t), a*Math.sin(t)];}
+
+  function processReading(r){ // r: {rpm, p:[{pp,ph}|null, {pp,ph}|null], src}
+    L.n++; $('lN').textContent=L.n;
+    $('lRpm').textContent=r.rpm.toFixed(1)+' rpm';
+    const show=(p)=>p?`${p.pp.toFixed(2)} µm pp`+(p.ph!=null?` at ${p.ph.toFixed(0)}°`:''):'not valid';
+    $('lP1').textContent=show(r.p[0]); $('lP3').textContent=show(r.p[1]);
+    if(L.wantSlow){
+      if(r.p.every(p=>!p||p.ph!=null)){L.slow=r.p.map(p=>p?vec(p.pp,p.ph):null); L.wantSlow=false;
+        $('lSlow').textContent=`captured at ${r.rpm.toFixed(0)} rpm: `+r.p.map(p=>p?p.pp.toFixed(2)+' µm pp':'–').join(', ');}
+      return;
+    }
+    const per=r.p.map((p,i)=>{ if(!p) return null; let a=p.pp/2;
+      if(L.slow&&L.slow[i]&&p.ph!=null){const v=vec(p.pp,p.ph); a=Math.hypot(v[0]-L.slow[i][0], v[1]-L.slow[i][1]);}
+      return a;});
+    const amps=per.filter(a=>a!=null);
+    if(RU.on && amps.length){ RU.pts.push({t:new Date().toISOString(), rpm:r.rpm, p1:per[0], p3:per[1]}); drawRunup(); }
+    if(!amps.length){$('lAmp').textContent='no valid probe'; return;}
+    const meas=amps.reduce((x,y)=>x+y,0)/amps.length*1e-6; // m, zero-peak
+    $('lAmp').textContent=(meas*1e6).toFixed(3)+' µm (zero-peak)';
+    L.recent.push(meas); if(L.recent.length>10)L.recent.shift();
+
+    if(L.baseBuf){ L.baseBuf.push({meas,rpm:r.rpm});
+      $('lBase').textContent=`collecting ${L.baseBuf.length} of 10`;
+      if(L.baseBuf.length>=10){
+        const m=L.baseBuf.reduce((s,x)=>s+x.meas,0)/10, rp=L.baseBuf.reduce((s,x)=>s+x.rpm,0)/10;
+        L.me = m / probeReading(P.K0, rp, 1); L.baseRpm=rp; L.baseBuf=null; L.hist=[]; L.t0=Date.now(); L.rul=null;
+        $('lBase').textContent=`set at ${rp.toFixed(0)} rpm, ${(m*1e6).toFixed(3)} µm`;
+        $('lMe').textContent=(L.me*1e6).toFixed(1)+' g·mm';
+      }
+      return;
+    }
+    if(L.me==null) return;
+    // use the average of the last 10 windows (speed is steady within 1%), so one noisy window does not swing K
+    L.rpms=(L.rpms||[]); L.rpms.push(r.rpm); if(L.rpms.length>10)L.rpms.shift();
+    const avgMeas=L.recent.reduce((x,y)=>x+y,0)/L.recent.length, avgRpm=L.rpms.reduce((x,y)=>x+y,0)/L.rpms.length;
+    const up=unitPreds(avgRpm), pr=up.map(v=>v*L.me), id=identifyIn(pr, avgMeas);
+    const atEdge = id.i===0 || id.i===KGRID.length-1;
+    const loss=(P.K0-id.K)/P.K0*100;
+    L.hist.push({t:(Date.now()-L.t0)/3.6e6, loss, K:id.K}); if(L.hist.length>300)L.hist.shift();
+    const fail=Math.min(0.9,Math.max(0.01,(+$('pFail').value||25)/100));
+    L.rul=fitRul(L.hist.slice(-200), fail); L.fail=fail;
+    $('lFailPct').textContent=(fail*100).toFixed(0);
+    $('lRul').textContent = L.rul.rul!==undefined ? `${fmtH(L.rul.rul)} (range ${fmtH(L.rul.hi)} to ${fmtH(L.rul.lo)})` : L.rul.why;
+    const p0=probeReading(P.K0,avgRpm,L.me), p9=probeReading(0.9*P.K0,avgRpm,L.me), d10=Math.abs(p9-p0);
+    const mean=L.recent.reduce((x,y)=>x+y,0)/L.recent.length;
+    const sd=L.recent.length>2?Math.sqrt(L.recent.reduce((s,x)=>s+(x-mean)**2,0)/(L.recent.length-1)):NaN;
+    $('lLoss').textContent=(loss>=0?'':'−')+Math.abs(loss).toFixed(1)+'%';
+    $('lTag').textContent= loss>=0 ? 'Stiffness loss from healthy' : 'Reads stiffer than healthy';
+    $('lText').textContent=`average of the last ${L.recent.length} windows at ${avgRpm.toFixed(0)} rpm`+(atEdge?'. K is at the edge of the search range (reading outside what the model can match)':'');
+    $('lVerdict').className='verdict'+(loss>=(+$('pFail').value||25)?' fail':'');
+    $('lK').textContent=fmtK(id.K); $('lSens').textContent=fmtUm(d10);
+    $('lScat').textContent=isNaN(sd)?'–':fmtUm(sd)+' ('+fmtUm(sd/Math.sqrt(L.recent.length))+')';
+    const sdAvg=sd/Math.sqrt(L.recent.length), ratio=d10/sdAvg;
+    $('lNote').textContent = isNaN(sd) ? '' : ratio<3
+      ? `A 10% drop in K changes the probe reading by only ${(d10*1e6).toFixed(3)} µm, ${ratio.toFixed(2)}× the scatter of the 10-window average. At this stiffness the percentage is mostly scatter; a real stiffness loss shows as a steady trend, not a single value.`
+      : `A 10% drop in K changes the reading by ${ratio.toFixed(1)}× the scatter of the 10-window average, so the percentage is meaningful.`;
+    lastLive={meas, id, K:id.K, rpm:r.rpm};
+    drawPlot(); drawTrend(); drawRotor();
+  }
+
+  function liveTable(){ $('lK0').textContent=fmtK(P.K0); }
+
+  // live feed: COE inference receiver, GET /digital-twin (CORS open), one new reading per window
+  let lastWin=null, polling=false;
+  const feedUrl=()=>($('feedUrl').value.trim()||'http://localhost:8000').replace(/\/+$/,'')+'/digital-twin';
+  async function poll(){
+    if(polling) return; polling=true;
+    try{
+      const res=await fetch(feedUrl(),{cache:'no-store'}); const js=await res.json();
+      if(!js.available){$('liveSrc').textContent='Connected to the COE receiver. No window from the node yet.';}
+      else{
+        $('liveSrc').textContent=`Connected to the COE receiver. Window ${js.window_id}, ${js.age_s} s ago.`+(js.age_s>5?' No new data is arriving.':'')+(js.ai_result?` AI: ${js.ai_result.result}`:'');
+        if(js.window_id!==lastWin){ lastWin=js.window_id;
+          if(js.measured_rpm!=null){
+            const pr=q=>q&&q.valid&&q.x1_valid&&q.x1_um_pp>0?{pp:q.x1_um_pp, ph:q.x1_phase_deg}:null;
+            processReading({rpm:js.measured_rpm, p:[pr(js.prox1), pr(js.prox3)], src:'node'});
+          }
+        }
+      }
+    }catch(e){$('liveSrc').textContent=`No live connection to ${feedUrl()}. Start the COE inference receiver, or type readings by hand below.`;}
+    polling=false;
+  }
+
+  // ---------- drawing ----------
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  function drawRotor(){
+    const svg=$('rotor'), live=lastLive&&L.me!=null;
+    const K= live?lastLive.K:10**+$('kTrue').value, rpm= live?Math.round(lastLive.rpm):+$('rpm').value;
+    const w=rpm*Math.PI/30, c=responseC(K,rpm,(live?L.me:P.me)*w*w);
+    // signed shape: rotate every node by the phase of the largest deflection
+    let im=0; c.forEach((v,i)=>{if(Math.hypot(...v)>Math.hypot(...c[im]))im=i;});
+    const ph=Math.atan2(c[im][1],c[im][0]), y=c.map(v=>v[0]*Math.cos(ph)+v[1]*Math.sin(ph));
+    const x0=80, x1=900, yc=175, maxAbs=Math.max(...y.map(Math.abs))||1, scale=70/maxAbs;
+    const Xp=i=>x0+(x1-x0)*X[i]/P.Ls, Y=i=>yc - y[i]*scale;
+    let path='M'+Xp(0)+' '+Y(0); for(let i=1;i<=NE;i++)path+=' L'+Xp(i)+' '+Y(i);
+    const spring=(x,top)=>{let s='M'+x+' '+top;const seg=8,h=(290-top)/(seg+2);s+=' L'+x+' '+(top+h);
+      for(let i=0;i<seg;i++)s+=' L'+(x+(i%2?-12:12))+' '+(top+h*(i+1.5));s+=' L'+x+' '+(top+h*(seg+1))+' L'+x+' 290';return s;};
+    const sh=css('--shaft'),sp=css('--spring'),pr=css('--probe'),gh=css('--ghost'),ink=css('--ink'),mu=css('--muted');
+    const disk=j=>`<rect x="${Xp(j)-9}" y="${Y(j)-52}" width="18" height="104" rx="3" fill="${ink}" opacity=".85"/>`;
+    const probe=(j,t)=>`<g fill="${pr}" stroke="${pr}"><rect x="${Xp(j)-6}" y="${Y(j)-66}" width="12" height="34" rx="2"/><line x1="${Xp(j)}" y1="${Y(j)-32}" x2="${Xp(j)}" y2="${Y(j)-10}" stroke-width="2"/></g>
+      <text x="${Xp(j)}" y="${Y(j)-74}" text-anchor="middle" fill="${pr}">${t}</text>`;
+    svg.innerHTML=`
+      <line x1="${x0}" y1="${yc}" x2="${x1}" y2="${yc}" stroke="${gh}" stroke-width="1.5" stroke-dasharray="6 6"/>
+      <path d="${path}" fill="none" stroke="${sh}" stroke-width="7" stroke-linecap="round"/>
+      <path d="${spring(Xp(P.ja),Y(P.ja)+4)}" fill="none" stroke="${sp}" stroke-width="3"/>
+      <path d="${spring(Xp(P.jd),Y(P.jd)+4)}" fill="none" stroke="${sp}" stroke-width="3"/>
+      <line x1="${Xp(P.ja)-30}" y1="292" x2="${Xp(P.ja)+30}" y2="292" stroke="${ink}" stroke-width="3"/>
+      <line x1="${Xp(P.jd)-30}" y1="292" x2="${Xp(P.jd)+30}" y2="292" stroke="${ink}" stroke-width="3"/>
+      ${disk(P.jd1)}${disk(P.jd2)}
+      <g font-family="system-ui, sans-serif" font-size="15" fill="${ink}">
+        ${probe(P.j1,'PROX 1')}${probe(P.j3,'PROX 3')}
+        <text x="${Xp(P.ja)}" y="322" text-anchor="middle">Bearing A</text>
+        <text x="${Xp(P.jd)}" y="322" text-anchor="middle">Bearing D</text>
+        <text x="${Xp(P.jd1)}" y="${Y(P.jd1)+72}" text-anchor="middle">Disk 1</text>
+        <text x="${Xp(P.jd2)}" y="${Y(P.jd2)+72}" text-anchor="middle">Disk 2</text>
+        <text x="${x0-6}" y="${yc+5}" fill="${mu}" font-size="13" text-anchor="end">coupling</text>
+        <text x="${(x0+x1)/2}" y="338" text-anchor="middle" fill="${mu}" font-size="13">${live?'Live: ':'Simulated: '}deflected shape at ${rpm} rpm, K = ${fmtK(K)}, exaggerated. Peak ${(maxAbs*1e6).toFixed(2)} µm</text>
+      </g>`;
+  }
+
+  function drawPlot(){
+    const svg=$('plot'), live=lastLive&&L.me!=null;
+    const src= live ? {Kt:P.K0, id:lastLive.id, ref:'Healthy K₀'} : last ? {Kt:last.Kt, id:last.id, ref:'Reference K'} : null;
+    if(!src){svg.innerHTML='';return;}
+    const {Kt,id}=src, Lx=40,R=930,T=24,B=250;
+    const lx=K=>Lx+(R-Lx)*(Math.log10(K)-3.5)/(9-3.5);
+    const vals=id.mis.map(v=>Math.max(v,1e-11)), lo=Math.log10(Math.min(...vals)), hi=Math.log10(Math.max(...vals));
+    const ly=v=>B-(B-T)*(Math.log10(Math.max(v,1e-11))-lo)/((hi-lo)||1);
+    let p='';KGRID.forEach((K,i)=>{p+=(i?' L':'M')+lx(K).toFixed(1)+' '+ly(vals[i]).toFixed(1);});
+    const sh=css('--shaft'),sp=css('--spring'),pr=css('--probe'),mu=css('--muted'),ln=css('--line'),ink=css('--ink');
+    let ticks='';for(let e=4;e<=9;e++){const x=lx(10**e);ticks+=`<line x1="${x}" y1="${T}" x2="${x}" y2="${B}" stroke="${ln}"/>
+      <text x="${x}" y="${B+20}" text-anchor="middle">${e<6?(10**e/1e3)+' kN/m':e<9?(10**e/1e6)+' MN/m':'1 GN/m'}</text>`;}
+    const band1=lx(Kt*0.9), band2=lx(Kt*1.1);
+    svg.innerHTML=`<g font-family="system-ui, sans-serif" font-size="13" fill="${mu}">
+      ${ticks}
+      <rect x="${band1}" y="${T}" width="${band2-band1}" height="${B-T}" fill="${pr}" opacity=".15"/>
+      <path d="${p}" fill="none" stroke="${sh}" stroke-width="2.5"/>
+      <line x1="${lx(Kt)}" y1="${T}" x2="${lx(Kt)}" y2="${B}" stroke="${pr}" stroke-width="2" stroke-dasharray="5 4"/>
+      <circle cx="${lx(id.K)}" cy="${ly(vals[id.i])}" r="7" fill="${sp}" stroke="${ink}" stroke-width="1.5"/>
+      <text x="${Lx}" y="${B+42}">Trial bearing stiffness K (log scale)${live?' — last live window':' — simulated test'}</text>
+      <text x="${Lx}" y="${T-8}">Mismatch between predicted and measured reading (log)</text>
+      <text x="${lx(Kt)+8}" y="${T+30}" fill="${pr}">${src.ref}, shaded ±10%</text>
+      <text x="${lx(id.K)+10}" y="${B-12}" fill="${ink}">Model's pick</text></g>`;
+  }
+
+  function drawTrend(){
+    const svg=$('trend'), h=L.hist; const Lx=60,R=940,T=20,B=200;
+    const mu=css('--muted'),ln=css('--line'),sh=css('--shaft'),fl=css('--fail'),pr=css('--probe');
+    if(!h.length){svg.innerHTML=`<text x="${Lx}" y="110" font-family="system-ui, sans-serif" font-size="14" fill="${mu}">Stiffness loss and the RUL trend line appear here after the healthy baseline is set.</text>`;return;}
+    const fail=(L.fail||0.25)*100, rul=L.rul||{};
+    const span=Math.max(h[h.length-1].t-h[0].t, 1e-6);
+    let tEnd=h[h.length-1].t; if(rul.tF!==undefined && rul.tF<h[0].t+5*span) tEnd=Math.max(tEnd,rul.tF);
+    const t0=h[0].t, X=t=>Lx+(R-Lx)*(t-t0)/Math.max(tEnd-t0,1e-9);
+    const mx=Math.min(100,Math.max(fail+10,...h.map(p=>Math.abs(p.loss)))), lo=-mx, hi=mx;
+    const cl=v=>Math.max(lo,Math.min(hi,v)), Y=v=>B-(B-T)*(cl(v)-lo)/(hi-lo);
+    let ticks=''; for(const v of [lo,lo/2,0,hi/2,hi]) ticks+=`<line x1="${Lx}" x2="${R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${ln}"/><text x="${Lx-6}" y="${Y(v)+4}" text-anchor="end">${v.toFixed(0)}%</text>`;
+    const pts=h.map(p=>`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.loss).toFixed(1)}" r="2.5" fill="${sh}"/>`).join('');
+    let fit='';
+    if(rul.b!==undefined){ const lossAt=t=>(1-Math.exp(rul.a+rul.b*t))*100;
+      const tA=h[Math.max(0,h.length-200)].t, tB=rul.tF!==undefined?Math.min(tEnd,rul.tF):h[h.length-1].t;
+      fit=`<line x1="${X(tA)}" y1="${Y(lossAt(tA))}" x2="${X(tB)}" y2="${Y(lossAt(tB))}" stroke="${pr}" stroke-width="2.5"/>`;
+      if(rul.tF!==undefined && rul.tF<=tEnd) fit+=`<circle cx="${X(rul.tF)}" cy="${Y(fail)}" r="6" fill="none" stroke="${fl}" stroke-width="2"/><text x="${X(rul.tF)-8}" y="${Y(fail)-10}" text-anchor="end" fill="${fl}">failure point, RUL ${fmtH(rul.rul)}</text>`;
+    }
+    const mins=(tEnd-t0)*60;
+    svg.innerHTML=`<g font-family="system-ui, sans-serif" font-size="13" fill="${mu}">${ticks}
+      <line x1="${Lx}" x2="${R}" y1="${Y(fail)}" y2="${Y(fail)}" stroke="${fl}" stroke-dasharray="6 4"/><text x="${R}" y="${Y(fail)-5}" text-anchor="end" fill="${fl}">failure point: ${fail.toFixed(0)}% stiffness drop</text>
+      ${pts}${fit}
+      <text x="${Lx}" y="${B+20}">0</text><text x="${R}" y="${B+20}" text-anchor="end">${mins<1?(mins*60).toFixed(0)+' s':mins.toFixed(1)+' min'}</text>
+      <text x="${(Lx+R)/2}" y="${B+28}" text-anchor="middle">Stiffness loss per window against time since the baseline (positive = softer). Green line: RUL trend fit.</text></g>`;
+  }
+
+  // ---------- hand calculations that depend on the inputs ----------
+  function handCalc(){
+    const H=P.H, f=(x,n=4)=>Number(x.toPrecision(n)).toLocaleString('en-US'), span=P.xd-P.xa;
+    const les=X.slice(1).map((x,i)=>x-X[i]), leMin=Math.min(...les), leMax=Math.max(...les);
+    // static check: rigid bearings, 10 N at mid-span (the overhangs carry no load)
+    const fe=Math.abs(responseC(1e15,0,10,{eta:0,at:P.jm})[P.jm][0]), hand=10*span**3/(48*P.EI);
+    // critical speed bounds: influence coefficients of the simply supported span
+    const alpha=(x,a)=>{const b=span-a; if(x<=a) return b*x*(span*span-b*b-x*x)/(6*P.EI*span); return alpha(span-x,span-a);};
+    const a1=P.xd1-P.xa, a2=P.xd2-P.xa, a11=alpha(a1,a1), a22=alpha(a2,a2), a12=alpha(a1,a2);
+    const y1=P.md*G*(a11+a12), y2=P.md*G*(a12+a22);
+    const wR=Math.sqrt(G*(y1+y2)/(y1*y1+y2*y2))*30/Math.PI;
+    const ws2=(Math.PI/span)**4*P.EI/(RHO*P.A), wD=Math.sqrt(1/(P.md*a11+P.md*a22+1/ws2))*30/Math.PI;
+    const crit=critSpeed(P.K0);
+    const w=1750*Math.PI/30, F=P.me*w*w, r=response(P.K0,1750);
+    $('fMesh').textContent=`${NE} elements (${(leMin*1000).toFixed(1)} to ${(leMax*1000).toFixed(1)} mm), ${NE+1} nodes, 2 degrees of freedom per node (deflection and slope), ${2*(NE+1)} in total. A node sits at every bearing, probe and disk and at mid-span.`;
+    $('hA').innerHTML=`<p>A1. Shaft section (d = ${(P.d*1000).toFixed(1)} mm): I = πd⁴/64 = ${P.I.toExponential(3)} m⁴, EI = ${P.EI.toFixed(2)} N·m², A = πd²/4 = ${P.A.toExponential(3)} m², ρA = ${(RHO*P.A).toFixed(4)} kg/m</p>
+      <p>A2. Mesh: ${NE} Euler–Bernoulli elements of length l<sub>e</sub> = ${(leMin*1000).toFixed(1)} to ${(leMax*1000).toFixed(1)} mm. Each has the stiffness matrix (EI/l<sub>e</sub>³)[12, 6l<sub>e</sub>, −12, 6l<sub>e</sub>; …] and the mass matrix (ρAl<sub>e</sub>/420)[156, 22l<sub>e</sub>, 54, −13l<sub>e</sub>; …], added into the ${2*(NE+1)} × ${2*(NE+1)} global matrices. Each disk adds m = ${P.md.toFixed(3)} kg on its deflection and I<sub>d</sub> = m(3r² + w²)/12 = ${P.Id.toExponential(3)} kg·m² on its slope.</p>
+      <p>A3. Validation: rigid bearings, 10 N at mid-span of the ${(span*1000).toFixed(0)} mm span, no rotation<br>
+      δ = PL³/48EI = 10 × ${span.toFixed(3)}³ / (48 × ${P.EI.toFixed(2)}) = ${(hand*1e6).toFixed(2)} µm &nbsp;&nbsp;(FE: ${(fe*1e6).toFixed(2)} µm)</p>
+      <p>A4. First critical speed, two hand bounds (disks at ${(a1*1000).toFixed(0)} and ${(a2*1000).toFixed(0)} mm from bearing A, rigid bearings)<br>
+      Influence coefficients of the simply supported span: α₁₁ = ${a11.toExponential(3)}, α₂₂ = ${a22.toExponential(3)}, α₁₂ = ${a12.toExponential(3)} m/N<br>
+      Rayleigh (static sag under the disk weights y₁ = ${(y1*1e6).toFixed(0)} µm, y₂ = ${(y2*1e6).toFixed(0)} µm; shaft mass ignored, so an upper bound): ω = √(gΣy/Σy²) = ${wR.toFixed(0)} rpm<br>
+      Dunkerley (each mass alone, plus the shaft alone; a lower bound): 1/ω² = mα₁₁ + mα₂₂ + 1/ω<sub>shaft</sub>² ⇒ ω = ${wD.toFixed(0)} rpm<br>
+      FE with K = K₀ and the overhangs: <b>${crit} rpm</b>, between the two bounds.</p>
+      <p>A5. Response at 1750 rpm with the test mass (${(P.me*1e6).toFixed(0)} g·mm): F = m·e·ω² = ${F.toFixed(3)} N shared by the disks ⇒ FE probe readings PROX 1 = ${(2*r[P.j1]*1e6).toFixed(2)} µm pk-pk, PROX 3 = ${(2*r[P.j3]*1e6).toFixed(2)} µm pk-pk</p>`;
+    const c=(n,o)=>`α = ${o.a.toFixed(1)}, k = ${o.k.toFixed(2)}, ε = ${o.eps.toFixed(3)}, φ = ${o.phi.toFixed(3)}, R′ = ${(o.Rp*1e3).toFixed(3)} mm ⇒ K<sub>${n}</sub> = ${o.Kc.toExponential(2)} N/m<sup>1.5</sup>`;
+    $('hB').innerHTML=`Inputs: Z = ${P.Z}, D<sub>w</sub> = ${(P.Dw*1e3).toFixed(2)} mm, d<sub>m</sub> = ${(P.dm*1e3).toFixed(2)} mm, r<sub>g</sub> = ${P.gr} D<sub>w</sub> = ${(H.rg*1e3).toFixed(3)} mm<br><br>
+      B1. Bearing loads from the shaft (${(RHO*P.A*P.Ls*1000).toFixed(0)} g) and two disks, by sum of moments: A = ${H.RA.toFixed(2)} N, D = ${H.RD.toFixed(2)} N. Mean W = ${H.W.toFixed(2)} N<br>
+      B2. r<sub>b</sub> = ${(H.rb*1e3).toFixed(3)}, r<sub>i</sub> = ${(H.ri*1e3).toFixed(3)}, r<sub>o</sub> = ${(H.ro*1e3).toFixed(3)} mm<br>
+      B3. Inner: R<sub>x</sub> = ${(H.ci.Rx*1e3).toFixed(3)} mm, R<sub>y</sub> = ${(H.ci.Ry*1e3).toFixed(2)} mm. Outer: R<sub>x</sub> = ${(H.co.Rx*1e3).toFixed(3)} mm, R<sub>y</sub> = ${(H.co.Ry*1e3).toFixed(2)} mm<br>
+      B4. K<sub>c</sub> = πkE′√(2εR′/9) φ<sup>−3/2</sup>, with k = 1.0339α<sup>0.636</sup>, ε = 1.0003 + 0.5968/α, φ = 1.5277 + 0.6023 ln α, α = R<sub>y</sub>/R<sub>x</sub><br>
+      &nbsp;&nbsp;Inner: ${c('i',H.ci)}<br>&nbsp;&nbsp;Outer: ${c('o',H.co)}<br>
+      B5. K<sub>n</sub> = (K<sub>i</sub><sup>−2/3</sup> + K<sub>o</sub><sup>−2/3</sup>)<sup>−3/2</sup> = ${H.Kn.toExponential(3)} N/m<sup>1.5</sup><br>
+      B6. Bottom ball carries the load: δ = (W/K<sub>n</sub>)<sup>2/3</sup> = ${(H.delta*1e6).toFixed(3)} µm, K = 1.5W/δ = ${fmtK(H.Kb)}<br>
+      B7. PLA ring (OD ${(P.ring.od*1e3).toFixed(1)}, bore ${(P.ring.bore*1e3).toFixed(1)}, width ${(P.ring.w*1e3).toFixed(1)} mm, E = 3.5 GPa) loaded across its bore: k = E·bore·width/wall = ${fmtK(H.kRing)}<br>
+      B8. In series: K₀ = (1/${fmtK(H.Kb)} + 1/${fmtK(H.kRing)})⁻¹ = <b>${fmtK(P.K0)}</b>
+      <br><br>If several balls share the load (no clearance), K is higher. A calculation, not a measurement.`;
+  }
+
+  function validate(){
+    const span=P.xd-P.xa, w=Math.abs(responseC(1e15,0,10,{eta:0,at:P.jm})[P.jm][0]), exact=10*span**3/(48*P.EI);
+    $('valid').textContent=`Model check: with rigid bearings and a 10 N load at mid-span, the model gives ${(w*1e6).toFixed(2)} µm; PL³/48EI gives ${(exact*1e6).toFixed(2)} µm (difference ${(Math.abs(w-exact)/exact*100).toFixed(4)}%).`;
+  }
+  function labels(){
+    $('kTrueV').textContent=fmtK(10**+$('kTrue').value);
+    $('rpmV').textContent=$('rpm').value+' rpm';
+    $('noiseV').textContent=(+$('noise').value).toFixed(2)+' µm';
+    $('avgV').textContent=$('avg').value;
+  }
+  function resetLive(){L.me=null;L.baseBuf=null;L.hist=[];L.recent=[];L.cache={};lastLive=null;L.rul=null;L.t0=null;$('lRul').textContent='–';
+    $('lBase').textContent='not set'; $('lMe').textContent='–'; $('lLoss').textContent='–'; $('lK').textContent='–';
+    $('lText').textContent='Set the healthy baseline first.'; $('lNote').textContent=''; $('lVerdict').className='verdict'; drawTrend();}
+
+  let t=null;
+  function refresh(full){labels();clearTimeout(t);t=setTimeout(()=>{if(full){readParams();assemble();validate();
+      $('kTrue').value=Math.log10(P.K0).toFixed(3);labels();liveTable();handCalc();resetLive();}
+    buildGrid();$('rTrials').textContent='not run';measure();},60);}
+
+  ['kTrue','noise','avg'].forEach(id=>$(id).addEventListener('input',()=>{labels();$('rTrials').textContent='not run';measure();}));
+  $('rpm').addEventListener('input',()=>refresh(false));
+  ['pD','pLs','pBa','pBd','pD1','pD2','pM','pP1','pP3','pTm','pR','pEta','bZ','bDw','bDm','bGr','bRing'].forEach(id=>$(id).addEventListener('change',()=>refresh(true)));
+  $('measure').addEventListener('click',measure);
+  $('trials').addEventListener('click',runTrials);
+  $('bSlow').addEventListener('click',()=>{L.wantSlow=true;$('lSlow').textContent='waiting for the next window (run the rig slowly, about 300–500 rpm)';});
+  $('bBase').addEventListener('click',()=>{L.baseBuf=[];L.hist=[];$('lBase').textContent='collecting 0 of 10';});
+  $('bReset').addEventListener('click',()=>{L.slow=null;$('lSlow').textContent='not captured';resetLive();});
+  $('ruStart').addEventListener('click',()=>{RU.on=true; drawRunup();});
+  $('ruStop').addEventListener('click',()=>{RU.on=false; drawRunup();});
+  $('ruClear').addEventListener('click',()=>{RU.pts=[]; drawRunup();});
+  $('ruCsv').addEventListener('click',runupCsv);
+  $('bManual').addEventListener('click',()=>{
+    const g=(a,b)=>{const pp=parseFloat($(a).value), ph=parseFloat($(b).value); return pp>0?{pp, ph:isFinite(ph)?ph:null}:null;};
+    const rpm=parseFloat($('mRpm').value); if(!(rpm>0)) return;
+    processReading({rpm, p:[g('mP1','mPh1'), g('mP3','mPh3')], src:'manual'});
+  });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawRotor();drawPlot();drawTrend();});
+
+  // always start from the values written in the page (browsers can restore old values on reload)
+  document.querySelectorAll('input').forEach(i=>{ if(i.type!=='file') i.value=i.defaultValue; });
+  readParams();assemble();validate();
+  $('kTrue').value=Math.log10(P.K0).toFixed(3);
+  labels();liveTable();handCalc();buildGrid();measure();drawTrend();drawRunup();
+  setTimeout(runTrials,50);
+  poll(); setInterval(poll,700);
+  window.__fe={processReading,P,L,fitRul:(h,f)=>fitRul(h,f),RU,drawRunup};
+})();
+</script>
+</body>
+</html>

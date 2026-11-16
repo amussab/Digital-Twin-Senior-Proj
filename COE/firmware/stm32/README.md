@@ -7,8 +7,10 @@ This is the one guide for the STM32 firmware. Detailed history lives in git
 
 ```text
 sensor -> IEPE conditioner -> filter -> AD7606 ADC (4 of 8 inputs)
-       -> STM32H755 CM7: 30 kS/s per channel -> DSP -> 32 features per window
-       -> 160-byte packet -> USART2 -> ESP32-C6 -> Wi-Fi/HTTP -> host
+RK4 PROX 1, PROX 3, Keyphasor -> dividers -> AD7606 AIN5..AIN7
+       -> STM32H755 CM7: 30 kS/s per channel -> DSP -> 32 features per window,
+          machine speed from the Keyphasor, probe gap / pk-pk / 1X per window
+       -> 204-byte packet -> USART2 -> ESP32-C6 -> Wi-Fi/HTTP -> host
 ```
 
 The Cortex-M7 does all the work. The Cortex-M4 only starts and idles.
@@ -113,9 +115,41 @@ the mode as an option instead.
 | `LIVE` | AD7606 → DSP → packets → ESP32, one status line per second | The real system |
 
 Live-mode settings are in [CM7/App/config/live_config.h](CM7/App/config/live_config.h):
-speed (`COE_LIVE_NOMINAL_RPM`, any value 60–3600 RPM; now 250 for the lab machine), bearing profile, and **`COE_LIVE_VOLTS_PER_G`** for the
+bearing profile, probe dividers and scale, and **`COE_LIVE_VOLTS_PER_G`** for the
 four channels. While these are 0 (unknown), LIVE computes everything from volts
 but sends **no packets**, because every packet declares g.
+
+**Machine speed: measured from the Keyphasor (16 Nov 2026).** No speed is set anywhere: not in
+the code, not on the laptop. LIVE reads the Keyphasor on ADC channel 7 (AIN7, slot 6) and
+measures the speed from its once-per-turn notch (`CM7/App/dsp/shaft/shaft_sensors.c`):
+
+- The notch levels are learned from the signal itself (last 2 s); the event is the falling
+  crossing of the middle level, timed to a fraction of a sample (about 1 µs).
+- A pulse closer than 0.7 × the last period is a glitch and is ignored; a gap longer than
+  1.2 s (below 50 RPM) means no speed.
+- The speed is "locked" when 4 periods in a row agree within ±1 %.
+- Once locked, LIVE starts the feature windows at the measured speed (rounded to whole RPM,
+  e.g. 1114). If the measured speed moves by more than 0.5 %, the window restarts at the new
+  speed. Without a lock no windows are made (the status line says `NO steady speed`).
+- A window is sent only if its mean speed is within 1 % of the speed its bands were computed
+  for and every single turn within 2 %; otherwise it is counted as `unsteady` and withheld.
+- Any 60–4000 RPM works (the rig runs 1750 and 3600, but those numbers are not in the code).
+
+The two RK4 proximity probes (AIN5 PROX 1, AIN6 PROX 3) are read in the same pass. Per
+window: gap (mean, µm), pk-pk vibration (µm), and the 1X vibration (amplitude µm pp and phase
+lag in degrees from the Keyphasor notch, vector average over the window's whole turns). A
+probe is valid when its mean voltage is between -19 and -1 V and nothing clips. Scale:
+divider 0.170 (`COE_LIVE_PROBE_DIVIDER`) and 200 mV/mil = 127 µm per probe volt
+(`COE_LIVE_PROBE_UM_PER_VOLT`). The speed and probe values go out in every packet (schema 2,
+section 6), so the AI host gets the 32 features and the digital twin gets the speed and shaft
+values from the same packet.
+
+The status line shows each second, for example:
+`Keyphasor 1114.91 RPM (windows at 1114 RPM), turns 203, rejected pulses 0`, and each window
+prints its Keyphasor speed and both probes' gap, pk-pk and 1X.
+
+The old laptop speed choice (beacon `COE-HOST <port> RPM <rpm>` and the `COR1` command on
+PD6, 14 Nov) is gone: the ESP32 no longer sends `COR1`, and LIVE ignores it.
 
 ### 2.2 Tools
 
@@ -235,7 +269,7 @@ packets appear in the ESP monitor and at the host; pressing **B1** once runs the
 timed delivery batch (section 7). Wi-Fi: the laptop joins the ESP's own Wi-Fi
 **COE-NODE** (or the same hotspot as the ESP, set in the ESP's
 `main/config/connection_settings.local.h`). The ESP finds the receiver by itself
-(UDP beacon on port 8001), so no laptop IP needs to be set.
+(UDP beacon `COE-HOST <port>` on port 8001), so no laptop IP needs to be set.
 
 ### 2.7 Quick ADC check (standalone, minimum wires)
 
@@ -332,34 +366,43 @@ reset in every mode, and never drives them high until B1 is pressed.
 
 ### 3.2 Analog channels (confirmed wiring)
 
-Since 2 Nov 2026: three TE 805-0050 sensors (the 4th has no cable). Conditioner
-output 2 feeds both filter 2 and filter 3, so B2X is a copy of the B1Y sensor
-taken before the filters (AIN4 and AIN6 match within about 0.2 mV). Confirmed by
-tapping one sensor at a time (4.8). Filter paths stay separate: never tie filter
-or ADC outputs together, and never copy one sampled channel in software to
-"make" four.
+Since 15 Nov 2026: four TE 805-0050 sensors, each on its own conditioner input
+(the 4th now has a BNC-to-terminal adapter), so all four channels are independent.
+Confirmed by unplugging one sensor at a time (each unplug moved exactly one input).
+Filter paths stay separate: never tie filter or ADC outputs together, and never
+copy one sampled channel in software to "make" four.
 
-| Sensor (conditioner input) | Conditioner output → filter / TL074 pin | ADC input | Serial slot (V1..V8 = 0..7) | Pipeline channel |
-| --- | --- | --- | ---: | --- |
-| IEPE 0 | out 1 → OUT1 / pin 1 | AIN2 | 1 | B1X, bearing 1 X |
-| IEPE 1 | out 2 → OUT2 / pin 7 | AIN4 | 3 | B1Y, bearing 1 Y |
-| IEPE 1 (copy) | out 2 → OUT3 / pin 8 | AIN6 | 5 | B2X, bearing 2 X |
-| IEPE 3 | out 4 → OUT4 / pin 14 | AIN8 | 7 | B2Y, bearing 2 Y |
+| Sensor | Conditioner input → output | Path | ADC input | Serial slot | Pipeline channel |
+| --- | --- | --- | --- | ---: | --- |
+| B1Y | 1 → 1 | filter (TL074) | AIN1 | 0 | B1Y, bearing 1 Y |
+| B1X | 2 → 2 | filter (TL074) | AIN2 | 1 | B1X, bearing 1 X |
+| B2X | 3 → 3 | filter (TL074) | AIN3 | 2 | B2X, bearing 2 X |
+| B2Y | 4 → 4 | filter (TL074 section A, output wire on pin 1's row, E10) | AIN4 | 3 | B2Y, bearing 2 Y |
+| RK4 PROX 1 | Proximitor output, 47 k / 10 k divider | — | AIN5 | 4 | PROX 1 gap, pk-pk, 1X (packet bytes 168–183) |
+| RK4 PROX 3 | Proximitor output, 47 k / 10 k divider | — | AIN6 | 5 | PROX 3 gap, pk-pk, 1X (packet bytes 184–199) |
+| RK4 Keyphasor | KØ output, 47 k / 10 k divider | — | AIN7 | 6 | machine speed (packet bytes 156–163) |
 
-IEPE 2 is empty and conditioner output 3 is not connected. The 805 sensors sit on
-a breadboard with jumpers: pin 1 (+OUT) to the BNC center, pin 2 (GND, the case)
-to the shield; pin 3 is unused. Powered sensors read about 10.9 V (datasheet
-bias 8–12 V).
+AIN8 is unused. An open AD7606 input reads about +1.75 V: a channel stuck there has
+lost its wire (on 15 Nov the B2Y filter output wire sat in an empty breadboard row;
+moved to E10, next to TL074 pin 1). All four channels then read 13-15 mV, 1.4-1.9 mV RMS.
+
+RK4 signals (15 Nov, machine at 500 RPM): Proximitor outputs are negative
+(200 mV/mil): PROX 1 about -9.7 V, PROX 3 about -8.2 V, Keyphasor -8.4 V with a
+-14.7 V pulse once per turn. The dividers scale them by 0.170 (measured), so the ADC
+sees -1.4 to -2.5 V; a disconnected probe (about -24 V) would still stay inside +/-5 V.
+The Proximitor commons (BNC shields) are joined to the node GND.
+
+The old layout (2-14 Nov): AIN2/4/6/8 = B1X/B1Y/B2X/B2Y, with B2X a copy of B1Y.
 
 Path: sensor → conditioner front IEPE input → rear output → filter input (before
-its first resistor) → filter output → ADC input. AIN1/3/5/7 are unused.
+its first resistor) → filter output → ADC input. AIN8 is unused.
 
 ### 3.3 STM32 to ESP32-C6
 
 | STM32 | Physical | ESP32-C6 | Function |
 | --- | --- | --- | --- |
 | PD5, USART2 TX | CN9 pin 6 (across from A2) | GPIO18 (RX) | Feature packets |
-| PD6, USART2 RX | CN9 pin 4 (across from A1) | GPIO19 (TX) | Delivery acknowledgment |
+| PD6, USART2 RX | CN9 pin 4 (across from A1) | GPIO19 (TX) | Delivery acknowledgment (REPLAY timing run); LIVE does not need it |
 | GND | CN9 pin 12 (across from A5) | GND | Common 0 V |
 
 Use ESP pins 18/19, not its TX/RX pins. Each board has its own USB cable; do
@@ -569,7 +612,7 @@ run without it. ESP32 reception and host delivery with the sensors not yet run.
 
 Input: four channels in g at 30 kS/s, order B1X, B1Y, B2X, B2Y. One window =
 20 nominal revolutions: 20,571 samples at 1750 RPM, 10,000 at 3600 RPM. Any
-speed from 60 to 3600 RPM is accepted. Below about 1500 RPM, 20 revolutions do
+speed from 60 to 4000 RPM is accepted (LIVE: the Keyphasor-measured speed, section 2.1). Below about 1500 RPM, 20 revolutions do
 not fit the envelope FFT, so a window is the most whole revolutions that fit
 (250 RPM: 3 revolutions, 21,600 samples, 0.72 s). The fault bands are never
 narrower than one FFT bin (0.10 order, or 1.22 Hz at slow speeds). Windows are not rounded to 256-sample blocks; filter
@@ -579,12 +622,32 @@ and decimation state carry across blocks and windows.
 | --- | --- | --- |
 | Band-pass | `bandpass` | Butterworth order 8 (4 biquads), 2–8 kHz, causal, CMSIS DF2T |
 | Time features | `time_features` | Signed RMS (no mean removal), Pearson kurtosis (Gaussian = 3), crest factor; one-pass centred moments in double |
-| Envelope | `envelope` | Absolute value → Butterworth order 7 low-pass (0.1 dB to 350 Hz, ≥ 60 dB from 1250 Hz) → keep 1 in 6 (5 kS/s) |
+| Envelope | `envelope` | Absolute value → Butterworth order 7 low-pass (0.1 dB to 700 Hz, ≥ 60 dB from 2500 Hz; 350/1250 Hz before 16 Nov 2026) → keep 1 in 6 (5 kS/s) |
 | Spectrum | `envelope_spectrum` | Whole-window envelope: remove mean, periodic Hann of the actual length, zero-pad to 4096, CMSIS real FFT; 1.2207 Hz bins; amplitude and one-sided PSD |
-| Frequency features | `frequency_features` | Envelope RMS (with mean), plus PSD band RMS at FTF/BSF/BPFO/BPFI orders ± 0.10 order |
+| Frequency features | `frequency_features` | Envelope RMS (with mean), plus PSD band RMS at the profile's FTF/ball/BPFO/BPFI orders ± the profile's half-width |
 
-Bearing profiles (orders): **project, ID 1, provisional**: FTF 0.38, BSF 1.98,
-BPFO 3.05, BPFI 4.95. CWRU drive end, ID 2: 0.39828, 2.35675, 3.5848, 5.4152.
+Bearing profiles (orders), the ID is sent in every packet:
+
+| ID | Bearing | FTF | Ball band | BPFO | BPFI | Half-width |
+|---:|---|---:|---:|---:|---:|---:|
+| **3 (LIVE since 16 Nov 2026)** | RK4 rotor kit, S6700 (10 × 15 mm), 11 balls × 1.2 mm, pitch 12.45 mm | 0.4518 | **2 × BSF = 10.2786** | 4.9699 | 6.0301 | ± 0.15 |
+| 1 (old) | provisional project bearing, replaced | 0.38 | BSF 1.98 | 3.05 | 4.95 | ± 0.10 |
+| 2 | CWRU drive end (replay tests only) | 0.39828 | BSF 2.35675 | 3.5848 | 5.4152 | ± 0.10 |
+
+Profile 3: geometry measured by ME (inner-ring land 11.4 mm, outer-ring land 13.5 mm,
+pitch = their mean; contact angle 0). Single BSF (5.139) would sit 0.17 order from
+BPFO (4.970) and the bands would overlap, so the ball band is 2 × BSF (a damaged ball
+strikes both races once per spin). ± 0.15 order covers slip and the pitch uncertainty
+(12.45 vs (10 + 15)/2 = 12.5 mm moves 2 × BSF by 0.04). At 3600 RPM the ball band
+reaches 629 Hz, hence the 700 Hz envelope passband. `generate_final_fixtures.py`
+recomputes the orders from the geometry and checks the firmware literal; REPLAY checks
+all three profiles at both speeds (18 windows) against Python.
+
+Limits to know: BPFO (4.970) and BPFI (6.030) lie within 0.03 order of the 5th and 6th
+shaft harmonics. A 20-revolution window resolves 0.05 order, so these bands also
+contain any 5× / 6× shaft content in the envelope (usually small after the 2-8 kHz
+band-pass). Train and judge the model on data from this machine, with healthy runs as
+the baseline. Never mix profile 1 and profile 3 data.
 Confirm the project orders for the real bearing before AI training.
 
 API rules (`CM7/App/pipeline/pipeline.h`): call `pipeline_init()` once per
@@ -602,21 +665,38 @@ Coefficients and test fixtures are generated from `coe_pipeline` by
 
 32 Float32 values, channel-major (B1X 0–7, B1Y 8–15, B2X 16–23, B2Y 24–31).
 Per channel: 0 band-pass RMS (g), 1 kurtosis, 2 crest factor, 3 envelope RMS (g),
-4 FTF band RMS, 5 BSF band RMS, 6 BPFO band RMS, 7 BPFI band RMS (g).
+4 FTF band RMS, 5 ball band RMS (`bsf`; 2 × BSF for profile 3), 6 BPFO band RMS, 7 BPFI band RMS (g).
 
-Packet, schema 1, 160 bytes, little-endian:
+Packet, little-endian. REPLAY sends schema 1 (160 bytes); LIVE sends schema 2 (204 bytes) =
+the same first 156 bytes with schema 2, then the shaft block and the CRC:
 
 | Bytes | Field |
 | --- | --- |
 | 0–3 | `COE1` |
-| 4–5 / 6–7 | Schema 1 / feature count 32 |
+| 4–5 / 6–7 | Schema (1 or 2) / feature count 32 |
 | 8–11 | Window ID (from 1 after each stream start) |
-| 12–15 | Nominal RPM |
+| 12–15 | RPM the bands were computed for (LIVE: measured speed, whole RPM) |
 | 16–19 | Bearing profile ID |
 | 20–23 | Channel-valid mask (bit 0 B1X … bit 3 B2Y) |
 | 24–27 | Unit ID, 1 = g |
 | 28–155 | 32 features |
-| 156–159 | CRC-32 (zlib.crc32) of bytes 0–155 |
+| 156–159 | Schema 1: CRC-32 (zlib.crc32) of bytes 0–155 |
+
+Schema 2 shaft block (`CM7/App/payload/node_packet.c`):
+
+| Bytes | Field |
+| --- | --- |
+| 156–159 | Measured speed, RPM (f32): mean of the window's Keyphasor turns |
+| 160–163 | Whole turns in the window (u32) |
+| 164–167 | Shaft flags (u32): bit 0 speed measured, bit 1 PROX 1 valid, bit 2 PROX 3 valid, bit 3 PROX 1 1X valid, bit 4 PROX 3 1X valid |
+| 168–183 | PROX 1: gap µm, pk-pk µm, 1X µm pp, 1X phase deg (4 × f32) |
+| 184–199 | PROX 3: same four values |
+| 200–203 | CRC-32 of bytes 0–199 |
+
+A value whose flag bit is clear is 0. The 1X values need a measured speed. The ESP32 checks
+these rules and forwards the values as JSON fields `measured_rpm`, `revolutions`,
+`shaft_flags`, `prox1_gap_um`, `prox1_pkpk_um`, `prox1_x1_um_pp`, `prox1_x1_phase_deg` and
+the same four for `prox3` (`../coe_esp32/README.md`).
 
 Host decoder: `coe_pipeline/steps/step_08/firmware_payload.py`. Use the same
 features, units and normalization for training and inference.
@@ -624,10 +704,10 @@ features, units and normalization for training and inference.
 ## 7. STM32 to ESP32 link
 
 USART2, 115200 8N1, TX by DMA1 Stream0 (interrupt priority 6), two owned
-160-byte slots in AXI SRAM (`CM7/App/communication/feature_uart.c`). Call
+224-byte slots in AXI SRAM (`CM7/App/communication/feature_uart.c`). Call
 `feature_uart_send()` and `feature_uart_process()` from the main loop only. A
 full queue returns false (never overwrites); an error or 100-ms timeout stops
-the transmitter until reset. One packet takes 13.9 ms on the wire. The ESP
+the transmitter until reset. One packet takes 13.9 ms (schema 1) or 17.7 ms (schema 2) on the wire. The ESP
 validates and forwards packets over HTTP; see `../coe_esp32/README.md`.
 
 Delivery timing (REPLAY mode, `delivery_timing.c`): after both boards and the
@@ -692,8 +772,9 @@ CM7/App/
   config/         pipeline_config.h (rates, sizes), firmware_mode.h, live_config.h
   acquisition/    AD7606 driver, safe pins, console, LIVE_RAW monitor, LIVE stream
   pipeline/       pipeline coordinator (windows, callback)
-  dsp/            bandpass, time_features, envelope, envelope_spectrum, frequency_features
-  payload/        32-feature vector and 160-byte packet
+  dsp/            bandpass, time_features, envelope, envelope_spectrum, frequency_features,
+                  shaft/ (Keyphasor speed and proximity probe values)
+  payload/        32-feature vector, 160-byte packet, 204-byte node packet (node_packet.c)
   communication/  USART2 DMA sender and delivery timing
   platform/       clock setup, cycle-counter timing
 CM7/TestData/     REPLAY-only demos, fixtures, generators, saved results, host tests
@@ -732,4 +813,7 @@ Drivers/          ST HAL, BSP and CMSIS (vendor code)
 - On the machine: record about 1 minute with the machine off (noise floor baseline), then the runs.
 - Aliasing suppression: measure 20–28 kHz generator inputs (4.7).
 - IEPE 1–3 current and the all-powered-together power test.
-- Warm-up after start, and revolution-accurate windows (needs a shaft reference).
+- Warm-up after start. Feature windows still start at any shaft angle (the Keyphasor is
+  measured, but windows are not aligned to the notch).
+- Confirm the 1X phase sign convention with the digital twin team (here: lag from the
+  Keyphasor notch to the closest approach, 0–360°).

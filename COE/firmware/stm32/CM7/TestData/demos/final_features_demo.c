@@ -104,8 +104,18 @@ static bool check_frequency_api(void)
         || frequency_profile_is_valid(NULL, 1750U)
         || frequency_profile_is_valid(&coe_project_bearing, 0U))
         return false;
-    bad.orders[COE_BPFI] = 10.0f;
+    bad.orders[COE_BPFI] = 15.0f; /* 900 Hz at 3600 RPM: above the 700 Hz envelope passband. */
     if (frequency_profile_is_valid(&bad, 3600U))
+        return false;
+    /* RK4 S6700: valid at both design speeds and the slow lab speed; with single BSF
+     * (5.139) instead of 2 x BSF its ball band would overlap BPFO and must be refused. */
+    if (!frequency_profile_is_valid(&coe_rk4_s6700_bearing, 1750U)
+        || !frequency_profile_is_valid(&coe_rk4_s6700_bearing, 3600U)
+        || !frequency_profile_is_valid(&coe_rk4_s6700_bearing, 500U))
+        return false;
+    bad = coe_rk4_s6700_bearing;
+    bad.orders[COE_BSF] = 5.13930723f;
+    if (frequency_profile_is_valid(&bad, 1750U))
         return false;
     bad = coe_project_bearing;
     bad.orders[COE_BPFI] = bad.orders[COE_BPFO];
@@ -163,7 +173,10 @@ static bool check_payload(void)
     test_time[1].rms = 11.0f;
     return !build_ai_payload(NULL, test_frequency, valid, 17U, 1750U, COE_PROJECT_BEARING, &test_payload)
         && !build_ai_payload(test_time, test_frequency, valid, 0U, 1750U, COE_PROJECT_BEARING, &test_payload)
-        && !build_ai_payload(test_time, test_frequency, valid, 17U, 1000U, COE_PROJECT_BEARING, &test_payload);
+        && !build_ai_payload(test_time, test_frequency, valid, 17U, 59U, COE_PROJECT_BEARING, &test_payload)
+        && !build_ai_payload(test_time, test_frequency, valid, 17U, 4001U, COE_PROJECT_BEARING, &test_payload)
+        && !build_ai_payload(test_time, test_frequency, valid, 17U, 1750U, 4U, &test_payload) /* no profile 4 */
+        && build_ai_payload(test_time, test_frequency, valid, 17U, 1750U, COE_RK4_S6700_BEARING, &test_payload);
 }
 
 /** Run all last-stage checks once and publish concise Watch status/counters. */

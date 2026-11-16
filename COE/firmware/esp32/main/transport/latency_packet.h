@@ -23,6 +23,16 @@ void latency_ack_encode(const LatencyAck *ack, uint8_t bytes[LATENCY_ACK_BYTES])
 bool latency_request_push(LatencyStream *stream, uint8_t byte, uint32_t *id);
 /** Reject corrupted, malformed or internally inconsistent acknowledgments. */
 bool latency_ack_push(LatencyStream *stream, uint8_t byte, LatencyAck *ack);
+/* Speed command, ESP32 -> STM32 on the same return wire as COA1: "COR1", RPM, CRC-32.
+ * The laptop chooses the machine speed (training page / inference script); the ESP32
+ * repeats it every 2 s, so a lost or corrupted frame is simply replaced. */
+#define SPEED_COMMAND_BYTES 12U
+#define SPEED_COMMAND_MIN_RPM 60U
+#define SPEED_COMMAND_MAX_RPM 3600U
+/** Encode a speed command (rpm in SPEED_COMMAND_MIN_RPM..MAX_RPM). */
+void speed_command_encode(uint32_t rpm, uint8_t bytes[SPEED_COMMAND_BYTES]);
+/** Consume arbitrary bytes; true only for a CRC-valid command with an RPM in range. */
+bool speed_command_push(LatencyStream *stream, uint8_t byte, uint32_t *rpm);
 /** Two frame types on the same UART; control bytes never enter a COE1 body. */
 typedef struct {
     FeaturePacketStream features;

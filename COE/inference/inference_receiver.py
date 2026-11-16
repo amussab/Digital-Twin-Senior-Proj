@@ -48,6 +48,19 @@ BEACON_PERIOD_S = 2.0
 QUEUE_LIMIT = 50  # windows waiting for the model (about 35 s at 250 RPM)
 
 
+def digital_twin_view(window, received_s):
+    """JSON for GET /digital-twin: one reading per window (speed, both probes), see the README."""
+    flags = window['shaft_flags'] or 0
+    view = {'available': True, 'age_s': round(time.monotonic() - received_s, 2),
+            'received_at': window['received_at'], 'window_id': window['window_id'],
+            'rpm': window['rpm'], 'measured_rpm': window['measured_rpm'],
+            'revolutions': window['revolutions'], 'shaft_flags': window['shaft_flags']}
+    for index, probe in enumerate(host_receiver.PROBES):
+        values = {name: window['shaft'].get(f'{probe}_{name}') for name in host_receiver.PROBE_VALUES}
+        view[probe] = dict(values, valid=bool(flags & (2 << index)), x1_valid=bool(flags & (8 << index)))
+    return view
+
+
 class WindowSink:
     """Stands in for host_receiver's output file: each new valid window lands here."""
 
@@ -80,8 +93,11 @@ class WindowSink:
             'schema_version': message.get('schema_version'), 'bearing_profile': message.get('bearing_profile'),
             'measured_rpm': message.get('measured_rpm') if message.get('shaft_flags', 0) & 1 else None,
             'shaft_flags': message.get('shaft_flags'),
+            'revolutions': message.get('revolutions'),
+            'shaft': {name: message[name] for name in host_receiver.SHAFT_FIELDS if name in message},
         }
         self.stats['last_seen'] = time.monotonic()
+        self.stats['latest'] = (window, self.stats['last_seen'])  # for GET /digital-twin, before the model runs
         while True:
             try:
                 self.windows.put_nowait(window)
@@ -100,7 +116,22 @@ class InferenceHandler(host_receiver.FeatureHandler):
             super().do_POST()
 
     def do_GET(self):
-        body = b'COE inference receiver is running. Results are printed in its terminal.\n'
+        if self.path.split('?')[0] == '/digital-twin':
+            stats = self.server.output.stats
+            latest = stats.get('latest')
+            data = digital_twin_view(*latest) if latest else {'available': False}
+            data['ai_result'] = stats.get('ai_result')
+            body = json.dumps(data).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Access-Control-Allow-Origin', '*')  # a web page on another port may read it
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        body = (b'COE inference receiver is running. Results are printed in its terminal.\n'
+                b'Digital twin data (speed, proximity probes): GET /digital-twin\n')
         self.send_response(200)
         self.send_header('Content-Type', 'text/plain')
         self.send_header('Content-Length', str(len(body)))
@@ -156,6 +187,20 @@ def backend_body(window, out, took_ms, contract):
             'postedAtMs': int(now * 1000), 'bearings': bearings}
 
 
+def shaft_text(window):
+    """Short text of the Keyphasor speed and probe gaps for the terminal line."""
+    if window['shaft_flags'] is None:
+        return f"{window['rpm']} RPM (old firmware: no Keyphasor or probe values)"
+    speed = (f"{window['measured_rpm']:.1f} RPM" if window['measured_rpm'] is not None
+             else f"{window['rpm']} RPM (no Keyphasor speed)")
+    gaps = []
+    for index, probe in enumerate(host_receiver.PROBES):
+        valid = window['shaft_flags'] & (2 << index)
+        gaps.append(f"{probe.upper()} gap {window['shaft'][probe + '_gap_um']:.0f} um" if valid
+                    else f'{probe.upper()} not valid')
+    return speed + ', ' + ', '.join(gaps)
+
+
 def run_forwarder(fwd, stats, stop):
     """Posts results to the backend. Never blocks the model or the node ACK; failures are counted and dropped."""
     while not stop.is_set():
@@ -201,6 +246,7 @@ def run_model(windows, stats, stop, fwd):
             except Exception as error:  # keep receiving even if the model fails once
                 result = f'MODEL ERROR: {type(error).__name__}: {error}'
             stats['done'] += 1
+            stats['ai_result'] = {'window_id': window['window_id'], 'result': str(result)}
             took_ms = (time.perf_counter() - started) * 1000
             body = backend_body(window, out, took_ms, contract)
             e2e_pred_ms = (time.time() - window['epoch_received']) * 1000
@@ -220,7 +266,7 @@ def run_model(windows, stats, stop, fwd):
                                   'fwd_dropped': stats['fwd_dropped']}) + '\n')
             log.flush()
             print(f"{window['received_at'][11:23]}  window {window['window_id']:>6}  "
-                  f"{window['rpm']} RPM  ->  {result}   (recv->pred {e2e_pred_ms:.0f} ms)", flush=True)
+                  f"{shaft_text(window)}  ->  {result}   (recv->pred {e2e_pred_ms:.0f} ms)", flush=True)
 
 
 def local_ipv4s():
@@ -280,7 +326,7 @@ def main():
 
     windows = queue.Queue(maxsize=QUEUE_LIMIT)
     stats = {'last_seen': None, 'started': time.monotonic(), 'dropped': 0,
-             'dropped_reported': 0, 'done': 0, 'fwd_ok': 0, 'fwd_dropped': 0}
+             'dropped_reported': 0, 'done': 0, 'fwd_ok': 0, 'fwd_dropped': 0, 'latest': None, 'ai_result': None}
     try:
         server = InferenceServer(('0.0.0.0', args.port), InferenceHandler)
     except OSError as error:

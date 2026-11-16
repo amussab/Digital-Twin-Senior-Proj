@@ -2,7 +2,9 @@
 
 Uses the unchanged Python steps 02..08 on exactly specified Float32 inputs.
 Synthetic records exercise FFT endpoints, odd lengths, padding and zero/DC cases.
-Full-pipeline vectors cover two bearing profiles, two speeds and three windows.
+Full-pipeline vectors cover three bearing profiles, two speeds and three windows.
+Profile 3 (RK4 rotor kit, S6700 bearing) is derived here from the measured geometry
+and checked against the firmware's literal values.
 """
 from pathlib import Path
 import argparse
@@ -25,6 +27,33 @@ def c_rows(values):
     """Format a flat numeric array six values per line."""
     return '\n'.join('    ' + ', '.join(literal(v) for v in values[i:i+6]) + ','
                      for i in range(0, len(values), 6))
+
+
+ENVELOPE_PASSBAND_HZ = 700
+ENVELOPE_STOPBAND_HZ = 2500
+
+# RK4 rotor-kit bearings since 16 Nov 2026: S6700-type deep-groove, 10 x 15 mm, measured by ME:
+# inner-ring land 11.4 mm, outer-ring land 13.5 mm, 11 balls of 1.2 mm, contact angle 0.
+RK4_BALLS, RK4_BALL_MM = 11, 1.2
+RK4_PITCH_MM = (11.4 + 13.5) / 2  # ball-centre circle between the two raceway lands
+
+
+def rk4_s6700_orders():
+    """Kinematic defect orders (multiples of shaft speed); the ball band uses 2 x BSF."""
+    ratio = RK4_BALL_MM / RK4_PITCH_MM
+    bsf = RK4_PITCH_MM / (2 * RK4_BALL_MM) * (1 - ratio ** 2)
+    return {"FTF": 0.5 * (1 - ratio), "BSF": 2 * bsf,
+            "BPFO": RK4_BALLS / 2 * (1 - ratio), "BPFI": RK4_BALLS / 2 * (1 + ratio)}
+
+
+def firmware_profile(firmware_project, name):
+    """Read one profile's orders and half-width from frequency_features.c."""
+    text = (firmware_project / 'CM7/App/dsp/frequency_features/frequency_features.c').read_text()
+    match = re.search(name + r' = \{.*?\.orders = \{([^}]*)\}, \.half_width_order = ([0-9.e+-]+)f', text, re.S)
+    if match is None:
+        raise ValueError(f'Profile {name} not found in frequency_features.c.')
+    orders = [float(v.strip().rstrip('f')) for v in match[1].split(',')]
+    return orders, float(match[2])
 
 
 def main():
@@ -75,7 +104,8 @@ def main():
             header += [f'static const float final_fft_{suffix}_{index}[{len(data)}] = {{', c_rows(data), '};']
         synthetic_features.append([
             [calculate_envelope_rms(record), *extract_frequency_domain_features(
-                frequencies, density, rpm, CWRU_DRIVE_END_ORDERS)]
+                frequencies, density, rpm, CWRU_DRIVE_END_ORDERS,
+                passband_edge_hz=ENVELOPE_PASSBAND_HZ)]
             for rpm in (1750, 3600)
         ])
     for suffix in ('input', 'amplitude', 'density'):
@@ -99,8 +129,14 @@ def main():
     values = re.findall(r'([-+]?\d+\.\d+e[-+]\d+)f', match[1])
     snippets = np.array(values, dtype=np.float32).reshape(4, 1024)
     bp = design_bandpass(30000, 2000, 8000)
-    lp = design_envelope_lowpass(30000, 350, 1250)
-    vectors = np.empty((2, 2, 3, 32), dtype=np.float32)
+    lp = design_envelope_lowpass(30000, ENVELOPE_PASSBAND_HZ, ENVELOPE_STOPBAND_HZ)
+    rk4 = rk4_s6700_orders()
+    profiles = ((CWRU_DRIVE_END_ORDERS, 0.10), (PROJECT_BEARING_ORDERS, 0.10), (rk4, 0.15))
+    c_orders, c_width = firmware_profile(args.firmware_project, 'coe_rk4_s6700_bearing')
+    expected32 = [np.float32(rk4[name]) for name in FAMILIES]
+    if [np.float32(v) for v in c_orders] != expected32 or np.float32(c_width) != np.float32(0.15):
+        raise ValueError(f'Firmware RK4 profile {c_orders}/{c_width} differs from geometry {expected32}.')
+    vectors = np.empty((len(profiles), 2, 3, 32), dtype=np.float32)
     third_envelopes = [[], []]
     cascade_errors = []
     for mode, rpm in enumerate((1750, 3600)):
@@ -117,16 +153,17 @@ def main():
                     third_envelopes[mode].append(envelope.astype(np.float32))
                 frequency, _, density = calculate_envelope_spectrum(envelope, 5000, 4096)
                 original_time = extract_time_domain_features(filtered[window*count:(window+1)*count])
-                for profile, orders in enumerate((CWRU_DRIVE_END_ORDERS, PROJECT_BEARING_ORDERS)):
+                for profile, (orders, width) in enumerate(profiles):
                     original_frequency = [calculate_envelope_rms(envelope),
-                        *extract_frequency_domain_features(frequency, density, rpm, orders)]
+                        *extract_frequency_domain_features(frequency, density, rpm, orders, width,
+                                                           ENVELOPE_PASSBAND_HZ)]
                     vectors[profile, mode, window, channel*8:(channel+1)*8] = build_feature_vector(
                         original_time, original_frequency)
                     # Profile coefficient quantization must not change selected bin centers.
                     for name in FAMILIES:
-                        edges = ((orders[name]-0.1)*rpm/60, (orders[name]+0.1)*rpm/60)
-                        edges32 = ((float(np.float32(orders[name]))-float(np.float32(0.1)))*rpm/60,
-                                   (float(np.float32(orders[name]))+float(np.float32(0.1)))*rpm/60)
+                        edges = ((orders[name]-width)*rpm/60, (orders[name]+width)*rpm/60)
+                        edges32 = ((float(np.float32(orders[name]))-float(np.float32(width)))*rpm/60,
+                                   (float(np.float32(orders[name]))+float(np.float32(width)))*rpm/60)
                         selected = (frequency >= edges[0]) & (frequency <= edges[1])
                         if not np.array_equal(selected, (frequency >= edges32[0]) & (frequency <= edges32[1])):
                             raise ValueError('Quantized bearing orders changed a selected feature bin.')
@@ -134,14 +171,16 @@ def main():
                     reduced32 = quantized[window*count+first:(window+1)*count:6]
                     f32, _, density32 = calculate_envelope_spectrum(reduced32, 5000, 4096)
                     approximate = np.array([calculate_envelope_rms(reduced32),
-                        *extract_frequency_domain_features(f32, density32, rpm, orders)])
+                        *extract_frequency_domain_features(f32, density32, rpm, orders, width,
+                                                           ENVELOPE_PASSBAND_HZ)])
                     error = np.max(np.abs(approximate - original_frequency))
                     cascade_errors.append(float(error))
                     if np.any(np.abs(approximate-original_frequency) > 4e-5*(1+np.abs(original_frequency))):
                         raise ValueError('Float32 cascade exceeds the new frequency-feature tolerance.')
-    header = ['/* Unchanged Python steps 02..08: two profiles/modes, three windows; four channels. */',
+    header = ['/* Unchanged Python steps 02..08: three profiles, two modes, three windows; four channels. */',
+              '/* Profiles: 0 CWRU drive end, 1 old provisional project, 2 RK4 S6700 (id 3). */',
               '#ifndef COE_FINAL_PIPELINE_EXPECTED_H', '#define COE_FINAL_PIPELINE_EXPECTED_H',
-              'static const float final_pipeline_expected[2][2][3][32] = {']
+              f'static const float final_pipeline_expected[{len(profiles)}][2][3][32] = {{']
     for profile in vectors:
         header += ['    {']
         for mode in profile:
@@ -197,9 +236,11 @@ def main():
         'source_fixture_sha256': hashlib.sha256(source).hexdigest(),
         'reference': 'unchanged Python steps 02 through 08, Float64 DSP and Float32 vector conversion',
         'fft_size': 4096, 'fft_bins': 2049, 'bin_spacing_hz': 5000/4096,
-        'synthetic_fft_records': len(cases), 'profiles': ['CWRU drive end', 'provisional project'],
+        'synthetic_fft_records': len(cases), 'profiles': ['CWRU drive end', 'old provisional project', 'RK4 S6700 (2xBSF ball band, +/-0.15 order)'],
+        'rk4_s6700_geometry_mm': {'balls': RK4_BALLS, 'ball': RK4_BALL_MM, 'pitch': RK4_PITCH_MM},
+        'rk4_s6700_orders': rk4, 'envelope_passband_hz': ENVELOPE_PASSBAND_HZ,
         'rpm_modes': [1750, 3600], 'channels': 4, 'feature_count': 32,
-        'complete_pipeline_reference_windows': 12,
+        'complete_pipeline_reference_windows': 6 * len(profiles),
         'vectors': vectors.tolist(),
         'time_feature_tolerance': '2e-5 * (1+abs(reference)), preserved',
         'new_spectrum_tolerance': '2e-5 * (1+abs(reference))',

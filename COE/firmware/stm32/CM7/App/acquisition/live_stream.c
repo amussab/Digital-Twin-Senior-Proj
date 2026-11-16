@@ -1,6 +1,8 @@
 /**
  * @file live_stream.c
- * Feed AD7606 slots 1/3/5/7 into the existing pipeline and send each window.
+ * LIVE: the four accelerometers go through the feature pipeline; the RK4
+ * Keyphasor gives the speed the windows use; the two RK4 probes are summarised
+ * over the same samples. Each window is sent as one schema-2 packet.
  */
 #include "live_stream.h"
 #include "live_config.h"
@@ -9,9 +11,10 @@
 #include "benchmark.h"
 #include "feature_uart.h"
 #include "main.h"
+#include "node_packet.h"
 #include "pipeline.h"
-#include "rpm_command.h"
-#include <stdio.h>
+#include "shaft_sensors.h"
+#include <math.h>
 #include <string.h>
 
 volatile bool live_calibrated;
@@ -27,20 +30,25 @@ volatile float live_dsp_load_percent;
 volatile float live_last_rms[COE_CHANNEL_COUNT];
 volatile float live_last_window_latency_ms;
 volatile float live_max_window_latency_ms;
-
-#ifndef COE_FW_VERSION /* The CMake build passes the git short hash. */
-#define COE_FW_VERSION __DATE__
-#endif
+volatile uint32_t live_rpm;
+volatile float live_measured_rpm;
+volatile uint32_t live_speed_changes;
+volatile uint32_t live_speed_losses;
+volatile uint32_t live_unsteady_windows;
+volatile float live_last_gap_um[SHAFT_PROBES];
+volatile float live_last_x1_um_pp[SHAFT_PROBES];
+volatile float live_last_x1_phase_deg[SHAFT_PROBES];
 
 #define REPORT_MS 1000U
 #define LATENCY_LIMIT_MS 333.0f /* S2: features within 333 ms of the window's end. */
 #define MAX_BLOCKS_PER_POLL 4U /* Keep UART and console servicing between blocks. */
 
-/* Pipeline order B1X, B1Y, B2X, B2Y from the confirmed AIN2/4/6/8 wiring. */
+/* Pipeline order B1X, B1Y, B2X, B2Y; slots from the wiring in ad7606.h. */
 static const uint32_t slots[COE_CHANNEL_COUNT] = {
     AD7606_SLOT_B1X, AD7606_SLOT_B1Y, AD7606_SLOT_B2X, AD7606_SLOT_B2Y,
 };
 static const char *const channel_names[COE_CHANNEL_COUNT] = {"B1X", "B1Y", "B2X", "B2Y"};
+static const char *const probe_names[SHAFT_PROBES] = {"PROX1", "PROX3"};
 static const float volts_per_g[COE_CHANNEL_COUNT] = COE_LIVE_VOLTS_PER_G;
 static float scale[COE_CHANNEL_COUNT]; /* Counts -> g, or -> V when uncalibrated. */
 
@@ -49,16 +57,13 @@ static EnvelopeSpectrumWorkspace workspace; /* CPU-only FFT work area in DTCM. *
 static PipelineEnvelopeBuffer envelope_buffer
     __attribute__((section(".pipeline_live_buffers"), aligned(32)));
 static float input[COE_CHANNEL_COUNT][AD7606_BLOCK_FRAMES];
-static uint32_t current_rpm = COE_LIVE_NOMINAL_RPM; /* Power-up default; not saved anywhere. */
-static uint32_t pending_rpm;  /* Requested by the laptop, applied at the next window end; 0 = none. */
-/* Bearing orders in use. The pipeline points at active_profile; it is only rewritten in
- * apply_pending(), right before the pipeline restarts. Id stays 1 (project bearing) in packets;
- * the runtime orders are reported by CONFIG? only. */
-static BearingFeatureProfile active_profile;
-static BearingFeatureProfile pending_profile;
-static bool has_pending_bearing;
-static bool window_closed;    /* A window ended in the block just processed. */
-static bool stream_ok;
+static ShaftSensors shaft;
+static float keyphasor_in[AD7606_BLOCK_FRAMES];
+static float probe_in[SHAFT_PROBES][AD7606_BLOCK_FRAMES];
+static uint8_t node_packet[COE_NODE_PACKET_BYTES];
+static bool shaft_ok;   /* shaft_sensors_init succeeded */
+static bool stream_ok;  /* the pipeline is running at live_rpm */
+static uint32_t refused_rpm;
 static uint32_t handled_gaps;
 static uint32_t started_tick, report_tick;
 static uint32_t interval_dsp_cycles;
@@ -91,15 +96,84 @@ static void print_features(const PipelineWindowResult *result)
     }
 }
 
-/** Window callback: queue the packet only when the input really is in g. */
+/** Print the Keyphasor speed and both probes of one window. */
+static void print_shaft(const ShaftWindow *w)
+{
+    char a[16], b[16], c[16];
+    if (w->speed_measured)
+        console_emit("    Keyphasor: %s RPM (%lu turns, %s..%s)\r\n",
+                     console_fixed2(a, sizeof(a), w->rpm), (unsigned long)w->revolutions,
+                     console_fixed2(b, sizeof(b), w->rpm_min), console_fixed2(c, sizeof(c), w->rpm_max));
+    else
+        console_emit("    Keyphasor: no whole turn in this window\r\n");
+    for (uint32_t p = 0U; p < SHAFT_PROBES; ++p)
+    {
+        const ShaftProbeWindow *pr = &w->probes[p];
+        char v[16], gap[16], pkpk[16], x1[16], phase[16];
+        if (!pr->valid)
+        {
+            console_emit("    %s: NOT VALID (mean %s V at the probe; valid -19..-1 V, no clipping)\r\n",
+                         probe_names[p], console_fixed2(v, sizeof(v), pr->mean_probe_volts));
+            continue;
+        }
+        console_emit("    %s: gap %s um (%s V), pk-pk %s um", probe_names[p],
+                     console_fixed2(gap, sizeof(gap), pr->gap_um),
+                     console_fixed2(v, sizeof(v), pr->mean_probe_volts),
+                     console_fixed2(pkpk, sizeof(pkpk), pr->pkpk_um));
+        if (pr->x1_valid)
+            console_emit(", 1X %s um pp at %s deg\r\n", console_fixed2(x1, sizeof(x1), pr->x1_um_pp),
+                         console_fixed2(phase, sizeof(phase), pr->x1_phase_deg));
+        else
+            console_emit(", 1X not valid\r\n");
+    }
+}
+
+/** Sent only if the measured speed stayed at the speed the bands were computed for. */
+static bool speed_steady(const ShaftWindow *w, uint32_t nominal_rpm)
+{
+    const float nominal = (float)nominal_rpm;
+    const float tolerance = COE_LIVE_SPEED_TOLERANCE * nominal;
+    return w->speed_measured && fabsf(w->rpm - nominal) <= tolerance
+           && w->rpm_min >= nominal - 2.0f * tolerance && w->rpm_max <= nominal + 2.0f * tolerance;
+}
+
+/** Window callback: add the shaft values and send the schema-2 packet. */
 static bool on_window(const PipelineWindowResult *result, void *context)
 {
     (void)context;
     ++live_windows;
-    window_closed = true;
     /* Conservative S2 latency: from the newest sample of this block (at or
      * after the window's last sample) to features and packet being ready.
      */
+    ShaftWindow shaft_window;
+    shaft_sensors_finish_window(&shaft, &shaft_window);
+    const bool steady = speed_steady(&shaft_window, result->nominal_rpm);
+    const char *outcome;
+    if (!live_calibrated)
+    {
+        ++live_packets_withheld;
+        outcome = "packet not sent (uncalibrated)";
+    }
+    else if (!steady)
+    {
+        ++live_unsteady_windows;
+        outcome = "packet NOT sent: the speed moved during this window";
+    }
+    else if (!node_packet_encode(result->ai_payload.bytes, &shaft_window, node_packet))
+    {
+        ++live_packet_failures;
+        outcome = "packet NOT sent: encoding refused a value";
+    }
+    else if (feature_uart_send(node_packet, COE_NODE_PACKET_BYTES))
+    {
+        ++live_packets_queued;
+        outcome = "packet sent";
+    }
+    else
+    {
+        ++live_packet_failures;
+        outcome = "packet NOT sent: UART queue";
+    }
     const float latency = block_wait_ms
                           + benchmark_cycles_to_us(benchmark_cycles_now() - block_began_cycles) / 1000.0f;
     live_last_window_latency_ms = latency;
@@ -107,160 +181,76 @@ static bool on_window(const PipelineWindowResult *result, void *context)
         live_max_window_latency_ms = latency;
     for (uint32_t channel = 0U; channel < COE_CHANNEL_COUNT; ++channel)
         live_last_rms[channel] = result->features[channel].rms;
-    if (!live_calibrated)
-        ++live_packets_withheld;
-    else if (feature_uart_send(result->ai_payload.bytes))
-        ++live_packets_queued;
-    else
-        ++live_packet_failures;
+    for (uint32_t p = 0U; p < SHAFT_PROBES; ++p)
+    {
+        live_last_gap_um[p] = shaft_window.probes[p].gap_um;
+        live_last_x1_um_pp[p] = shaft_window.probes[p].x1_um_pp;
+        live_last_x1_phase_deg[p] = shaft_window.probes[p].x1_phase_deg;
+    }
 
     char ms[16], max_ms[16];
-    console_emit("  window %lu (%lu samples/channel, %lu RPM): features ready %s ms after its"
-                 " last sample (max %s ms, limit 333) %s%s\r\n",
+    console_emit("  window %lu (%lu samples/channel, bands for %lu RPM): features ready %s ms after its"
+                 " last sample (max %s ms, limit 333) %s, %s\r\n",
                  (unsigned long)result->window_id, (unsigned long)result->sample_count,
                  (unsigned long)result->nominal_rpm,
                  console_fixed2(ms, sizeof(ms), latency),
                  console_fixed2(max_ms, sizeof(max_ms), live_max_window_latency_ms),
-                 latency <= LATENCY_LIMIT_MS ? "OK" : "OVER LIMIT",
-                 live_calibrated ? ", packet sent" : ", packet not sent (uncalibrated)");
+                 latency <= LATENCY_LIMIT_MS ? "OK" : "OVER LIMIT", outcome);
+    print_shaft(&shaft_window);
     print_features(result);
     return true;
 }
 
+/** (Re)start the pipeline at live_rpm; a new shaft window starts with it. */
 static void restart_stream(void)
 {
-    stream_ok = pipeline_init(&pipeline, current_rpm, &envelope_buffer, &workspace,
-                              &active_profile, on_window, NULL);
-    if (!stream_ok)
-        ++live_pipeline_errors;
+    stream_ok = pipeline_init(&pipeline, live_rpm, &envelope_buffer, &workspace,
+                              &COE_LIVE_BEARING_PROFILE, on_window, NULL)
+                && pipeline.window_samples > AD7606_BLOCK_FRAMES; /* at most one window end per block */
+    shaft_sensors_start_window(&shaft);
 }
 
-/** "0.4518" style text (4 decimals); console_fixed2 has only two. */
-static const char *fixed4(char *text, size_t size, float x)
+/** Between blocks: start, follow or stop the windows with the Keyphasor speed. */
+static void follow_speed(void)
 {
-    const uint32_t v = (uint32_t)((double)x * 10000.0 + 0.5);
-    snprintf(text, size, "%lu.%04lu", (unsigned long)(v / 10000U), (unsigned long)(v % 10000U));
-    return text;
-}
-
-/** NULL if the node can run at this speed with this bearing, else a short reason. */
-static const char *reject_reason(uint32_t rpm, const BearingFeatureProfile *profile)
-{
-    if (rpm < COE_MIN_RPM || rpm > COE_MAX_RPM)
-        return "out of range 60..3600";
-    if (!frequency_profile_is_valid(profile, rpm))
-        return "bearing bands do not fit at this speed";
-    if (!pipeline_rpm_supported(rpm, profile))
-        return "window does not fit";
-    return NULL;
-}
-
-/** The bearing a new speed would run with: the pending one if any, else the active one. */
-static const BearingFeatureProfile *target_profile(void)
-{
-    return has_pending_bearing ? &pending_profile : &active_profile;
-}
-
-/** The speed a new bearing would run at: the pending one if any, else the current one. */
-static uint32_t target_rpm(void)
-{
-    return pending_rpm != 0U ? pending_rpm : current_rpm;
-}
-
-static void emit_bearing(const char *prefix, const BearingFeatureProfile *p)
-{
-    char a[16], b[16], c[16], d[16], h[16];
-    console_emit("%s ftf=%s bsf=%s bpfo=%s bpfi=%s hw=%s", prefix,
-                 fixed4(a, sizeof(a), p->orders[COE_FTF]), fixed4(b, sizeof(b), p->orders[COE_BSF]),
-                 fixed4(c, sizeof(c), p->orders[COE_BPFO]), fixed4(d, sizeof(d), p->orders[COE_BPFI]),
-                 fixed4(h, sizeof(h), p->half_width_order));
-}
-
-/** Start the pending speed/bearing: the pipeline restarts exactly as at start-up (new window,
- * filters cleared). Called only between blocks in the main loop, at a window end, or when
- * nothing is streaming. Both were validated together when accepted. */
-static void apply_pending(void)
-{
-    const uint32_t old_rpm = current_rpm;
-    const BearingFeatureProfile old_profile = active_profile;
-    const bool rpm_changed = pending_rpm != 0U, bearing_changed = has_pending_bearing;
-    if (rpm_changed)
-        current_rpm = pending_rpm;
-    if (bearing_changed)
-        active_profile = pending_profile;
-    pending_rpm = 0U;
-    has_pending_bearing = false;
-    restart_stream();
-    if (!stream_ok) /* Not expected: it was checked when accepted. */
+    double rpm = 0.0;
+    const bool locked = shaft_ok && shaft_sensors_speed(&shaft, &rpm);
+    live_measured_rpm = locked ? (float)rpm : 0.0f;
+    if (!locked)
     {
-        current_rpm = old_rpm;
-        active_profile = old_profile;
-        restart_stream();
-        console_emit("@ERR APPLY pipeline refused it, back to rpm=%lu\r\n", (unsigned long)old_rpm);
+        if (stream_ok)
+        {
+            stream_ok = false;
+            live_rpm = 0U;
+            ++live_speed_losses;
+            console_emit("\r\nKeyphasor speed lost or not steady: windows paused until 4 turns agree.\r\n");
+        }
         return;
     }
-    if (rpm_changed)
-        console_emit("@OK RPM %lu\r\n", (unsigned long)current_rpm);
-    if (bearing_changed)
+    if (stream_ok && fabs(rpm - live_rpm) <= COE_LIVE_SPEED_RESTART * live_rpm)
+        return;
+    if (!stream_ok && refused_rpm != 0U && fabs(rpm - refused_rpm) <= COE_LIVE_SPEED_RESTART * refused_rpm)
+        return; /* Already refused at about this speed. */
+    const uint32_t before = live_rpm;
+    live_rpm = (uint32_t)(rpm + 0.5);
+    restart_stream();
+    char text[16];
+    if (!stream_ok)
     {
-        emit_bearing("@OK BEARING", &active_profile);
-        console_emit("\r\n");
+        refused_rpm = live_rpm;
+        console_emit("\r\nKeyphasor speed %s RPM: outside what the pipeline accepts (%u..%u RPM with"
+                     " this bearing profile); no windows.\r\n",
+                     console_fixed2(text, sizeof(text), rpm), (unsigned)COE_MIN_RPM, (unsigned)COE_MAX_RPM);
+        live_rpm = 0U;
+        return;
     }
-}
-
-static void emit_config(void)
-{
-    char pending[12];
-    if (pending_rpm != 0U)
-        snprintf(pending, sizeof(pending), "%lu", (unsigned long)pending_rpm);
-    else
-        snprintf(pending, sizeof(pending), "none");
-    char head[48];
-    snprintf(head, sizeof(head), "@CONFIG rpm=%lu pending_rpm=%s", (unsigned long)current_rpm, pending);
-    emit_bearing(head, &active_profile);
-    console_emit(" pending_bearing=%s fw=%s\r\n", has_pending_bearing ? "yes" : "none", COE_FW_VERSION);
-}
-
-/** One command line from the laptop. Replies start with '@' so a host can find them. */
-static void handle_command(const char *line)
-{
-    const rpm_command_t command = rpm_command_parse(line);
-    if (command.kind == RPM_CMD_QUERY)
-        emit_config();
-    else if (command.kind == RPM_CMD_SET)
-    {
-        const char *reason = reject_reason(command.rpm, target_profile());
-        if (reason != NULL)
-            console_emit("@ERR RPM %lu %s\r\n", (unsigned long)command.rpm, reason);
-        else if (command.rpm == current_rpm)
-        {
-            pending_rpm = 0U; /* Also cancels an earlier, different request. */
-            console_emit("@OK RPM %lu\r\n", (unsigned long)current_rpm);
-        }
-        else
-            pending_rpm = command.rpm; /* A newer request replaces an older pending one. */
-    }
-    else if (command.kind == RPM_CMD_BEARING)
-    {
-        BearingFeatureProfile candidate = active_profile;
-        for (uint32_t i = 0U; i < COE_BEARING_FAMILIES; ++i)
-            candidate.orders[i] = command.orders[i];
-        if (command.has_half_width)
-            candidate.half_width_order = command.half_width;
-        const char *reason = reject_reason(target_rpm(), &candidate);
-        if (reason != NULL)
-        {
-            emit_bearing("@ERR BEARING", &candidate);
-            console_emit(" %s at %lu RPM\r\n", reason, (unsigned long)target_rpm());
-        }
-        else
-        {
-            pending_profile = candidate;
-            has_pending_bearing = true;
-        }
-    }
-    else
-        console_emit("@ERR CMD use RPM <n>, BEARING <ftf> <bsf> <bpfo> <bpfi> [hw], CONFIG?\r\n");
+    refused_rpm = 0U;
+    if (before != 0U)
+        ++live_speed_changes;
+    console_emit("\r\nKeyphasor speed %s RPM: windows at %lu RPM, %lu turns (%lu samples)%s.\r\n",
+                 console_fixed2(text, sizeof(text), rpm), (unsigned long)live_rpm,
+                 (unsigned long)pipeline.window_revolutions, (unsigned long)pipeline.window_samples,
+                 before != 0U ? " (speed changed; window restarted)" : "");
 }
 
 static void reset_counters(void)
@@ -268,6 +258,7 @@ static void reset_counters(void)
     live_windows = live_packets_queued = live_packets_withheld = 0U;
     live_packet_failures = live_discarded_blocks = live_restarts = 0U;
     live_pipeline_errors = 0U;
+    live_speed_changes = live_speed_losses = live_unsteady_windows = 0U;
     live_max_block_ms = live_dsp_load_percent = 0.0f;
     live_last_window_latency_ms = live_max_window_latency_ms = 0.0f;
     interval_dsp_cycles = 0U;
@@ -275,7 +266,7 @@ static void reset_counters(void)
     memset(&previous, 0, sizeof(previous));
 }
 
-/** Scale one block's four pipeline slots and run the pipeline on them.
+/** Scale one block; feed the shaft sensors always and the pipeline while it runs.
  * frames_after: frames already published after this block's newest frame.
  */
 static void process_block(const ad7606_frame_t *block, uint32_t frames_after)
@@ -284,11 +275,35 @@ static void process_block(const ad7606_frame_t *block, uint32_t frames_after)
     block_began_cycles = began;
     block_wait_ms = (float)frames_after * 1000.0f / (ad7606_timing.sample_rate_millihz / 1000.0f);
     for (uint32_t frame = 0U; frame < AD7606_BLOCK_FRAMES; ++frame)
+    {
         for (uint32_t channel = 0U; channel < COE_CHANNEL_COUNT; ++channel)
             input[channel][frame] = (float)block[frame][slots[channel]] * scale[channel];
+        keyphasor_in[frame] = (float)block[frame][AD7606_SLOT_KEYPHASOR] * AD7606_VOLTS_PER_COUNT;
+        probe_in[0][frame] = (float)block[frame][AD7606_SLOT_PROX1] * AD7606_VOLTS_PER_COUNT;
+        probe_in[1][frame] = (float)block[frame][AD7606_SLOT_PROX3] * AD7606_VOLTS_PER_COUNT;
+    }
     const float *const channels[COE_CHANNEL_COUNT] = {input[0], input[1], input[2], input[3]};
+    const float *const probes[SHAFT_PROBES] = {probe_in[0], probe_in[1]};
 
-    const bool ok = pipeline_process_block(&pipeline, channels, AD7606_BLOCK_FRAMES);
+    /* The shaft window must hold exactly the pipeline window's samples: feed the
+     * samples up to the window end first, so on_window sees all of them. */
+    size_t first = AD7606_BLOCK_FRAMES;
+    if (stream_ok)
+    {
+        const uint32_t room = pipeline.window_samples - pipeline.samples_in_window;
+        if (room < first)
+            first = room;
+    }
+    shaft_sensors_process(&shaft, keyphasor_in, probes, first);
+    bool ok = true;
+    if (stream_ok)
+        ok = pipeline_process_block(&pipeline, channels, AD7606_BLOCK_FRAMES);
+    if (first < AD7606_BLOCK_FRAMES)
+    {
+        const float *const rest[SHAFT_PROBES] = {probe_in[0] + first, probe_in[1] + first};
+        shaft_sensors_process(&shaft, keyphasor_in + first, rest, AD7606_BLOCK_FRAMES - first);
+    }
+
     const uint32_t cycles = benchmark_cycles_now() - began;
     interval_dsp_cycles += cycles;
     const float ms = benchmark_cycles_to_us(cycles) / 1000.0f;
@@ -297,11 +312,11 @@ static void process_block(const ad7606_frame_t *block, uint32_t frames_after)
     if (!ok)
     {
         ++live_pipeline_errors;
-        stream_ok = false; /* Restart at the next block; this window is lost. */
+        stream_ok = false; /* Restarted by follow_speed; this window is lost. */
     }
 }
 
-/** Take whole blocks; drop the ones around a gap and restart the windows. */
+/** Take whole blocks; drop the ones around a gap and restart the timing. */
 static void consume_blocks(void)
 {
     const ad7606_frame_t *block;
@@ -320,24 +335,15 @@ static void consume_blocks(void)
                 ad7606_release_block();
                 continue;
             }
+            /* Samples are missing: the window and the turn timing are broken. */
             handled_gaps = gaps;
             ++live_restarts;
-            restart_stream();
+            shaft_sensors_restart_timing(&shaft);
+            stream_ok = false;
+            live_rpm = 0U;
         }
-        else if (!stream_ok)
-        {
-            ++live_restarts;
-            restart_stream();
-        }
-        if (stream_ok)
-        {
-            window_closed = false;
-            process_block(block, status.frames - (start + AD7606_BLOCK_FRAMES));
-            if (window_closed && (pending_rpm != 0U || has_pending_bearing))
-                apply_pending(); /* A window just ended: safe point to change speed. */
-        }
-        else
-            ++live_discarded_blocks;
+        follow_speed();
+        process_block(block, status.frames - (start + AD7606_BLOCK_FRAMES));
         ad7606_release_block();
     }
 }
@@ -346,7 +352,7 @@ static void report(void)
 {
     ad7606_status_t now;
     ad7606_snapshot(&now);
-    char rate[24], block_ms[24], load[24], uart_ms[24], window_ms[24];
+    char rate[24], block_ms[24], load[24], uart_ms[24], window_ms[24], speed[24], hi[16], lo[16];
     const uint32_t edges = now.busy_edges - previous.busy_edges;
     const uint32_t cycles = now.last_busy_cycles - previous.last_busy_cycles;
     const double rate_hz = (previous.busy_edges != 0U && cycles != 0U)
@@ -355,14 +361,15 @@ static void report(void)
                                     / ((double)SystemCoreClock * REPORT_MS / 1000.0));
     interval_dsp_cycles = 0U;
     previous = now;
-    console_emit("[%lus] rate %s Hz | windows %lu sent %lu withheld %lu fail %lu |"
+    console_emit("[%lus] rate %s Hz | windows %lu sent %lu withheld %lu unsteady %lu fail %lu |"
                  " gaps %lu dropped blocks %lu restarts %lu stall %lu\r\n"
                  "  fill max %lu/%u | block max %s ms, DSP %s%% | window latency max %s ms (limit 333)"
-                 " | UART done %lu err %lu max %s ms\r\n",
+                 " | UART done %lu err %lu max %s ms, RX err %lu\r\n",
                  (unsigned long)((HAL_GetTick() - started_tick) / 1000U),
                  console_fixed2(rate, sizeof(rate), rate_hz),
                  (unsigned long)live_windows, (unsigned long)live_packets_queued,
-                 (unsigned long)live_packets_withheld, (unsigned long)live_packet_failures,
+                 (unsigned long)live_packets_withheld, (unsigned long)live_unsteady_windows,
+                 (unsigned long)live_packet_failures,
                  (unsigned long)ad7606_gap_events(&now), (unsigned long)live_discarded_blocks,
                  (unsigned long)live_restarts, (unsigned long)ad7606_stalls,
                  (unsigned long)now.max_fill_frames, (unsigned)AD7606_RING_FRAMES,
@@ -370,7 +377,17 @@ static void report(void)
                  console_fixed2(load, sizeof(load), live_dsp_load_percent),
                  console_fixed2(window_ms, sizeof(window_ms), live_max_window_latency_ms),
                  (unsigned long)feature_uart_packets_sent, (unsigned long)feature_uart_errors,
-                 console_fixed2(uart_ms, sizeof(uart_ms), feature_uart_max_tx_us / 1000.0));
+                 console_fixed2(uart_ms, sizeof(uart_ms), feature_uart_max_tx_us / 1000.0),
+                 (unsigned long)feature_uart_rx_errors);
+    if (live_measured_rpm > 0.0f)
+        console_emit("  Keyphasor %s RPM (windows at %lu RPM), turns %lu, rejected pulses %lu\r\n",
+                     console_fixed2(speed, sizeof(speed), live_measured_rpm), (unsigned long)live_rpm,
+                     (unsigned long)shaft.total_revolutions, (unsigned long)shaft.glitches);
+    else
+        console_emit("  Keyphasor: NO steady speed (levels %s..%s V at the ADC, notch %s) -> no windows\r\n",
+                     console_fixed2(lo, sizeof(lo), shaft.level_low),
+                     console_fixed2(hi, sizeof(hi), shaft.level_high),
+                     shaft.levels_ok ? "seen" : "not seen (need 0.25 V)");
 }
 
 bool live_stream_init(void)
@@ -382,21 +399,21 @@ bool live_stream_init(void)
     for (uint32_t channel = 0U; channel < COE_CHANNEL_COUNT; ++channel)
         scale[channel] = live_calibrated ? AD7606_VOLTS_PER_COUNT / volts_per_g[channel]
                                          : AD7606_VOLTS_PER_COUNT;
+    stream_ok = false;
+    live_rpm = 0U;
 
-    active_profile = COE_LIVE_BEARING_PROFILE; /* Power-up default; runtime BEARING changes the copy. */
-    restart_stream();
-    console_rx_init();
     console_banner("LIVE: AD7606 -> DSP -> ESP32");
-    console_emit("Speed %u RPM (the laptop can change it: RPM <n>), window %lu revolutions (%lu samples), bearing profile %lu,"
-                 " channels %s/%s/%s/%s = AIN2/4/6/8.\r\n",
-                 (unsigned)current_rpm, (unsigned long)pipeline.window_revolutions,
-                 (unsigned long)pipeline.window_samples, (unsigned long)active_profile.id,
-                 channel_names[0], channel_names[1], channel_names[2], channel_names[3]);
+    console_emit("Speed: measured by the RK4 Keyphasor on AIN7 (no set value); windows start when"
+                 " 4 turns agree within 1 %%.\r\nBearing profile %lu, channels %s/%s/%s/%s = AIN2/1/3/4,"
+                 " %s AIN5, %s AIN6.\r\n",
+                 (unsigned long)COE_LIVE_BEARING_PROFILE.id,
+                 channel_names[0], channel_names[1], channel_names[2], channel_names[3],
+                 probe_names[0], probe_names[1]);
     console_emit(live_calibrated
                      ? "Calibrated (live_config.h): input in g, packets sent to the ESP32.\r\n"
                      : "UNCALIBRATED: COE_LIVE_VOLTS_PER_G is not set in live_config.h.\r\n"
                        "DSP runs on ADC volts for timing checks; NO packets are sent.\r\n");
-    return stream_ok;
+    return true;
 }
 
 static void start_live(void)
@@ -404,7 +421,16 @@ static void start_live(void)
     if (console_start_acquisition() == AD7606_OK)
     {
         reset_counters();
-        restart_stream();
+        const ShaftSensorsConfig config = {
+            ad7606_timing.sample_rate_millihz / 1000.0,
+            COE_LIVE_PROBE_DIVIDER, COE_LIVE_PROBE_UM_PER_VOLT};
+        shaft_ok = shaft_sensors_init(&shaft, &config);
+        if (!shaft_ok)
+            console_emit("Shaft sensor settings refused (live_config.h): no speed, no windows.\r\n");
+        stream_ok = false;
+        live_rpm = 0U;
+        live_measured_rpm = 0.0f;
+        refused_rpm = 0U;
         started_tick = report_tick = HAL_GetTick();
     }
 }
@@ -441,13 +467,7 @@ void live_stream_poll(void)
         console_emit("\r\nAD7606 STALL: no frame for %u ms; stopped and pins held low."
                      " Check ADC power/BUSY, then press B1.\r\n", (unsigned)AD7606_STALL_MS);
 
-    const char *command_line;
-    while ((command_line = console_rx_line()) != NULL)
-        handle_command(command_line);
-
     consume_blocks();
-    if ((pending_rpm != 0U || has_pending_bearing) && !ad7606_running())
-        apply_pending(); /* Nothing streaming: no window to wait for. */
 
     if (ad7606_running() && (uint32_t)(HAL_GetTick() - report_tick) >= REPORT_MS)
     {

@@ -3,12 +3,12 @@
 inference_receiver.py calls:
   setup()          once, at start: load your model here and return it.
   predict(window, model)  once per window from the COE node, live
-                   (about every 0.72 s at 250 RPM). Return the result.
+                   (every 0.69 s at 1750 RPM, 0.33 s at 3600 RPM). Return the result.
 
 `window` is a dict:
   window['features']   list of 32 floats, always in FEATURE_NAMES order
   window['named']      the same 32 values by name, e.g. window['named']['B1X_rms']
-  window['rpm']        shaft speed set in the node (int)
+  window['rpm']        machine speed the node used for this window: 1750 or 3600 (int)
   window['window_id']  window number from the node (int)
   window['valid_channels']  bit mask, 15 = all 4 channels valid
   window['received_at']     time on this laptop (ISO text)

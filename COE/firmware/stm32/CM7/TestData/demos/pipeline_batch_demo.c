@@ -73,7 +73,9 @@ static bool check_mode(size_t profile, size_t mode)
 {
     const uint32_t rpm = mode == 0U ? 1750U : 3600U;
     const uint32_t samples = mode == 0U ? 20571U : 10000U;
-    const BearingFeatureProfile *bearing = profile == 0U ? &coe_cwru_drive_end_bearing : &coe_project_bearing;
+    static const BearingFeatureProfile *const bearings[3] = {
+        &coe_cwru_drive_end_bearing, &coe_project_bearing, &coe_rk4_s6700_bearing};
+    const BearingFeatureProfile *bearing = bearings[profile];
     if (!pipeline_init(&pipeline, rpm, &envelope_buffer, &final_test_workspace, bearing, capture_result, NULL)
         || pipeline.window_samples != samples || samples > MAX_WINDOW_SAMPLES)
         return false;
@@ -104,7 +106,7 @@ static bool check_mode(size_t profile, size_t mode)
             || captured.sample_count != samples || captured.nominal_rpm != rpm)
             return false;
         /* The feature vector is complete before starting UART transmission. */
-        if (!feature_uart_send(captured.ai_payload.bytes))
+        if (!feature_uart_send(captured.ai_payload.bytes, COE_PAYLOAD_BYTES))
             return false;
         delivery_timing_finish(pipeline_batch_timer_ready
             ? benchmark_cycles_to_us(end - start) / 1000.0f : 0.0f);
@@ -168,14 +170,14 @@ void run_pipeline_batch_demo(void)
     for (size_t index = 0U; index < COE_PAYLOAD_BYTES; ++index)
         pipeline_batch_payload_1750[index] = pipeline_batch_payload_3600[index] = 0U;
     pipeline_batch_timer_ready = benchmark_init();
-    for (size_t profile = 0U; profile < 2U; ++profile)
+    for (size_t profile = 0U; profile < 3U; ++profile)
         for (size_t mode = 0U; mode < 2U; ++mode)
             if (!check_mode(profile, mode))
             {
                 pipeline_batch_failed_check = (uint32_t)(profile * 2U + mode + 1U);
                 return;
             }
-    pipeline_batch_checks_passed = pipeline_batch_checked_windows == 12U;
+    pipeline_batch_checks_passed = pipeline_batch_checked_windows == 18U;
     pipeline_batch_fixed_shape_passed = pipeline_batch_checks_passed
         && pipeline_batch_feature_count_1750 == COE_FEATURE_COUNT
         && pipeline_batch_feature_count_3600 == COE_FEATURE_COUNT;

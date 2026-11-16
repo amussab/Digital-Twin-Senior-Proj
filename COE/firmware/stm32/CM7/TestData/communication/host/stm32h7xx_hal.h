@@ -13,13 +13,16 @@ typedef struct { void *Instance; DMA_InitTypeDef Init; void *Parent; } DMA_Handl
 typedef struct { uint32_t BaudRate, WordLength, StopBits, Parity, Mode, HwFlowCtl,
     OverSampling, OneBitSampling, ClockPrescaler; } UART_InitTypeDef;
 typedef struct { void *Instance; UART_InitTypeDef Init;
-    struct { uint32_t AdvFeatureInit; } AdvancedInit; DMA_HandleTypeDef *hdmatx; } UART_HandleTypeDef;
+    struct { uint32_t AdvFeatureInit; } AdvancedInit; DMA_HandleTypeDef *hdmatx;
+    uint32_t ErrorCode, RxState; } UART_HandleTypeDef;
 typedef struct { uint32_t CCR; } HostSCB;
 extern HostSCB fake_scb;
 extern UART_HandleTypeDef *fake_uart;
 extern uint8_t *fake_buffer;
 extern uint32_t fake_tick, fake_start_calls, fake_abort_calls, fake_cache_calls;
-extern uint32_t fake_dma_irqs, fake_uart_irqs;
+extern uint32_t fake_dma_irqs, fake_uart_irqs, fake_receive_calls;
+extern UART_HandleTypeDef *fake_rx_uart; /* Last Receive_IT target. */
+extern uint8_t *fake_rx_byte;
 extern HAL_StatusTypeDef fake_start_status, fake_init_status;
 #define SCB (&fake_scb)
 #define SCB_CCR_DC_Msk 4U
@@ -54,6 +57,13 @@ extern HAL_StatusTypeDef fake_start_status, fake_init_status;
 #define UART_ONE_BIT_SAMPLE_DISABLE 0U
 #define UART_PRESCALER_DIV1 1U
 #define UART_ADVFEATURE_NO_INIT 0U
+#define HAL_UART_ERROR_PE 0x01U
+#define HAL_UART_ERROR_NE 0x02U
+#define HAL_UART_ERROR_FE 0x04U
+#define HAL_UART_ERROR_ORE 0x08U
+#define HAL_UART_ERROR_DMA 0x10U
+#define HAL_UART_STATE_READY 0x20U
+#define HAL_UART_STATE_BUSY_RX 0x22U
 #define __HAL_RCC_GPIOD_CLK_ENABLE() ((void)0)
 #define __HAL_RCC_USART2_CLK_ENABLE() ((void)0)
 #define __HAL_RCC_DMA1_CLK_ENABLE() ((void)0)
@@ -66,9 +76,10 @@ static inline HAL_StatusTypeDef HAL_UARTEx_DisableFifoMode(UART_HandleTypeDef *u
 static inline void HAL_NVIC_SetPriority(int irq, unsigned priority, unsigned sub) { (void)irq; (void)priority; (void)sub; }
 static inline void HAL_NVIC_EnableIRQ(int irq) { (void)irq; }
 static inline uint32_t HAL_GetTick(void) { return fake_tick; }
+extern unsigned fake_size;
 static inline HAL_StatusTypeDef HAL_UART_Transmit_DMA(UART_HandleTypeDef *uart, uint8_t *bytes, unsigned size)
 {
-    (void)size;
+    fake_size = size;
     fake_uart = uart;
     fake_buffer = bytes;
     ++fake_start_calls;
@@ -81,7 +92,7 @@ static inline void SCB_CleanDCache_by_Addr(uint32_t *bytes, unsigned size)
 static inline void HAL_DMA_IRQHandler(DMA_HandleTypeDef *dma) { (void)dma; ++fake_dma_irqs; }
 static inline void HAL_UART_IRQHandler(UART_HandleTypeDef *uart) { (void)uart; ++fake_uart_irqs; }
 static inline HAL_StatusTypeDef HAL_UART_Receive_IT(UART_HandleTypeDef *handle, uint8_t *byte, uint16_t n)
-{ (void)handle; (void)byte; (void)n; return HAL_OK; }
+{ (void)n; fake_rx_uart = handle; fake_rx_byte = byte; ++fake_receive_calls; return HAL_OK; }
 static inline HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *handle, const uint8_t *bytes, uint16_t n, uint32_t timeout)
 { (void)handle; (void)bytes; (void)n; (void)timeout; return HAL_OK; }
 static inline void HAL_Delay(uint32_t ms) { fake_tick += ms; }

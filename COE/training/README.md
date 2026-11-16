@@ -20,8 +20,11 @@ condition, level and speed.
    python training_recorder.py
    ```
 3. Open **http://localhost:8000**. The top pill turns green, showing **"Data arriving"**.
-4. Choose the condition, add a note if useful, and press **Start**. Press **Stop** when the run is done.
-5. Download the CSV for one run or for all runs.
+4. **Machine speed and shaft:** nothing to choose. Set the machine to the speed you want; the node
+   measures it from the Keyphasor and the page shows it (for example **"Speed (Keyphasor):
+   1750.2 RPM"**), with the two proximity probes' gap, pk-pk and 1X vibration.
+5. Choose the condition, add a note if useful, and press **Start**. Press **Stop** when the run is done.
+6. Download the CSV for one run or for all runs.
 
 ## Shaft speed
 
@@ -39,9 +42,13 @@ while recording. Same from a terminal: `python node_rpm.py 3600` or `python node
   script loses nothing.
 - CSV columns: `run_id, label, note, received_at, rpm, window_id, sequence,
   device_id, valid_channels`, then the 32 features `B1X_rms` … `B2Y_bpfi`
-  (order and units: [../README.md](../README.md)), then (appended at the end) `severity, bearing_id, position, is_baseline`.
+  (order and units: [../README.md](../README.md)), then the shaft columns
+  `schema_version, measured_rpm, revolutions, shaft_flags, prox1_gap_um, prox1_pkpk_um,
+  prox1_x1_um_pp, prox1_x1_phase_deg, prox3_...` (empty for windows from old firmware), then (appended at the end) `severity, bearing_id, position, is_baseline`.
   Older CSVs without the last four are still read (by header name).
 - The labels are whatever you select. Record one condition per run, and record healthy runs too.
+- The `rpm` column is the speed the node used for that window; with the Keyphasor firmware it is measured (whole RPM) and
+  `measured_rpm` is the exact value. Record each condition at both machine speeds (1750/1800 and 3600) if the model must work at both.
 
 ## Train on the recorded data (one command)
 

@@ -14,6 +14,9 @@ The two folders must stay **side by side**: the STM32 build uses two files from 
 
 ## Build and flash
 
+Ready-made files (no build tools needed): [`prebuilt/`](prebuilt/README.md); steps in
+[`../ICS_START_HERE.md`](../ICS_START_HERE.md). After a firmware change, rebuild them (see `prebuilt/README.md`).
+
 - **STM32** (STM32CubeCLT, the board on USB): in `stm32/`,
   `powershell -ExecutionPolicy Bypass -File .\tools\flash.ps1 -Mode LIVE`
   (`tools\build.ps1 -Mode LIVE` builds without flashing). LIVE is the mode the node runs.
@@ -28,6 +31,6 @@ In those READMEs, `coe_firmware` means `stm32/` and `coe_esp32` means `esp32/` (
 
 ## Settings you might change
 
-- Machine speed: `stm32/CM7/App/config/live_config.h`, `COE_LIVE_NOMINAL_RPM` (60–3600, now 250).
-  Rebuild and flash the STM32.
+- Machine speed: chosen on the laptop (training page or `inference_receiver.py --rpm`), no reflash.
+  The start speed after power-up is `COE_LIVE_START_RPM` (1750) in `stm32/CM7/App/config/live_config.h`.
 - Auto-start on power-up: same file, `COE_LIVE_AUTOSTART` (1 = on).

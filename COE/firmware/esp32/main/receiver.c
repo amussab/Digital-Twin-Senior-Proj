@@ -57,6 +57,13 @@ static void display_packet(const FeaturePacket *packet)
     if (!COE_DISPLAY_FEATURES) {
         ESP_LOGI(tag, "UART accepted packet=%" PRIu32 ", RPM=%" PRIu32 ", profile=%" PRIu32 ", window=%" PRIu32 ", features=32",
                  received_packets, packet->rpm, packet->bearing_profile, packet->window_id);
+        if (packet->schema == 2U)
+            ESP_LOGI(tag, "  Keyphasor %.2f RPM (%" PRIu32 " turns), PROX1 gap %.1f um 1X %.1f um pp @ %.1f deg,"
+                     " PROX3 gap %.1f um 1X %.1f um pp @ %.1f deg, flags 0x%02" PRIx32,
+                     (double)packet->measured_rpm, packet->revolutions,
+                     (double)packet->probes[0][0], (double)packet->probes[0][2], (double)packet->probes[0][3],
+                     (double)packet->probes[1][0], (double)packet->probes[1][2], (double)packet->probes[1][3],
+                     packet->shaft_flags);
         return;
     }
     printf("{\"received_packets\":%" PRIu32 ",\"crc_valid\":true,\"window_id\":%" PRIu32
@@ -66,7 +73,15 @@ static void display_packet(const FeaturePacket *packet)
            packet->bearing_profile, packet->valid_channels);
     for (size_t index = 0U; index < FEATURE_PACKET_VALUES; ++index)
         printf(index == 0U ? "%.9g" : ",%.9g", (double)packet->features[index]);
-    printf("]}\n");
+    printf("]");
+    if (packet->schema == 2U) /* prox: gap_um, pkpk_um, x1_um_pp, x1_phase_deg */
+        printf(",\"measured_rpm\":%.9g,\"revolutions\":%" PRIu32 ",\"shaft_flags\":%" PRIu32
+               ",\"prox1\":[%.9g,%.9g,%.9g,%.9g],\"prox3\":[%.9g,%.9g,%.9g,%.9g]",
+               (double)packet->measured_rpm, packet->revolutions, packet->shaft_flags,
+               (double)packet->probes[0][0], (double)packet->probes[0][1], (double)packet->probes[0][2],
+               (double)packet->probes[0][3], (double)packet->probes[1][0], (double)packet->probes[1][1],
+               (double)packet->probes[1][2], (double)packet->probes[1][3]);
+    printf("}\n");
     fflush(stdout);
 }
 

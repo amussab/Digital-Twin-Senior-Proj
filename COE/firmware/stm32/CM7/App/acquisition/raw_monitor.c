@@ -21,8 +21,8 @@ volatile uint32_t raw_monitor_start_result;
 #define REPORT_MS 1000U
 
 static const char *const slot_names[AD7606_SLOTS] = {
-    "V1 AIN1    ", "V2 AIN2 B1X", "V3 AIN3    ", "V4 AIN4 B1Y",
-    "V5 AIN5    ", "V6 AIN6 B2X", "V7 AIN7    ", "V8 AIN8 B2Y",
+    "V1 AIN1 B1Y", "V2 AIN2 B1X", "V3 AIN3 B2X", "V4 AIN4 B2Y",
+    "V5 AIN5 PX1", "V6 AIN6 PX3", "V7 AIN7 KPH", "V8 AIN8    ",
 };
 
 /* Per-slot sums over the current report interval. */

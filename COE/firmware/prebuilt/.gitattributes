@@ -1,0 +1,3 @@
+# Firmware files: store exactly as built (no line-ending changes), so the SHA-256 in README.md matches.
+*.hex binary
+*.bin binary

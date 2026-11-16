@@ -80,11 +80,13 @@ bool pipeline_envelope_matches_reference(const PipelineWindowResult *result,
 bool pipeline_final_matches_reference(const PipelineWindowResult *result,
                                        size_t profile, size_t mode, size_t window)
 {
-    if (result == NULL || profile >= 2U || mode >= 2U || window >= 3U
+    if (result == NULL || profile >= 3U || mode >= 2U || window >= 3U
         || result->ai_payload.channel_valid_mask != 15U)
         return false;
     const uint8_t *packet = result->ai_payload.bytes;
-    const uint32_t profile_id = profile == 0U ? COE_CWRU_DRIVE_END_BEARING : COE_PROJECT_BEARING;
+    static const uint32_t profile_ids[3] = {COE_CWRU_DRIVE_END_BEARING, COE_PROJECT_BEARING,
+                                            COE_RK4_S6700_BEARING};
+    const uint32_t profile_id = profile_ids[profile];
     if (memcmp(packet, "COE1", 4U) != 0 || packet[4] != COE_PAYLOAD_SCHEMA_VERSION
         || packet[5] != 0U || packet[6] != COE_FEATURE_COUNT || packet[7] != 0U
         || packet[16] != profile_id || packet[17] != 0U || packet[18] != 0U || packet[19] != 0U
@@ -216,7 +218,7 @@ static bool check_api(void)
 {
     output = (DemoOutput){0};
     if (pipeline_init(NULL, 1750U, &envelope_buffer, &final_test_workspace, &coe_cwru_drive_end_bearing, capture_window, &output)
-        || pipeline_init(&demo_pipeline, 1000U, &envelope_buffer, &final_test_workspace, &coe_cwru_drive_end_bearing, capture_window, &output)
+        || pipeline_init(&demo_pipeline, 59U, &envelope_buffer, &final_test_workspace, &coe_cwru_drive_end_bearing, capture_window, &output)
         || pipeline_init(&demo_pipeline, 1750U, &envelope_buffer, &final_test_workspace, &coe_cwru_drive_end_bearing, NULL, &output)
         || pipeline_init(&demo_pipeline, 1750U, NULL, &final_test_workspace, &coe_cwru_drive_end_bearing, capture_window, &output)
         || pipeline_init(&demo_pipeline, 1750U, &envelope_buffer, NULL, &coe_cwru_drive_end_bearing, capture_window, &output)

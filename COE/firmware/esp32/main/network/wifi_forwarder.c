@@ -40,7 +40,10 @@ static uint32_t next_sequence;
 
 /* Host discovery: the training recorder broadcasts "COE-HOST <port>" on UDP 8001.
  * The ESP sends to the laptop that last announced itself, so no laptop IP is
- * fixed in the firmware. Until a beacon arrives, COE_HTTP_URL is used. */
+ * fixed in the firmware. Until a beacon arrives, COE_HTTP_URL is used.
+ * Machine speed: since 16 Nov 2026 the STM32 measures it with the Keyphasor. An
+ * older laptop script may still send "COE-HOST <port> RPM <rpm>"; the RPM part is
+ * ignored (nothing is sent to the STM32). */
 #define DISCOVERY_PORT 8001
 static char target_url[96] = COE_HTTP_URL;
 static SemaphoreHandle_t target_lock;

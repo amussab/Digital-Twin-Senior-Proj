@@ -1,15 +1,27 @@
 /**
  * @file live_config.h
- * LIVE mode settings: machine speed, bearing profile and calibration.
+ * LIVE mode settings: bearing profile, calibration of the accelerometers and
+ * of the RK4 proximity probes.
  */
 #ifndef COE_LIVE_CONFIG_H
 #define COE_LIVE_CONFIG_H
 
-/* Settled shaft speed of the machine, any value 60..3600 RPM (pipeline_config.h).
- * Change it here, rebuild and flash. 11 Nov 2026: was 250 (wrong: no tachometer, the
- * value is only a setting). 12 Nov 2026: the rig runs at 1800 RPM; build 3600 for the 2nd speed.
+/* Machine speed: NOT a setting. Since 16 Nov 2026 LIVE measures it from the RK4
+ * Keyphasor on AIN7 (shaft_sensors.c). Windows start once 4 turns agree within
+ * 1 %, the window length and bearing bands follow the measured speed, and the
+ * window restarts when the speed moves by more than COE_LIVE_SPEED_RESTART.
+ * No Keyphasor pulses = no feature windows (nothing is guessed).
  */
-#define COE_LIVE_NOMINAL_RPM 1800U
+#define COE_LIVE_SPEED_RESTART 0.005f /* 0.5 %: 8.75 RPM at 1750 */
+/* A window is sent only if its measured mean speed is within this of the speed
+ * its bands were computed for, and every turn in it within twice this. */
+#define COE_LIVE_SPEED_TOLERANCE 0.01f
+
+/* RK4 proximity probes (PROX 1 on AIN5, PROX 3 on AIN6) and Keyphasor (AIN7):
+ * each through a 47 k / 10 k divider, ratio measured 0.170 (15 Nov 2026).
+ * Proximitor sensitivity 200 mV/mil (RK4 datasheet) = 127 um per volt. */
+#define COE_LIVE_PROBE_DIVIDER {0.170f, 0.170f}
+#define COE_LIVE_PROBE_UM_PER_VOLT 127.0f
 
 /* 1: start acquiring on power-up (first try after the delay, so the ADC has
  * power) and retry while stopped, so the node runs with no one at the board.
@@ -20,10 +32,11 @@
 #define COE_LIVE_AUTOSTART_DELAY_MS 2000U
 #define COE_LIVE_AUTOSTART_RETRY_MS 5000U
 
-/* Bearing orders for the frequency features. coe_project_bearing is the
- * provisional project profile (confirm before AI training).
+/* Bearing orders for the frequency features: the RK4 rotor kit's S6700 bearings
+ * (profile 3, since 16 Nov 2026; see frequency_features.c). Profile 1 was the old
+ * provisional bearing: its data must not be mixed with profile 3 data.
  */
-#define COE_LIVE_BEARING_PROFILE coe_project_bearing
+#define COE_LIVE_BEARING_PROFILE coe_rk4_s6700_bearing
 
 /* Volts at the ADC input per g, for B1X, B1Y, B2X, B2Y: sensor sensitivity
  * x conditioner gain x filter gain. 0 = unknown: do not guess a value.
