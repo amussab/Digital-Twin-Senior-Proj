@@ -175,6 +175,15 @@ summary{cursor:pointer;font-weight:600}
     <div class="plotwrap" style="margin-top:12px"><svg id="trend" viewBox="0 0 960 240" role="img" aria-label="Stiffness loss over time"></svg></div>
   </section>
 
+  <section class="box" aria-labelledby="h-run" style="margin-top:18px">
+    <h2 id="h-run">Run-up: critical speed on the rig</h2>
+    <p class="note" style="margin:0 0 8px">Set the rig's speed ramp to 5 rpm/s or slower (the node only sends a reading while the speed is steady within 1%), from about 500 to 2500 rpm. Press Start before the ramp and Stop after it. No test screw. The page finds the speed where the probes peak and compares it with the model.</p>
+    <div class="btns"><button id="ruStart">Start recording</button><button id="ruStop" class="alt">Stop</button><button id="ruCsv" class="alt">Download data (CSV)</button><button id="ruClear" class="alt">Clear</button></div>
+    <p class="note" id="ruInfo">Not recording.</p>
+    <div id="ruVerdict" class="verdict" style="display:none"><span class="big" id="ruPeak">–</span><span><span class="tag" id="ruTag"></span><br><span id="ruText" class="note" style="margin:0"></span></span></div>
+    <div class="plotwrap"><svg id="runup" viewBox="0 0 960 330" role="img" aria-label="Probe amplitude against speed, measured and model"></svg></div>
+  </section>
+
   <div class="grid">
     <section class="box" aria-labelledby="h-ctl">
       <h2 id="h-ctl">Simulated test (Spec 2 check)</h2>
@@ -459,6 +468,57 @@ summary{cursor:pointer;font-weight:600}
       const ks=Object.keys(L.cache); if(ks.length>40) delete L.cache[ks[0]];}
     return L.cache[key];
   }
+  // ---------- run-up: measured critical speed ----------
+  const RU={on:false, pts:[]};
+  function runupFit(){ // bin by 25 rpm, fit the model's shape (K = K0) with the unbalance and damping free
+    const bins=new Map();
+    for(const q of RU.pts){ const a=[q.p1,q.p3].filter(v=>v!=null); if(!a.length) continue;
+      const k=Math.round(q.rpm/25)*25; if(!bins.has(k)) bins.set(k,[]); bins.get(k).push(a.reduce((x,y)=>x+y,0)/a.length); }
+    const B=[...bins].sort((x,y)=>x[0]-y[0]).map(([k,v])=>{v.sort((x,y)=>x-y); return {rpm:k, a:v[Math.floor(v.length/2)]*1e-6};});
+    if(B.length<4) return {B};
+    let ip=0; B.forEach((b,i)=>{ if(b.a>B[ip].a) ip=i; });
+    const before=Math.min(...B.slice(0,ip+1).map(b=>b.a)), after=Math.min(...B.slice(ip).map(b=>b.a));
+    const passed = ip>0 && ip<B.length-1 && before<0.7*B[ip].a && after<0.7*B[ip].a;
+    const unit=(eta,rpm)=>{const w=rpm*Math.PI/30, c=responseC(P.K0,rpm,w*w,{eta}); return (Math.hypot(...c[P.j1])+Math.hypot(...c[P.j3]))/2;};
+    let best=null;
+    for(const eta of [0.01,0.02,0.03,0.05,0.07,0.1,0.15,0.2,0.3]){
+      const u=B.map(b=>unit(eta,b.rpm)); let su=0,sm=0; u.forEach((x,i)=>{su+=x*x; sm+=x*B[i].a;});
+      const me=sm/su; let e=0; u.forEach((x,i)=>{e+=((me*x-B[i].a)/B[ip].a)**2;});
+      if(!best||e<best.e) best={eta,me,e:Math.sqrt(e/B.length)};
+    }
+    return {B, ip, peak:B[ip].rpm, passed, best, unit};
+  }
+  function drawRunup(){
+    const svg=$('runup'), F=runupFit(), B=F.B||[];
+    const mu=css('--muted'),ln=css('--line'),sh=css('--shaft'),pr=css('--probe'),fl=css('--fail'),ink=css('--ink');
+    $('ruInfo').textContent=(RU.on?'Recording. ':'Not recording. ')+`${RU.pts.length} readings`+(RU.pts.length?`, ${Math.round(Math.min(...RU.pts.map(q=>q.rpm)))} to ${Math.round(Math.max(...RU.pts.map(q=>q.rpm)))} rpm`:'')+'.';
+    const crit=critSpeed(P.K0);
+    if(!B.length){ svg.innerHTML=`<text x="60" y="160" font-family="system-ui, sans-serif" font-size="14" fill="${mu}">Probe amplitude against speed appears here while recording. The model predicts the peak at ${crit} rpm.</text>`; $('ruVerdict').style.display='none'; return; }
+    const r0=Math.min(400,B[0].rpm), r1=Math.max(2600,B[B.length-1].rpm), Lx=70,R=940,T=20,Bt=270;
+    const model=[]; if(F.best) for(let r=r0;r<=r1;r+=10) model.push([r,F.best.me*F.unit(F.best.eta,r)*2e6]);
+    const ymax=Math.max(...B.map(b=>b.a*2e6), ...model.map(m=>m[1]).slice(0))*1.1||1;
+    const X=r=>Lx+(R-Lx)*(r-r0)/(r1-r0), Y=v=>Bt-(Bt-T)*Math.min(v,ymax)/ymax;
+    let ticks=''; for(let r=Math.ceil(r0/500)*500;r<=r1;r+=500) ticks+=`<line x1="${X(r)}" x2="${X(r)}" y1="${T}" y2="${Bt}" stroke="${ln}"/><text x="${X(r)}" y="${Bt+18}" text-anchor="middle">${r}</text>`;
+    for(let i=0;i<=4;i++){const v=ymax*i/4; ticks+=`<text x="${Lx-6}" y="${Y(v)+4}" text-anchor="end">${v.toFixed(v<10?1:0)}</text>`;}
+    const mpath=model.map((m,i)=>(i?'L':'M')+X(m[0]).toFixed(1)+' '+Y(m[1]).toFixed(1)).join(' ');
+    svg.innerHTML=`<g font-family="system-ui, sans-serif" font-size="13" fill="${mu}">${ticks}
+      <line x1="${X(crit)}" x2="${X(crit)}" y1="${T}" y2="${Bt}" stroke="${pr}" stroke-dasharray="6 4"/><text x="${X(crit)+6}" y="${T+14}" fill="${pr}">model ${crit} rpm</text>
+      ${model.length?`<path d="${mpath}" fill="none" stroke="${pr}" stroke-width="2.5"/>`:''}
+      ${B.map(b=>`<circle cx="${X(b.rpm)}" cy="${Y(b.a*2e6)}" r="4" fill="${sh}"/>`).join('')}
+      ${F.passed?`<line x1="${X(F.peak)}" x2="${X(F.peak)}" y1="${T}" y2="${Bt}" stroke="${ink}" stroke-width="1.5"/><text x="${X(F.peak)-6}" y="${T+30}" text-anchor="end" fill="${ink}">measured ${F.peak} rpm</text>`:''}
+      <text x="${(Lx+R)/2}" y="${Bt+40}" text-anchor="middle">Shaft speed (rpm). Dots: measured 1X, both probes averaged, µm pk-pk (25 rpm bins). Line: FE model fitted to the dots.</text></g>`;
+    const v=$('ruVerdict');
+    if(F.passed){ const d=(F.peak-crit)/crit*100; v.style.display='flex'; v.className='verdict';
+      $('ruPeak').textContent=F.peak+' rpm'; $('ruTag').textContent=`Measured critical speed (model ${crit} rpm, difference ${d>=0?'+':''}${d.toFixed(1)}%)`;
+      $('ruText').textContent=`Fitted damping η ≈ ${F.best.eta}, rig unbalance ≈ ${(F.best.me*1e6).toFixed(1)} g·mm. Bins are 25 rpm wide, so the peak is known to about ±13 rpm.`; }
+    else { v.style.display='none'; }
+  }
+  function runupCsv(){
+    const rows=['time,rpm,prox1_1x_um_pp,prox3_1x_um_pp'].concat(RU.pts.map(q=>[q.t,q.rpm.toFixed(1),q.p1==null?'':(2*q.p1).toFixed(3),q.p3==null?'':(2*q.p3).toFixed(3)].join(',')));
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([rows.join('\n')+'\n'],{type:'text/csv'}));
+    a.download='runup_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.csv'; a.click();
+  }
+
   function vec(pp,ph){const a=pp/2, t=(ph||0)*Math.PI/180; return [a*Math.cos(t), a*Math.sin(t)];}
 
   function processReading(r){ // r: {rpm, p:[{pp,ph}|null, {pp,ph}|null], src}
@@ -471,9 +531,11 @@ summary{cursor:pointer;font-weight:600}
         $('lSlow').textContent=`captured at ${r.rpm.toFixed(0)} rpm: `+r.p.map(p=>p?p.pp.toFixed(2)+' µm pp':'–').join(', ');}
       return;
     }
-    const amps=[]; r.p.forEach((p,i)=>{ if(!p) return; let a=p.pp/2;
+    const per=r.p.map((p,i)=>{ if(!p) return null; let a=p.pp/2;
       if(L.slow&&L.slow[i]&&p.ph!=null){const v=vec(p.pp,p.ph); a=Math.hypot(v[0]-L.slow[i][0], v[1]-L.slow[i][1]);}
-      amps.push(a);});
+      return a;});
+    const amps=per.filter(a=>a!=null);
+    if(RU.on && amps.length){ RU.pts.push({t:new Date().toISOString(), rpm:r.rpm, p1:per[0], p3:per[1]}); drawRunup(); }
     if(!amps.length){$('lAmp').textContent='no valid probe'; return;}
     const meas=amps.reduce((x,y)=>x+y,0)/amps.length*1e-6; // m, zero-peak
     $('lAmp').textContent=(meas*1e6).toFixed(3)+' µm (zero-peak)';
@@ -695,6 +757,10 @@ summary{cursor:pointer;font-weight:600}
   $('bSlow').addEventListener('click',()=>{L.wantSlow=true;$('lSlow').textContent='waiting for the next window (run the rig slowly, about 300–500 rpm)';});
   $('bBase').addEventListener('click',()=>{L.baseBuf=[];L.hist=[];$('lBase').textContent='collecting 0 of 10';});
   $('bReset').addEventListener('click',()=>{L.slow=null;$('lSlow').textContent='not captured';resetLive();});
+  $('ruStart').addEventListener('click',()=>{RU.on=true; drawRunup();});
+  $('ruStop').addEventListener('click',()=>{RU.on=false; drawRunup();});
+  $('ruClear').addEventListener('click',()=>{RU.pts=[]; drawRunup();});
+  $('ruCsv').addEventListener('click',runupCsv);
   $('bManual').addEventListener('click',()=>{
     const g=(a,b)=>{const pp=parseFloat($(a).value), ph=parseFloat($(b).value); return pp>0?{pp, ph:isFinite(ph)?ph:null}:null;};
     const rpm=parseFloat($('mRpm').value); if(!(rpm>0)) return;
@@ -706,10 +772,10 @@ summary{cursor:pointer;font-weight:600}
   document.querySelectorAll('input').forEach(i=>{ if(i.type!=='file') i.value=i.defaultValue; });
   readParams();assemble();validate();
   $('kTrue').value=Math.log10(P.K0).toFixed(3);
-  labels();liveTable();handCalc();buildGrid();measure();drawTrend();
+  labels();liveTable();handCalc();buildGrid();measure();drawTrend();drawRunup();
   setTimeout(runTrials,50);
   poll(); setInterval(poll,700);
-  window.__fe={processReading,P,L,fitRul:(h,f)=>fitRul(h,f)};
+  window.__fe={processReading,P,L,fitRul:(h,f)=>fitRul(h,f),RU,drawRunup};
 })();
 </script>
 </body>
