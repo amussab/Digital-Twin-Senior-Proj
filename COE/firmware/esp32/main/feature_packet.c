@@ -42,7 +42,8 @@ size_t feature_packet_length(const uint8_t header[8])
 {
     if (header == NULL || header[5] != 0U || header[6] != FEATURE_PACKET_VALUES || header[7] != 0U)
         return 0U;
-    return header[4] == 1U ? FEATURE_PACKET_BYTES : header[4] == 2U ? FEATURE_PACKET_SHAFT_BYTES : 0U;
+    return header[4] == 1U ? FEATURE_PACKET_BYTES : header[4] == 2U ? FEATURE_PACKET_SHAFT_BYTES
+         : header[4] == 3U ? FEATURE_PACKET_LATENCY_BYTES : 0U;
 }
 
 /** A value that must be finite and >= 0 when its flag is set, and exactly 0 otherwise. */
@@ -99,7 +100,7 @@ bool feature_packet_decode(const uint8_t *bytes, FeaturePacket *output)
     decoded.bearing_profile = read_u32(bytes + 16U);
     decoded.valid_channels = read_u32(bytes + 20U);
     if (decoded.window_id == 0U || decoded.rpm < FEATURE_PACKET_MIN_RPM || decoded.rpm > FEATURE_PACKET_MAX_RPM
-        || decoded.bearing_profile < 1U || decoded.bearing_profile > 3U /* 3 = RK4 S6700 */
+        || decoded.bearing_profile < 1U || decoded.bearing_profile > FEATURE_PACKET_MAX_PROFILE
         || (decoded.valid_channels & ~15U) != 0U || read_u32(bytes + 24U) != 1U)
         return false;
     for (size_t index = 0U; index < FEATURE_PACKET_VALUES; ++index)
@@ -110,8 +111,27 @@ bool feature_packet_decode(const uint8_t *bytes, FeaturePacket *output)
             return false;
         decoded.features[index] = value;
     }
-    if (decoded.schema == 2U && !decode_shaft(bytes, &decoded))
+    if (decoded.schema >= 2U && !decode_shaft(bytes, &decoded))
         return false;
+    if (decoded.schema == 3U)
+    {
+        decoded.stm_latency_us = read_u32(bytes + 200U);
+        decoded.sample_rate_millihz = read_u32(bytes + 204U);
+        if (decoded.stm_latency_us == 0U || decoded.stm_latency_us > FEATURE_PACKET_MAX_LATENCY_US
+            || decoded.sample_rate_millihz < FEATURE_PACKET_MIN_RATE_MILLIHZ
+            || decoded.sample_rate_millihz > FEATURE_PACKET_MAX_RATE_MILLIHZ)
+            return false;
+        decoded.rpm_min = read_f32(bytes + 208U);
+        decoded.rpm_max = read_f32(bytes + 212U);
+        decoded.adc_gaps = read_u32(bytes + 216U);
+        decoded.unsteady_windows = read_u32(bytes + 220U);
+        decoded.stm_send_failures = read_u32(bytes + 224U);
+        const bool speed = (decoded.shaft_flags & FEATURE_SHAFT_SPEED_MEASURED) != 0U;
+        if (speed ? !(isfinite(decoded.rpm_min) && isfinite(decoded.rpm_max) && decoded.rpm_min > 0.0f
+                      && decoded.rpm_min <= decoded.rpm_max && decoded.rpm_max <= FEATURE_PACKET_MAX_TURN_RPM)
+                  : (decoded.rpm_min != 0.0f || decoded.rpm_max != 0.0f))
+            return false;
+    }
     *output = decoded;
     return true;
 }

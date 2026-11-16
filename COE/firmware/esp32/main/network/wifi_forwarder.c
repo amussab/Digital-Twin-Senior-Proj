@@ -35,6 +35,13 @@ static QueueHandle_t jobs;
 static EventGroupHandle_t connection;
 static uint64_t session_id;
 static uint32_t next_sequence;
+/* Round trip of the last accepted HTTP request (us), sent with the next window as
+ * its Wi-Fi part of the end-to-end latency. Only the forwarding task uses it. */
+static uint32_t last_http_us;
+/* Windows not delivered (node health, sent with every window). Each counter has one
+ * writer: the UART task (queue full) or the forwarding task (failed after retries). */
+static volatile uint32_t queue_full_drops;
+static volatile uint32_t send_failures;
 #define CONNECTED_BIT BIT0 /* joined a hotspot */
 #define AP_CLIENT_BIT BIT1 /* a laptop is on the node's own Wi-Fi */
 
@@ -242,11 +249,45 @@ static void wifi_event(void *argument, esp_event_base_t base, int32_t id, void *
     }
 }
 
+/** Wi-Fi link to the laptop and its signal. A laptop on the node's own Wi-Fi is preferred
+ * (the usual set-up); with several clients the weakest is reported. */
+static void wifi_signal(uint32_t *link, int32_t *rssi_dbm)
+{
+    *link = FEATURE_WIFI_LINK_NONE;
+    *rssi_dbm = 0;
+    const EventBits_t bits = xEventGroupGetBits(connection);
+    wifi_sta_list_t clients;
+    if ((bits & AP_CLIENT_BIT) != 0U && esp_wifi_ap_get_sta_list(&clients) == ESP_OK && clients.num > 0)
+    {
+        int32_t weakest = 0;
+        for (int index = 0; index < clients.num; ++index)
+            if (index == 0 || clients.sta[index].rssi < weakest)
+                weakest = clients.sta[index].rssi;
+        *link = FEATURE_WIFI_LINK_NODE;
+        *rssi_dbm = weakest;
+        return;
+    }
+    wifi_ap_record_t hotspot;
+    if ((bits & CONNECTED_BIT) != 0U && esp_wifi_sta_get_ap_info(&hotspot) == ESP_OK)
+    {
+        *link = FEATURE_WIFI_LINK_HOTSPOT;
+        *rssi_dbm = hotspot.rssi;
+    }
+    if (*rssi_dbm > 0 || *rssi_dbm < -127) /* never sent out of range */
+        *rssi_dbm = *rssi_dbm > 0 ? 0 : -127;
+}
+
 /** POST one JSON vector; only a completed HTTP 2xx response confirms host acceptance. */
 static bool post_vector(const ForwardJob *job)
 {
     char body[FEATURE_JSON_BYTES];
-    const size_t length = feature_packet_to_json(&job->packet, COE_DEVICE_ID,
+    FeaturePacket packet = job->packet;
+    const int64_t waited_us = esp_timer_get_time() - job->received_us;
+    packet.esp_latency_us = waited_us > 0 ? (uint32_t)(waited_us < 10000000 ? waited_us : 10000000) : 0U;
+    packet.wifi_latency_us = last_http_us;
+    packet.esp_dropped = queue_full_drops + send_failures;
+    wifi_signal(&packet.wifi_link, &packet.wifi_rssi_dbm);
+    const size_t length = feature_packet_to_json(&packet, COE_DEVICE_ID,
                                                  session_id, job->sequence, body, sizeof(body));
     if (length == 0U)
         return false;
@@ -270,10 +311,14 @@ static bool post_vector(const ForwardJob *job)
         error = esp_http_client_set_header(client, "Idempotency-Key", identity);
     if (error == ESP_OK)
         error = esp_http_client_set_post_field(client, body, (int)length);
+    const int64_t sent_us = esp_timer_get_time();
     if (error == ESP_OK)
         error = esp_http_client_perform(client);
+    const int64_t round_trip_us = esp_timer_get_time() - sent_us;
     const int status = esp_http_client_get_status_code(client);
     const bool accepted = error == ESP_OK && status >= 200 && status < 300;
+    if (accepted)
+        last_http_us = (uint32_t)(round_trip_us < 10000000 ? round_trip_us : 10000000);
     if (!accepted)
         ESP_LOGW(tag, "POST sequence=%" PRIu32 " failed: %s, HTTP=%d",
                  job->sequence, esp_err_to_name(error), status);
@@ -322,8 +367,11 @@ static void forwarding_task(void *argument)
                      network_us / 1000.0, attempts);
         }
         else
+        {
+            ++send_failures;
             ESP_LOGW(tag, "Discarded sequence=%" PRIu32 " after retries, failed=%" PRIu32,
                      job.sequence, ++failed);
+        }
     }
 }
 
@@ -417,5 +465,8 @@ ForwardStatus wifi_forwarder_submit(const FeaturePacket *packet, uint32_t measur
         return FORWARD_QUEUE_FULL;
     const ForwardJob job = {.packet = *packet, .sequence = ++next_sequence,
                             .measurement_id = measurement_id, .received_us = received_us};
-    return xQueueSend(jobs, &job, 0) == pdTRUE ? FORWARD_QUEUED : FORWARD_QUEUE_FULL;
+    if (xQueueSend(jobs, &job, 0) == pdTRUE)
+        return FORWARD_QUEUED;
+    ++queue_full_drops;
+    return FORWARD_QUEUE_FULL;
 }

@@ -10,7 +10,7 @@ sensor -> IEPE conditioner -> filter -> AD7606 ADC (4 of 8 inputs)
 RK4 PROX 1, PROX 3, Keyphasor -> dividers -> AD7606 AIN5..AIN7
        -> STM32H755 CM7: 30 kS/s per channel -> DSP -> 32 features per window,
           machine speed from the Keyphasor, probe gap / pk-pk / 1X per window
-       -> 204-byte packet -> USART2 -> ESP32-C6 -> Wi-Fi/HTTP -> host
+       -> 232-byte packet -> USART2 -> ESP32-C6 -> Wi-Fi/HTTP -> host
 ```
 
 The Cortex-M7 does all the work. The Cortex-M4 only starts and idles.
@@ -140,7 +140,7 @@ window: gap (mean, µm), pk-pk vibration (µm), and the 1X vibration (amplitude 
 lag in degrees from the Keyphasor notch, vector average over the window's whole turns). A
 probe is valid when its mean voltage is between -19 and -1 V and nothing clips. Scale:
 divider 0.170 (`COE_LIVE_PROBE_DIVIDER`) and 200 mV/mil = 127 µm per probe volt
-(`COE_LIVE_PROBE_UM_PER_VOLT`). The speed and probe values go out in every packet (schema 2,
+(`COE_LIVE_PROBE_UM_PER_VOLT`). The speed and probe values go out in every packet (schema 3,
 section 6), so the AI host gets the 32 features and the digital twin gets the speed and shaft
 values from the same packet.
 
@@ -150,6 +150,23 @@ prints its Keyphasor speed and both probes' gap, pk-pk and 1X.
 
 The old laptop speed choice (beacon `COE-HOST <port> RPM <rpm>` and the `COR1` command on
 PD6, 14 Nov) is gone: the ESP32 no longer sends `COR1`, and LIVE ignores it.
+
+**End-to-end latency (16 Nov 2026, schema 3).** Spec: from a window's last sample to the AI
+result in under 500 ms (collecting the window itself is not counted). Each part measures its
+own time, so no clocks need to agree:
+
+| Part | Measured by | How |
+| --- | --- | --- |
+| STM32 | STM32, sent in the packet (`stm_latency_us`) | window's last sample -> packet handed to the UART (DSP, features, packet) |
+| UART | ESP32 (`uart_latency_us`) | 232 bytes + 10-character idle timeout at 115200 baud = 21.0 ms (fixed, upper bound) |
+| ESP32 | ESP32 (`esp_latency_us`) | packet complete -> its HTTP request starts (queue) |
+| Wi-Fi | ESP32 (`wifi_latency_us`) | round trip of the **previous** accepted HTTP request (this one is not finished when it is sent); 0 for the first |
+| Laptop | `inference_receiver.py` | POST received -> `model_hook.predict()` done |
+
+The ESP32 adds `node_latency_us` = the sum of its four parts; the inference receiver adds its
+own part and prints `end-to-end X ms OK/OVER (limit 500: STM32 + UART + ESP32 + Wi-Fi + laptop)`
+for each window, and puts it in `GET /digital-twin` (`ai_result.end_to_end_ms`, `within_limit`).
+
 
 ### 2.2 Tools
 
@@ -643,13 +660,15 @@ Coefficients and test fixtures are generated from `coe_pipeline` by
 Per channel: 0 band-pass RMS (g), 1 kurtosis, 2 crest factor, 3 envelope RMS (g),
 4 FTF band RMS, 5 ball band RMS (`bsf`; 2 × BSF for profile 3), 6 BPFO band RMS, 7 BPFI band RMS (g).
 
-Packet, little-endian. REPLAY sends schema 1 (160 bytes); LIVE sends schema 2 (204 bytes) =
-the same first 156 bytes with schema 2, then the shaft block and the CRC:
+Packet, little-endian. REPLAY sends schema 1 (160 bytes); LIVE sends schema 3 (232 bytes) =
+the same first 156 bytes with schema 3, then the shaft block, the STM32 latency, the ADC sample
+rate, the window's speed range, the node health counters and the CRC
+(schema 2, 204 bytes, was the same without the latency; the ESP32 still accepts it):
 
 | Bytes | Field |
 | --- | --- |
 | 0–3 | `COE1` |
-| 4–5 / 6–7 | Schema (1 or 2) / feature count 32 |
+| 4–5 / 6–7 | Schema (1, 2 or 3) / feature count 32 |
 | 8–11 | Window ID (from 1 after each stream start) |
 | 12–15 | RPM the bands were computed for (LIVE: measured speed, whole RPM) |
 | 16–19 | Bearing profile ID |
@@ -658,7 +677,7 @@ the same first 156 bytes with schema 2, then the shaft block and the CRC:
 | 28–155 | 32 features |
 | 156–159 | Schema 1: CRC-32 (zlib.crc32) of bytes 0–155 |
 
-Schema 2 shaft block (`CM7/App/payload/node_packet.c`):
+Schema 3 shaft block and latency (`CM7/App/payload/node_packet.c`):
 
 | Bytes | Field |
 | --- | --- |
@@ -667,12 +686,21 @@ Schema 2 shaft block (`CM7/App/payload/node_packet.c`):
 | 164–167 | Shaft flags (u32): bit 0 speed measured, bit 1 PROX 1 valid, bit 2 PROX 3 valid, bit 3 PROX 1 1X valid, bit 4 PROX 3 1X valid |
 | 168–183 | PROX 1: gap µm, pk-pk µm, 1X µm pp, 1X phase deg (4 × f32) |
 | 184–199 | PROX 3: same four values |
-| 200–203 | CRC-32 of bytes 0–199 |
+| 200–203 | STM32 latency, µs (u32, 1 … 10,000,000): window's last sample -> packet handed to the UART |
+| 204–207 | ADC sample rate per channel, mHz (u32, 1 … 200 kS/s; the board: 29,998,500 = 29,998.5 S/s) |
+| 208–215 | Slowest / fastest single turn in the window, RPM (2 × f32; 0 without a measured speed) |
+| 216–219 | ADC sample gaps that broke the stream since LIVE started (u32, `live_restarts`) |
+| 220–223 | Windows withheld because the speed moved, since LIVE started (u32, `live_unsteady_windows`) |
+| 224–227 | Packets not sent: encoding refused or UART queue full (u32, `live_packet_failures`) |
+| 228–231 | CRC-32 of bytes 0–227 (schema 2: CRC at 200–203) |
 
 A value whose flag bit is clear is 0. The 1X values need a measured speed. The ESP32 checks
 these rules and forwards the values as JSON fields `measured_rpm`, `revolutions`,
 `shaft_flags`, `prox1_gap_um`, `prox1_pkpk_um`, `prox1_x1_um_pp`, `prox1_x1_phase_deg` and
-the same four for `prox3` (`../coe_esp32/README.md`).
+the same four for `prox3`, and the latency parts `stm_latency_us`, `uart_latency_us`,
+`esp_latency_us`, `wifi_latency_us`, `node_latency_us`, `sample_rate_hz` (e.g. 29998.500),
+`rpm_min`, `rpm_max`, `adc_gaps`, `unsteady_windows`, `stm_send_failures`, plus the ESP32's own
+`esp_rx_rejected`, `esp_dropped`, `wifi_link` and `wifi_rssi_dbm` (section 2.1, `../coe_esp32/README.md`).
 
 Host decoder: `coe_pipeline/steps/step_08/firmware_payload.py`. Use the same
 features, units and normalization for training and inference.
@@ -680,10 +708,10 @@ features, units and normalization for training and inference.
 ## 7. STM32 to ESP32 link
 
 USART2, 115200 8N1, TX by DMA1 Stream0 (interrupt priority 6), two owned
-224-byte slots in AXI SRAM (`CM7/App/communication/feature_uart.c`). Call
+256-byte slots in AXI SRAM (`CM7/App/communication/feature_uart.c`). Call
 `feature_uart_send()` and `feature_uart_process()` from the main loop only. A
 full queue returns false (never overwrites); an error or 100-ms timeout stops
-the transmitter until reset. One packet takes 13.9 ms (schema 1) or 17.7 ms (schema 2) on the wire. The ESP
+the transmitter until reset. One packet takes 13.9 ms (schema 1) or 20.1 ms (schema 3) on the wire. The ESP
 validates and forwards packets over HTTP; see `../coe_esp32/README.md`.
 
 Delivery timing (REPLAY mode, `delivery_timing.c`): after both boards and the
@@ -750,7 +778,7 @@ CM7/App/
   pipeline/       pipeline coordinator (windows, callback)
   dsp/            bandpass, time_features, envelope, envelope_spectrum, frequency_features,
                   shaft/ (Keyphasor speed and proximity probe values)
-  payload/        32-feature vector, 160-byte packet, 204-byte node packet (node_packet.c)
+  payload/        32-feature vector, 160-byte packet, 232-byte node packet (node_packet.c)
   communication/  USART2 DMA sender and delivery timing
   platform/       clock setup, cycle-counter timing
 CM7/TestData/     REPLAY-only demos, fixtures, generators, saved results, host tests

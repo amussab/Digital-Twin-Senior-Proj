@@ -1,6 +1,6 @@
 /**
  * @file live_stream.h
- * LIVE mode: AD7606 blocks -> scaling -> pipeline -> 204-byte packets (schema 2)
+ * LIVE mode: AD7606 blocks -> scaling -> pipeline -> 232-byte packets (schema 3)
  * on USART2 to the ESP32. DSP runs in the main loop, never in an interrupt.
  * The speed comes from the RK4 Keyphasor (AIN7): windows start once it is
  * steady, follow it, and stop when it is lost. The packet also carries the

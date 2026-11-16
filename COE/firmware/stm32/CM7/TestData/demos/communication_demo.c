@@ -27,6 +27,9 @@ static void record_check(bool passed)
 /** Refresh the CRC of deliberately malformed metadata so rejection tests
  * exercise schema/value validation rather than only the checksum check.
  */
+#define RATE 29998500U /* 29,998.5 S/s, the board's AD7606 rate in mHz */
+static const NodeHealth HEALTH = {3U, 7U, 1U}; /* gaps, unsteady windows, send failures */
+
 static void refresh_crc_length(uint8_t *bytes, size_t length)
 {
     uint32_t crc = UINT32_MAX;
@@ -96,11 +99,14 @@ static void check_shaft_packets(void)
     w.probes[0] = (ShaftProbeWindow){true, true, 1231.9f, 52.25f, 50.0f, 70.5f, -9.7f};
     w.probes[1] = (ShaftProbeWindow){true, false, 1041.4f, 20.0f, 0.0f, 0.0f, -8.2f};
     FeaturePacket out;
-    const bool encoded = node_packet_encode(final_payload_expected, &w, node);
-    record_check(encoded && feature_packet_length(node) == FEATURE_PACKET_SHAFT_BYTES
-                 && memcmp(node, final_payload_expected, 4U) == 0 && node[4] == 2U
+    const bool encoded = node_packet_encode(final_payload_expected, &w, 12345U, RATE, &HEALTH, node);
+    record_check(encoded && feature_packet_length(node) == FEATURE_PACKET_LATENCY_BYTES
+                 && memcmp(node, final_payload_expected, 4U) == 0 && node[4] == 3U
                  && memcmp(node + 5U, final_payload_expected + 5U, 151U) == 0);
-    record_check(feature_packet_decode(node, &out) && matches_fixture(&out) && out.schema == 2U
+    record_check(feature_packet_decode(node, &out) && matches_fixture(&out) && out.schema == 3U
+                 && out.stm_latency_us == 12345U && out.sample_rate_millihz == 29998500U
+                 && out.rpm_min == 1749.5f && out.rpm_max == 1750.25f && out.adc_gaps == 3U
+                 && out.unsteady_windows == 7U && out.stm_send_failures == 1U
                  && out.measured_rpm == 1749.93f && out.revolutions == 20U
                  && out.shaft_flags == (FEATURE_SHAFT_SPEED_MEASURED | FEATURE_SHAFT_PROX1_VALID
                                         | FEATURE_SHAFT_PROX3_VALID | FEATURE_SHAFT_PROX1_X1_VALID)
@@ -113,31 +119,44 @@ static void check_shaft_packets(void)
     ShaftWindow v = w;
     memcpy(bad, final_payload_expected, FEATURE_PACKET_BYTES);
     bad[60] ^= 1U;
-    record_check(!node_packet_encode(bad, &w, node) && node[0] == 0U);
+    record_check(!node_packet_encode(bad, &w, 12345U, RATE, &HEALTH, node) && node[0] == 0U);
     v.probes[0].gap_um = -1.0f;
-    record_check(!node_packet_encode(final_payload_expected, &v, node));
+    record_check(!node_packet_encode(final_payload_expected, &v, 12345U, RATE, &HEALTH, node));
     v = w;
     v.probes[0].x1_phase_deg = 360.0f;
-    record_check(!node_packet_encode(final_payload_expected, &v, node));
+    record_check(!node_packet_encode(final_payload_expected, &v, 12345U, RATE, &HEALTH, node));
     v = w;
     v.rpm = 4100.0f;
-    record_check(!node_packet_encode(final_payload_expected, &v, node));
+    record_check(!node_packet_encode(final_payload_expected, &v, 12345U, RATE, &HEALTH, node));
+    /* The STM32 latency must be 1 us .. 10 s. */
+    record_check(!node_packet_encode(final_payload_expected, &w, 0U, RATE, &HEALTH, node)
+                 && !node_packet_encode(final_payload_expected, &w, COE_NODE_MAX_LATENCY_US + 1U, RATE, &HEALTH, node)
+                 && node_packet_encode(final_payload_expected, &w, COE_NODE_MAX_LATENCY_US, RATE, &HEALTH, node));
+    /* The sample rate must be 1 kS/s .. 200 kS/s. */
+    record_check(!node_packet_encode(final_payload_expected, &w, 12345U, COE_NODE_MIN_RATE_MILLIHZ - 1U, &HEALTH, node)
+                 && !node_packet_encode(final_payload_expected, &w, 12345U, COE_NODE_MAX_RATE_MILLIHZ + 1U, &HEALTH, node)
+                 && node_packet_encode(final_payload_expected, &w, 12345U, COE_NODE_MIN_RATE_MILLIHZ, &HEALTH, node));
+    /* Health counters are required; the slowest turn must not be faster than the fastest. */
+    v = w;
+    v.rpm_min = 1751.0f;
+    record_check(!node_packet_encode(final_payload_expected, &w, 12345U, RATE, NULL, node)
+                 && !node_packet_encode(final_payload_expected, &v, 12345U, RATE, &HEALTH, node));
     /* No Keyphasor speed: no 1X either, even if the probe had it. */
     v = w;
     v.speed_measured = false;
-    record_check(node_packet_encode(final_payload_expected, &v, node) && feature_packet_decode(node, &out)
+    record_check(node_packet_encode(final_payload_expected, &v, 12345U, RATE, &HEALTH, node) && feature_packet_decode(node, &out)
                  && out.shaft_flags == (FEATURE_SHAFT_PROX1_VALID | FEATURE_SHAFT_PROX3_VALID)
-                 && out.measured_rpm == 0.0f && out.revolutions == 0U
+                 && out.measured_rpm == 0.0f && out.revolutions == 0U && out.rpm_min == 0.0f && out.rpm_max == 0.0f
                  && out.probes[0][2] == 0.0f && out.probes[0][3] == 0.0f && out.probes[0][0] == 1231.9f);
     /* A probe that is not valid sends zeros and no flag. */
     v = w;
     v.probes[1].valid = false;
-    record_check(node_packet_encode(final_payload_expected, &v, node) && feature_packet_decode(node, &out)
+    record_check(node_packet_encode(final_payload_expected, &v, 12345U, RATE, &HEALTH, node) && feature_packet_decode(node, &out)
                  && (out.shaft_flags & FEATURE_SHAFT_PROX3_VALID) == 0U && out.probes[1][0] == 0.0f);
 
     /* Decoder: CRC-valid packets that break a rule are rejected. */
-    (void)node_packet_encode(final_payload_expected, &w, node);
-    for (unsigned test = 0U; test < 8U; ++test)
+    (void)node_packet_encode(final_payload_expected, &w, 12345U, RATE, &HEALTH, node);
+    for (unsigned test = 0U; test < 14U; ++test)
     {
         memcpy(bad, node, sizeof(bad));
         switch (test)
@@ -149,6 +168,12 @@ static void check_shaft_packets(void)
         case 4U: bad[160] = 0U; break;               /* speed flag but 0 turns */
         case 5U: put_f32(bad + 196U, 1.0f); break;   /* PROX3 1X value, flag clear */
         case 6U: put_f32(bad + 180U, 360.0f); break; /* phase out of range */
+        case 7U: memset(bad + 200U, 0, 4U); break;   /* STM32 latency 0 */
+        case 8U: bad[203] = 0x01U; break;            /* STM32 latency > 10 s */
+        case 9U: memset(bad + 204U, 0, 4U); break;   /* sample rate 0 */
+        case 10U: bad[207] = 0x10U; break;           /* sample rate > 200 kS/s */
+        case 11U: put_f32(bad + 208U, 1751.0f); break; /* slowest turn faster than the fastest */
+        case 12U: put_f32(bad + 212U, 9000.0f); break; /* turn speed above the limit */
         default: put_f32(bad + 168U, -5.0f); break;  /* negative gap */
         }
         refresh_crc_length(bad, sizeof(bad));
@@ -158,14 +183,14 @@ static void check_shaft_packets(void)
     bad[190] ^= 1U; /* corruption in the shaft block, CRC not refreshed */
     record_check(!feature_packet_decode(bad, &out));
 
-    /* Stream: schema 1 and 2 packets back to back, and recovery after a bad schema-2 packet. */
+    /* Stream: schema 1 and 3 packets back to back, and recovery after a bad schema-3 packet. */
     FeaturePacketStream stream = {0};
     record_check(feed_bytes(&stream, node, sizeof(node)) == 1U
                  && feed_bytes(&stream, final_payload_expected, FEATURE_PACKET_BYTES) == 1U
                  && feed_bytes(&stream, node, sizeof(node)) == 1U);
     record_check(feed_bytes(&stream, bad, sizeof(bad)) == 0U
                  && feed_bytes(&stream, final_payload_expected, FEATURE_PACKET_BYTES) == 1U
-                 && feed_bytes(&stream, node, 100U) == 0U && feed_bytes(&stream, node + 100U, 104U) == 1U);
+                 && feed_bytes(&stream, node, 100U) == 0U && feed_bytes(&stream, node + 100U, sizeof(node) - 100U) == 1U);
 }
 
 /** Exercise malformed packets and stream recovery without modifying DSP output. */
@@ -185,8 +210,8 @@ void run_communication_demo(void)
      * negative acceleration, and a nonzero value on a channel marked invalid.
      */
     const size_t offsets[] = {0U, 4U, 6U, 8U, 13U, 16U, 20U, 24U, 31U, 31U, 31U, 20U};
-    const uint8_t values[] = {'X', 3U, 31U, 0U, 0x10U, 4U, 31U, 2U, 0x7FU, 0x7FU, 0xBFU, 14U};
-    /* Offset 4 = 3: schema 3 does not exist (1 and 2 do).
+    const uint8_t values[] = {'X', 4U, 31U, 0U, 0x10U, 4U, 31U, 2U, 0x7FU, 0x7FU, 0xBFU, 14U};
+    /* Offset 4 = 4: schema 4 does not exist (1, 2 and 3 do).
      * Offset 13 = 0x10: RPM 1750 becomes 4310, above the 4000 limit (any 60..4000 is valid).
      * Offset 16 = 4: bearing profile 4 does not exist (1..3 are valid). */
     for (size_t test = 0U; test < sizeof(offsets) / sizeof(offsets[0]); ++test)

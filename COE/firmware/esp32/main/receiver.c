@@ -57,7 +57,16 @@ static void display_packet(const FeaturePacket *packet)
     if (!COE_DISPLAY_FEATURES) {
         ESP_LOGI(tag, "UART accepted packet=%" PRIu32 ", RPM=%" PRIu32 ", profile=%" PRIu32 ", window=%" PRIu32 ", features=32",
                  received_packets, packet->rpm, packet->bearing_profile, packet->window_id);
-        if (packet->schema == 2U)
+        if (packet->schema == 3U)
+        {
+            ESP_LOGI(tag, "  STM32 latency %.2f ms, sample rate %.3f S/s, turns %.1f..%.1f RPM",
+                     packet->stm_latency_us / 1000.0, packet->sample_rate_millihz / 1000.0,
+                     (double)packet->rpm_min, (double)packet->rpm_max);
+            ESP_LOGI(tag, "  STM32 health: ADC gaps %" PRIu32 ", unsteady windows %" PRIu32
+                     ", send failures %" PRIu32, packet->adc_gaps, packet->unsteady_windows,
+                     packet->stm_send_failures);
+        }
+        if (packet->schema >= 2U)
             ESP_LOGI(tag, "  Keyphasor %.2f RPM (%" PRIu32 " turns), PROX1 gap %.1f um 1X %.1f um pp @ %.1f deg,"
                      " PROX3 gap %.1f um 1X %.1f um pp @ %.1f deg, flags 0x%02" PRIx32,
                      (double)packet->measured_rpm, packet->revolutions,
@@ -74,7 +83,10 @@ static void display_packet(const FeaturePacket *packet)
     for (size_t index = 0U; index < FEATURE_PACKET_VALUES; ++index)
         printf(index == 0U ? "%.9g" : ",%.9g", (double)packet->features[index]);
     printf("]");
-    if (packet->schema == 2U) /* prox: gap_um, pkpk_um, x1_um_pp, x1_phase_deg */
+    if (packet->schema == 3U)
+        printf(",\"stm_latency_us\":%" PRIu32 ",\"sample_rate_millihz\":%" PRIu32,
+               packet->stm_latency_us, packet->sample_rate_millihz);
+    if (packet->schema >= 2U) /* prox: gap_um, pkpk_um, x1_um_pp, x1_phase_deg */
         printf(",\"measured_rpm\":%.9g,\"revolutions\":%" PRIu32 ",\"shaft_flags\":%" PRIu32
                ",\"prox1\":[%.9g,%.9g,%.9g,%.9g],\"prox3\":[%.9g,%.9g,%.9g,%.9g]",
                (double)packet->measured_rpm, packet->revolutions, packet->shaft_flags,
@@ -89,7 +101,9 @@ static void display_packet(const FeaturePacket *packet)
 static void accept_packet(const FeaturePacket *packet, uint32_t measurement)
 {
     const int64_t received_us = esp_timer_get_time();
-    if (wifi_forwarder_submit(packet, measurement, received_us) == FORWARD_QUEUE_FULL)
+    FeaturePacket forwarded = *packet;
+    forwarded.esp_rx_rejected = stream.features.rejected_packets + uart_errors; /* node health */
+    if (wifi_forwarder_submit(&forwarded, measurement, received_us) == FORWARD_QUEUE_FULL)
         ESP_LOGW(tag, "Forwarding queue full; UART packet received but not forwarded");
     status_led_received();
     display_packet(packet);

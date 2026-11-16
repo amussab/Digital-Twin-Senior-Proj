@@ -69,9 +69,12 @@ static uint32_t started_tick, report_tick;
 static uint32_t interval_dsp_cycles;
 static ad7606_status_t previous;
 /* Latency bookkeeping for the block being processed: how long its newest
- * frame had already waited in the ring, and when its DSP call began.
+ * frame had already waited in the ring, how many ms of the block came after
+ * the window's last sample (the window can end inside the block), and when
+ * its DSP call began.
  */
 static float block_wait_ms;
+static float block_tail_ms;
 static uint32_t block_began_cycles;
 
 /** Print the window's 32 ordered features: amplitudes in milli-units. */
@@ -137,16 +140,20 @@ static bool speed_steady(const ShaftWindow *w, uint32_t nominal_rpm)
            && w->rpm_min >= nominal - 2.0f * tolerance && w->rpm_max <= nominal + 2.0f * tolerance;
 }
 
-/** Window callback: add the shaft values and send the schema-2 packet. */
+/** Window callback: add the shaft values, STM32 latency, sample rate and health counters,
+ * send the schema-3 packet. */
 static bool on_window(const PipelineWindowResult *result, void *context)
 {
     (void)context;
     ++live_windows;
-    /* Conservative S2 latency: from the newest sample of this block (at or
-     * after the window's last sample) to features and packet being ready.
-     */
     ShaftWindow shaft_window;
     shaft_sensors_finish_window(&shaft, &shaft_window);
+    /* STM32 latency (S2 and the end-to-end chain): from the window's last sample
+     * (block_tail_ms before the block's newest sample, which waited block_wait_ms
+     * in the ring) to the packet being handed to the UART, which follows at once. */
+    const float latency = block_tail_ms + block_wait_ms
+                          + benchmark_cycles_to_us(benchmark_cycles_now() - block_began_cycles) / 1000.0f;
+    const uint32_t latency_us = (uint32_t)ceilf(latency * 1000.0f);
     const bool steady = speed_steady(&shaft_window, result->nominal_rpm);
     const char *outcome;
     if (!live_calibrated)
@@ -159,7 +166,10 @@ static bool on_window(const PipelineWindowResult *result, void *context)
         ++live_unsteady_windows;
         outcome = "packet NOT sent: the speed moved during this window";
     }
-    else if (!node_packet_encode(result->ai_payload.bytes, &shaft_window, node_packet))
+    else if (!node_packet_encode(result->ai_payload.bytes, &shaft_window, latency_us,
+                                 ad7606_timing.sample_rate_millihz,
+                                 &(NodeHealth){live_restarts, live_unsteady_windows, live_packet_failures},
+                                 node_packet))
     {
         ++live_packet_failures;
         outcome = "packet NOT sent: encoding refused a value";
@@ -174,8 +184,6 @@ static bool on_window(const PipelineWindowResult *result, void *context)
         ++live_packet_failures;
         outcome = "packet NOT sent: UART queue";
     }
-    const float latency = block_wait_ms
-                          + benchmark_cycles_to_us(benchmark_cycles_now() - block_began_cycles) / 1000.0f;
     live_last_window_latency_ms = latency;
     if (latency > live_max_window_latency_ms)
         live_max_window_latency_ms = latency;
@@ -294,6 +302,8 @@ static void process_block(const ad7606_frame_t *block, uint32_t frames_after)
         if (room < first)
             first = room;
     }
+    block_tail_ms = (float)(AD7606_BLOCK_FRAMES - first) * 1000.0f
+                    / (ad7606_timing.sample_rate_millihz / 1000.0f);
     shaft_sensors_process(&shaft, keyphasor_in, probes, first);
     bool ok = true;
     if (stream_ok)

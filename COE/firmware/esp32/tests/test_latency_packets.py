@@ -80,11 +80,17 @@ with tempfile.TemporaryDirectory() as temporary:
         count += 1
 
     class FeatureStream(c.Structure):
-        _fields_ = [('bytes', c.c_uint8 * 204), ('count', c.c_size_t), ('rejected_packets', c.c_uint32)]
+        _fields_ = [('bytes', c.c_uint8 * 232), ('count', c.c_size_t), ('rejected_packets', c.c_uint32)]
     class Feature(c.Structure):
         _fields_ = ([(n, c.c_uint32) for n in ('window_id', 'rpm', 'bearing_profile', 'valid_channels')]
                     + [('features', c.c_float * 32), ('schema', c.c_uint32), ('measured_rpm', c.c_float),
-                       ('revolutions', c.c_uint32), ('shaft_flags', c.c_uint32), ('probes', c.c_float * 8)])
+                       ('revolutions', c.c_uint32), ('shaft_flags', c.c_uint32), ('probes', c.c_float * 8),
+                       ('stm_latency_us', c.c_uint32), ('esp_latency_us', c.c_uint32),
+                       ('wifi_latency_us', c.c_uint32), ('sample_rate_millihz', c.c_uint32),
+                       ('rpm_min', c.c_float), ('rpm_max', c.c_float), ('adc_gaps', c.c_uint32),
+                       ('unsteady_windows', c.c_uint32), ('stm_send_failures', c.c_uint32),
+                       ('esp_rx_rejected', c.c_uint32), ('esp_dropped', c.c_uint32),
+                       ('wifi_link', c.c_uint32), ('wifi_rssi_dbm', c.c_int32)])
     class Transport(c.Structure):
         _fields_ = [('features', FeatureStream), ('requests', Stream),
                     ('request_bytes_left', c.c_uint), ('measurement_id', c.c_uint32)]
@@ -165,6 +171,56 @@ with tempfile.TemporaryDirectory() as temporary:
         damaged = bytearray(good)
         damaged[index] ^= 0x10
         assert decode_shaft(bytes(damaged)) == [] and decode_shaft(bytes(damaged) + good) == [(0, 2) + expected]
+        count += 1
+    # Schema 3 (232 bytes, LIVE since 16 Nov 2026 afternoon): schema 2 + STM32 latency (u32 us)
+    # + ADC sample rate (u32 mHz) + slowest/fastest turn (2 x f32) + STM32 health (3 x u32).
+    def latency_packet(latency_us=12345, profile=3, rate=29998500, low=1749.5, high=1750.25, flags=0x1F):
+        head = b'COE1' + struct.pack('<HHIIIII', 3, 32, 6, 1750, profile, 15, 1) + struct.pack('<32f', *[i / 10 for i in range(32)])
+        speed = (1749.93, 20) if flags & 1 else (0.0, 0)
+        prox = (1231.9, 52.25, 50.0, 70.5, 1041.4, 20.0, 12.0, 200.0) if flags & 1 else (1231.9, 52.25, 0, 0, 1041.4, 20.0, 0, 0)
+        block = (head + struct.pack('<fII', *speed, flags) + struct.pack('<8f', *prox)
+                 + struct.pack('<II', latency_us, rate) + struct.pack('<ff', low, high)
+                 + struct.pack('<III', 3, 7, 1))
+        return block + struct.pack('<I', zlib.crc32(block))
+
+    def decode_latency(data):
+        state, value, identity = Transport(), Feature(), c.c_uint32()
+        results = []
+        for byte in data:
+            if lib.latency_feature_push(c.byref(state), byte, c.byref(value), c.byref(identity)):
+                results.append((value.schema, value.window_id, value.bearing_profile, value.measured_rpm,
+                                value.shaft_flags, value.stm_latency_us, value.esp_latency_us,
+                                value.wifi_latency_us, value.sample_rate_millihz, value.rpm_min,
+                                value.rpm_max, value.adc_gaps, value.unsteady_windows,
+                                value.stm_send_failures, value.esp_rx_rejected, value.esp_dropped,
+                                value.wifi_link, value.wifi_rssi_dbm))
+        return results
+
+    rpm32 = f32([1749.93])[0]
+    for latency, profile in ((1, 3), (12345, 2), (10000000, 3)):
+        packet = latency_packet(latency, profile)
+        assert len(packet) == 232
+        node = (3, 6, profile, rpm32, 0x1F, latency, 0, 0, 29998500, 1749.5, 1750.25, 3, 7, 1, 0, 0, 0, 0)
+        assert decode_latency(packet + good + packet) == [
+            node, (2, 5, 3, rpm32, 0x1F) + (0,) * 13, node]
+        count += 1
+    late = latency_packet()
+    for rate in (1000000, 200000000):
+        assert decode_latency(latency_packet(rate=rate))[0][8] == rate
+        count += 1
+    # No speed: the speed range is 0.
+    assert decode_latency(latency_packet(flags=0x06, low=0.0, high=0.0))[0][9:11] == (0.0, 0.0)
+    count += 1
+    for packet in (latency_packet(0), latency_packet(10000001), latency_packet(profile=4),
+                   latency_packet(rate=0), latency_packet(rate=999999), latency_packet(rate=200000001),
+                   latency_packet(low=1751.0), latency_packet(low=0.0), latency_packet(high=8001.0),
+                   latency_packet(high=float('nan')), latency_packet(flags=0x06)):
+        assert decode_latency(packet) == [] and decode_latency(packet + late)[0][5] == 12345
+        count += 1
+    for index in range(196, 232):
+        damaged = bytearray(late)
+        damaged[index] ^= 0x10
+        assert decode_latency(bytes(damaged)) == [] and decode_latency(bytes(damaged) + late)[0][5] == 12345
         count += 1
     state = Transport()
     state.measurement_id = 99
