@@ -104,7 +104,7 @@ def validate_vector(message):
             raise ValueError(f'{name} must be an integer')
     if message['schema_version'] not in (1, 2, 3) or not 60 <= message['rpm'] <= 4000:
         raise ValueError('Unsupported schema or speed')
-    if message['bearing_profile'] not in (1, 2, 3, 4) or message.get('acceleration_unit') != 'g':
+    if message['bearing_profile'] not in (1, 2, 3) or message.get('acceleration_unit') != 'g':
         raise ValueError('Unsupported bearing profile or unit')
     if not 1 <= message['window_id'] <= 0xFFFFFFFF or not 1 <= message['sequence'] <= 0xFFFFFFFF:
         raise ValueError('Invalid window or delivery sequence')

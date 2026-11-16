@@ -1,68 +1,62 @@
-# ICS update, 16 Nov 2026: what changed in the node and what to change on your side
+# ICS update, 16 Nov 2026: what the node sends now
 
-Two things changed in the node firmware (STM32 + ESP32). Your receiver code needs a small update
-to accept the new packets.
+The node (STM32 + ESP32) sends **one JSON message per window** with everything in it: the 32
+features for the AI model, plus the machine speed, both proximity probes, the latency, the sampling
+rate and the node's health. One message, one place to read from: the AI model and the digital twin
+take what they need from the same message.
 
-## 1. Backup firmware with your training conditions
+It arrives as `POST /features` on your laptop (port 8000, laptop on the Wi-Fi **COE-NODE**), about
+every 0.69 s at 1750 RPM and every 0.33 s at 3600 RPM. `schema_version` is now **3**.
 
-Your model was trained on the 13 Nov recordings (node firmware `639376b`). Since then the node
-changed: new bearings (profile 3: ball band at 2 × BSF, ± 0.15 order), a wider envelope
-(700 Hz) and B2X is now its own sensor. A model trained on 13 Nov data would see different
-features.
+## Example message (one window)
 
-If there is no time to retrain, flash the **backup** STM32 file
-`COE/firmware/prebuilt/coe_node_stm32_LIVE_ICS_BACKUP.hex`. It makes the same kind of features
-as your training data:
+```json
+{"schema_version": 3, "device_id": "coe-node", "session_id": "1a2b3c4d5e6f7081", "sequence": 118,
+ "window_id": 118, "rpm": 1750, "bearing_profile": 3, "valid_channels": 15, "acceleration_unit": "g",
+ "features": [0.0123, 3.02, 3.9, "... 32 numbers: B1X rms .. B2Y bpfi"],
 
-| | Normal (`coe_node_stm32_LIVE.hex`) | Backup (`..._ICS_BACKUP.hex`), as 13 Nov |
+ "measured_rpm": 1749.6, "revolutions": 20, "shaft_flags": 31,
+ "rpm_min": 1749.1, "rpm_max": 1750.2,
+ "prox1_gap_um": 1226.7, "prox1_pkpk_um": 22.1, "prox1_x1_um_pp": 14.5, "prox1_x1_phase_deg": 105.0,
+ "prox3_gap_um": 1024.5, "prox3_pkpk_um": 25.0, "prox3_x1_um_pp": 17.6, "prox3_x1_phase_deg": 104.0,
+
+ "sample_rate_hz": 29998.5,
+
+ "stm_latency_us": 4200, "uart_latency_us": 21007, "esp_latency_us": 150, "wifi_latency_us": 35000,
+ "node_latency_us": 60357,
+
+ "adc_gaps": 0, "unsteady_windows": 0, "stm_send_failures": 0, "esp_rx_rejected": 0, "esp_dropped": 0,
+ "wifi_link": "node", "wifi_rssi_dbm": -52}
+```
+
+## The fields
+
+| Group | Fields | Meaning |
 |---|---|---|
-| `bearing_profile` in the JSON | 3 | **4** |
-| Ball band (`*_bsf`) | 2 × BSF = 10.2786 × speed, ± 0.15 order | **BSF = 5.1393 × speed, ± 0.08 order** |
-| FTF / BPFO / BPFI bands | 0.4518 / 4.9699 / 6.0301, ± 0.15 | the same orders, **± 0.08** |
-| Envelope low-pass | 700 Hz | **350 Hz** (the old filter) |
-| `B2X_*` features (16–23) | the B2X sensor | **a copy of B1Y**, as the old wiring gave |
+| AI model | `features` (32), `valid_channels` | Same order as before: B1X, B1Y, B2X, B2Y × rms, kurtosis, crest, envelope_rms, ftf, bsf, bpfo, bpfi. `bearing_profile` 3 = RK4 S6700 |
+| Speed | `measured_rpm`, `rpm`, `revolutions`, `rpm_min`, `rpm_max` | Speed from the Keyphasor (ADC channel 7): exact mean, whole RPM, whole turns in the window, slowest and fastest turn |
+| Proximity probes | `prox1_*`, `prox3_*` (ADC channels 5, 6) | Per probe: `gap_um` (distance probe-shaft), `pkpk_um` (vibration pk-pk), `x1_um_pp` and `x1_phase_deg` (once-per-turn part and where in the turn) |
+| Valid flags | `shaft_flags` | bit 0 speed measured, 1 PROX 1 valid, 2 PROX 3 valid, 3 PROX 1 1X valid, 4 PROX 3 1X valid. A value whose bit is clear is 0 |
+| Sampling | `sample_rate_hz` | ADC samples per second per channel (29998.5) |
+| Latency | `stm_latency_us`, `uart_latency_us`, `esp_latency_us`, `wifi_latency_us`, `node_latency_us` | The node's part of the end-to-end latency (see below) |
+| Node health | `adc_gaps`, `unsteady_windows`, `stm_send_failures`, `esp_rx_rejected`, `esp_dropped` | Problems counted since the node started; all 0 = nothing lost |
+| Wi-Fi | `wifi_link`, `wifi_rssi_dbm` | `node` = laptop on COE-NODE; signal in dBm (-60 or better good, below -75 weak) |
 
-Speed and probes are measured in both (Keyphasor, PROX 1, PROX 3). The ESP32 file is the same
-for both. Data recorded with the backup is profile 4: keep it apart from profile 3 data.
+## End-to-end latency (spec: under 500 ms)
 
-## 2. End-to-end latency in every window (packet schema 3)
+From a window's last sample to your AI result (collecting the window is not counted):
 
-Spec: under 500 ms from a window's last sample to your AI result (collecting the window is not
-counted). The node now sends its part in the JSON, in whole microseconds:
+**end-to-end = `node_latency_us` / 1000 + your time from receiving the POST to the AI result (ms).**
 
-| Field | Part |
-|---|---|
-| `stm_latency_us` | STM32: DSP, features, packet |
-| `uart_latency_us` | STM32 -> ESP32 wire (fixed 21007) |
-| `esp_latency_us` | ESP32 queue |
-| `wifi_latency_us` | Wi-Fi: the previous request's round trip (0 for the first) |
-| `node_latency_us` | the sum of the four |
-
-**End-to-end = `node_latency_us` + your time from receiving the POST to the AI result.**
+Note `time.perf_counter()` when the POST arrives and again after `predict()`. Our
 `COE/inference/inference_receiver.py` already does this and prints it per window; it is also in
 `GET /digital-twin` (`ai_result.end_to_end_ms`).
 
-Also new in schema 3: `sample_rate_hz`, the ADC samples per second per channel (29998.5 on this
-board). With `revolutions` (whole shaft turns in the window, already sent since schema 2) and
-`measured_rpm` you have the window's timing: about `revolutions / measured_rpm * 60` seconds.
-`rpm_min` / `rpm_max` are the slowest and fastest turn in the window. Node health counters
-(`adc_gaps`, `unsteady_windows`, `stm_send_failures`, `esp_rx_rejected`, `esp_dropped`) and the
-Wi-Fi link (`wifi_link`, `wifi_rssi_dbm`) are for the user interface; see `COE/inference/README.md`.
+## What to check in your code
 
-## 3. What to change in your code (fpr branch)
-
-The node now sends `schema_version` **3** and, with the backup, `bearing_profile` **4**. Your
-receiver currently accepts only `schema_version` 1 and `bearing_profile` 1–2, so it would answer
-400 and drop every window. Change:
-
-- Accept `schema_version` 1, 2 and 3 (your `SCHEMA_VERSION` check in the node adapter, and the
-  `host_receiver.py` limits). The simplest: take `COE/inference/host_receiver.py` from `main`.
-- Accept `bearing_profile` 1–4.
-- Accept `rpm` 60–4000 (the node measures the speed; it is not exactly 1750 or 3600).
-- Ignore extra fields you don't use (`measured_rpm`, `revolutions`, `prox1_*`, `prox3_*`,
-  `*_latency_us`, `sample_rate_hz`, `rpm_min`, `rpm_max`, the health counters, `wifi_*`), or
-  use them. The 32 `features` are in the same order as before.
-- For the latency: note `time.perf_counter()` when the POST arrives, and after `predict()`
-  add `(now - arrival) * 1000` ms to `node_latency_us / 1000`.
+- Accept `schema_version` 1, 2 and 3 (the simplest: take `COE/inference/host_receiver.py` from `main`).
+- Accept `bearing_profile` 1–3 and `rpm` 60–4000 (the node measures the speed; it is not exactly
+  1750 or 3600).
+- Read the extra fields you need from the same message, and ignore the rest.
 
 Questions: Abdullah (COE).
