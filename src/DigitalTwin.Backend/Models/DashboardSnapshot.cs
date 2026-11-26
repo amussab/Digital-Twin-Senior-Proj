@@ -20,4 +20,5 @@ public sealed record DashboardSnapshot(
     double? RulResidualPercent = null,
     string? Bearing1Fault = null,
     string? Bearing2Fault = null,
-    int? HealthStage = null);
+    int? HealthStage = null,
+    LiveInfo? Live = null);

@@ -1,3 +1,4 @@
+using DigitalTwin.Backend.Models;
 using System.Text;
 using DigitalTwin.Backend.Config;
 using DigitalTwin.Backend.Ingest;
@@ -48,6 +49,7 @@ builder.Services.AddSingleton<StateStore>();
 builder.Services.AddSingleton<SnapshotFactory>();
 builder.Services.AddSingleton<SnapshotPublisher>();
 builder.Services.AddSingleton<LatencyRecorder>();
+builder.Services.AddSingleton<LiveFeTwin>();
 builder.Services.AddSingleton<Pipeline>();
 builder.Services.AddHostedService<BroadcastTimer>();
 builder.Services.AddHostedService<UdpIngestService>();
@@ -109,9 +111,22 @@ app.MapGet("/api/state", (StateStore s, SnapshotFactory f, IInferenceEngine e) =
 app.MapGet("/api/metrics", (LatencyRecorder l, IInferenceEngine e) =>
     Results.Ok(new { isSimulated = e.IsSimulated, rejects = l.Rejects, udpRejectedNonLan = l.UdpRejectedNonLan, stages = l.Snapshot() }));
 
+// Live node path (Python NodeEngine result + the node's 32 features). Same LAN-only guard as every other route (C5/I1).
+app.MapPost("/api/live/prediction", async (LiveWindow w, Pipeline pipe, DemoControl ctl) =>
+{
+    if (ctl.Source != DemoControl.NodeLive) ctl.TrySet(DemoControl.NodeLive);
+    var (ok, err) = await pipe.IngestLiveAsync(w);
+    return ok ? Results.Accepted(value: new { backendAckMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) : Results.BadRequest(new { error = err });
+});
+// The dashboard reports how long a window took from laptop receipt to being drawn (browser and backend share the laptop clock).
+app.MapPost("/api/live/render-ack", (RenderAck a, LatencyRecorder l) => { l.Record("live_recv_to_dashboard_render", a.RenderMs); return Results.Accepted(); });
+app.MapGet("/api/live/latest", (StateStore s) => Results.Ok(s.Current.Live));
+// ME FE twin: forget the calibrated unbalance and K baseline (after rebalancing or rebuilding the rig)
+app.MapPost("/api/live/fe-twin/reset", (LiveFeTwin t) => { t.Reset(); return Results.Ok(); });
+
 app.MapGet("/api/demo", (DemoControl c) => Results.Ok(new { source = c.Source, machine = c.MachineLabel }));
 app.MapPost("/api/demo/source", (string name, DemoControl c) =>
-    c.TrySet(name) ? Results.Ok(new { source = c.Source }) : Results.BadRequest(new { error = "name must be demo | twin-sim | synthetic | up2" }));
+    c.TrySet(name) ? Results.Ok(new { source = c.Source }) : Results.BadRequest(new { error = "name must be demo | twin-sim | synthetic | up2 | node-live" }));
 
 app.MapGet("/api/health", (IInferenceEngine e) => Results.Ok(new { status = "ok", isSimulated = e.IsSimulated }));
 

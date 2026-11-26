@@ -1,0 +1,1904 @@
+{
+ "meta": {
+  "provenance": "[SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape + life variance assumed]",
+  "limits": "No real run-to-failure data exists for 4 of 5 fault classes. Anchors = 5 physical bearings (H-01 + one per fault); test units are held-out simulated trajectories, not held-out bearings; the damage-curve family is assumed.",
+  "seed": 20261004,
+  "git_commit": "2e86bdd",
+  "git_dirty": true,
+  "xgboost_device": "cuda",
+  "command": "python -m aiengine.v7_node test --threads 6",
+  "utc": "2026-11-15T20:54:52+00:00",
+  "touch": "registered fresh test units scored once (4 pre-declared variants of the same unit ids)",
+  "data_counts": {
+   "train": {
+    "units": 2000
+   },
+   "val": {
+    "units": 100
+   },
+   "test": {
+    "units": 100,
+    "feature_rows": 75556,
+    "faulted_run_to_failure_bearings": 80
+   }
+  },
+  "frozen_file": "v7_node_frozen_20261115T203939Z.json",
+  "frozen_sha256": "82fac2299c3da1ac36378d50e72d341f6b37769f690f0e4fee40d75fca0db408",
+  "test_seconds": 183.5
+ },
+ "frozen": {
+  "classifier_hp": {
+   "max_depth": 6,
+   "learning_rate": 0.1
+  },
+  "classifier_best_iteration": 132,
+  "gate_tau": 0.0,
+  "gate_signal": "family",
+  "rul_head": {
+   "max_depth": 8,
+   "levels": true
+  },
+  "rul_best_iteration": 870,
+  "z_head": {
+   "max_depth": 4
+  },
+  "z_best_iteration": 1496,
+  "z_cut": -0.08,
+  "postprocess": {
+   "stage_k": 1,
+   "stage_max_step": null,
+   "rul_alpha": 0.5,
+   "rul_scale_early": 0.85,
+   "rul_scale_late": 1.0
+  },
+  "baseline_control": {
+   "a": 5.837489867843819,
+   "b": -2.2924737820865646,
+   "feature": "mean of the last 6 rows of the health index hi (aggregate 'mean6:hi')",
+   "rul_alpha": 1.0
+  }
+ },
+ "val_selected": {
+  "S7_mape_pct": 12.0385426309989,
+  "S7_baseline_mape_pct": 58.39747141061364,
+  "stage": {
+   "n_windows": 30411,
+   "max_abs_error": 1,
+   "within1_frac": 1.0,
+   "mae": 0.12712505343461247,
+   "exact_frac": 0.8728749465653876,
+   "windows_error_ge2": 0,
+   "bearings_with_error_ge2": 0
+  },
+  "is3": {
+   "macro_f1": 0.8466465000636084,
+   "caught": {
+    "rtf_bearings": 80,
+    "caught_by_stage3": 76,
+    "caught_by_stage3_frac": 0.95,
+    "never_caught": 0,
+    "caught_at_stage_hist": {
+     "1": 6,
+     "2": 59,
+     "3": 11,
+     "4": 4
+    },
+    "per_class_by_stage3": {
+     "ball": "19/20",
+     "cage": "20/20",
+     "inner_race": "17/20",
+     "outer_race": "20/20"
+    },
+    "false_early_calls": null
+   }
+  }
+ },
+ "test": {
+  "S7": {
+   "S7_mape_pct": 11.471631314411711,
+   "S7_window": "DESIGN.md section 7: detected onset .. T_fail - 10 % of span",
+   "n_bearings": 80,
+   "n_windows_s7": 15451,
+   "alt_mape_true_onset_pct": 13.351678368627773,
+   "n_windows": 18460,
+   "per_bearing_mape_pct": {
+    "rigL:u2101:B1": 13.588003766722743,
+    "rigL:u2102:B1": 12.669182606485732,
+    "rigL:u2103:B1": 9.333638803242932,
+    "rigL:u2104:B1": 9.2760611839852,
+    "rigL:u2106:B1": 8.088324770765782,
+    "rigL:u2107:B1": 22.52510053538901,
+    "rigL:u2108:B1": 8.653489476439665,
+    "rigL:u2109:B1": 4.448982759630167,
+    "rigL:u2111:B1": 9.104467072493527,
+    "rigL:u2112:B1": 5.016770983337718,
+    "rigL:u2113:B1": 19.090436181818887,
+    "rigL:u2114:B1": 8.302341361490676,
+    "rigL:u2116:B1": 10.741986548163364,
+    "rigL:u2117:B1": 10.290176082304466,
+    "rigL:u2118:B1": 11.325242279657548,
+    "rigL:u2119:B1": 6.629144897577843,
+    "rigL:u2121:B1": 14.404851655736135,
+    "rigL:u2122:B1": 7.961001328335038,
+    "rigL:u2123:B1": 9.383431285016295,
+    "rigL:u2124:B1": 10.277747628913334,
+    "rigL:u2126:B1": 9.31423941853093,
+    "rigL:u2127:B1": 11.383105139773411,
+    "rigL:u2128:B1": 14.379311849722418,
+    "rigL:u2129:B1": 8.251340885546222,
+    "rigL:u2131:B1": 10.379009664198566,
+    "rigL:u2132:B1": 6.4975650829222245,
+    "rigL:u2133:B1": 17.095747399876245,
+    "rigL:u2134:B1": 10.969307415062133,
+    "rigL:u2136:B1": 7.003838036994875,
+    "rigL:u2137:B1": 8.02293878848945,
+    "rigL:u2138:B1": 28.083625689824,
+    "rigL:u2139:B1": 13.698086886560093,
+    "rigL:u2141:B1": 8.296402396705222,
+    "rigL:u2142:B1": 19.045240815052907,
+    "rigL:u2143:B1": 10.403587520560842,
+    "rigL:u2144:B1": 10.32538545705165,
+    "rigL:u2146:B1": 12.103839545989155,
+    "rigL:u2147:B1": 10.089658470002547,
+    "rigL:u2148:B1": 13.406711619812247,
+    "rigL:u2149:B1": 8.368834382842302,
+    "rigL:u2151:B1": 29.66462269242055,
+    "rigL:u2152:B1": 12.547623301882654,
+    "rigL:u2153:B1": 11.6952684963406,
+    "rigL:u2154:B1": 11.491447084295837,
+    "rigL:u2156:B1": 11.228989585522049,
+    "rigL:u2157:B1": 3.160790949062342,
+    "rigL:u2158:B1": 9.85556448960644,
+    "rigL:u2159:B1": 12.083030204474683,
+    "rigL:u2161:B1": 7.722552572118949,
+    "rigL:u2162:B1": 9.391188957110673,
+    "rigL:u2163:B1": 16.296413259063495,
+    "rigL:u2164:B1": 17.762802123421746,
+    "rigL:u2166:B1": 14.094253795467163,
+    "rigL:u2167:B1": 6.393551116589255,
+    "rigL:u2168:B1": 9.251276811261196,
+    "rigL:u2169:B1": 10.827342637299598,
+    "rigL:u2171:B1": 7.857981404050486,
+    "rigL:u2172:B1": 12.45038163732989,
+    "rigL:u2173:B1": 11.964484235607877,
+    "rigL:u2174:B1": 10.047190324953327,
+    "rigL:u2176:B1": 14.993654793617386,
+    "rigL:u2177:B1": 9.888371817192807,
+    "rigL:u2178:B1": 11.330543125248083,
+    "rigL:u2179:B1": 10.2417759512819,
+    "rigL:u2181:B1": 11.01798740494541,
+    "rigL:u2182:B1": 4.1163992289409315,
+    "rigL:u2183:B1": 12.412102795382557,
+    "rigL:u2184:B1": 6.712099508745821,
+    "rigL:u2186:B1": 13.574783718571904,
+    "rigL:u2187:B1": 6.635709326491783,
+    "rigL:u2188:B1": 11.001049747840197,
+    "rigL:u2189:B1": 30.548498559003832,
+    "rigL:u2191:B1": 28.81874261003152,
+    "rigL:u2192:B1": 12.706225301917092,
+    "rigL:u2193:B1": 8.038696885821492,
+    "rigL:u2194:B1": 8.800767466070969,
+    "rigL:u2196:B1": 9.435374421862559,
+    "rigL:u2197:B1": 11.384458374785526,
+    "rigL:u2198:B1": 8.593315665371538,
+    "rigL:u2199:B1": 3.465035098911276
+   },
+   "per_bearing_summary": {
+    "median": 10.352197560625108,
+    "p90": 17.1624528722308,
+    "max": 30.548498559003832,
+    "frac_le_15": 0.875
+   },
+   "window_ape_pct": {
+    "median": 10.224025319403644,
+    "p90": 30.262624076453402
+   },
+   "rmse_hours": 9.051371274385055,
+   "alt_percent_of_life_error_pts": 6.045168350219328,
+   "alt_mape_full_degradation_pct": 14.059720936484098,
+   "error_vs_life_fraction": {
+    "0.0-0.1": {
+     "mape_pct": 24.8291597219859,
+     "median_ape_pct": 22.054421938084484,
+     "bias_pct": -14.598890650695962,
+     "n": 2077
+    },
+    "0.1-0.2": {
+     "mape_pct": 18.953275767601053,
+     "median_ape_pct": 16.618344218256208,
+     "bias_pct": -12.26530144313114,
+     "n": 2044
+    },
+    "0.2-0.3": {
+     "mape_pct": 14.614424507260315,
+     "median_ape_pct": 12.849670447037617,
+     "bias_pct": -1.705566633668138,
+     "n": 2061
+    },
+    "0.3-0.4": {
+     "mape_pct": 13.661617925653385,
+     "median_ape_pct": 10.643962680439913,
+     "bias_pct": -0.3026834053526623,
+     "n": 2029
+    },
+    "0.4-0.5": {
+     "mape_pct": 10.234993859865401,
+     "median_ape_pct": 7.257142224580298,
+     "bias_pct": 1.9269033936170161,
+     "n": 2035
+    },
+    "0.5-0.6": {
+     "mape_pct": 9.860550460210485,
+     "median_ape_pct": 7.207306954981144,
+     "bias_pct": -2.5197599567475804,
+     "n": 2080
+    },
+    "0.6-0.7": {
+     "mape_pct": 9.647696495018996,
+     "median_ape_pct": 7.119135802948606,
+     "bias_pct": -4.737991533853162,
+     "n": 2038
+    },
+    "0.7-0.8": {
+     "mape_pct": 10.474221516798835,
+     "median_ape_pct": 8.92405562347218,
+     "bias_pct": -2.038079141756477,
+     "n": 2034
+    },
+    "0.8-0.9": {
+     "mape_pct": 11.684486866146354,
+     "median_ape_pct": 9.527128242831203,
+     "bias_pct": 1.630903312039499,
+     "n": 2053
+    }
+   },
+   "error_vs_life_fraction_window": "true-onset window, u = true elapsed fraction",
+   "per_rpm_mode": {
+    "1800": 11.976305753084864,
+    "3600": 10.630507249956455
+   },
+   "per_fault_class": {
+    "ball": 12.579696880875726,
+    "cage": 10.62636109085593,
+    "inner_race": 12.571695293745412,
+    "outer_race": 10.108771992169775
+   }
+  },
+  "S7_baseline": {
+   "S7_mape_pct": 63.70764876574069,
+   "S7_window": "DESIGN.md section 7: detected onset .. T_fail - 10 % of span",
+   "n_bearings": 80,
+   "n_windows_s7": 15451,
+   "alt_mape_true_onset_pct": 63.290903496608486,
+   "n_windows": 18460,
+   "per_bearing_mape_pct": {
+    "rigL:u2101:B1": 31.800538262019217,
+    "rigL:u2102:B1": 17.727867232292127,
+    "rigL:u2103:B1": 17.585090935246587,
+    "rigL:u2104:B1": 52.52587148821316,
+    "rigL:u2106:B1": 115.30646775122382,
+    "rigL:u2107:B1": 155.5781431034261,
+    "rigL:u2108:B1": 26.04147342123956,
+    "rigL:u2109:B1": 104.76014458178749,
+    "rigL:u2111:B1": 10.6943799090001,
+    "rigL:u2112:B1": 16.67770898457705,
+    "rigL:u2113:B1": 41.02833509727527,
+    "rigL:u2114:B1": 25.593755490393587,
+    "rigL:u2116:B1": 206.51908914152978,
+    "rigL:u2117:B1": 12.018056743095505,
+    "rigL:u2118:B1": 30.99803465164411,
+    "rigL:u2119:B1": 139.73278495493227,
+    "rigL:u2121:B1": 5.868197602344444,
+    "rigL:u2122:B1": 17.725468533887693,
+    "rigL:u2123:B1": 18.7531472731466,
+    "rigL:u2124:B1": 24.598545062857223,
+    "rigL:u2126:B1": 124.3530834213234,
+    "rigL:u2127:B1": 12.26155441778847,
+    "rigL:u2128:B1": 28.160438608270326,
+    "rigL:u2129:B1": 112.94218546406174,
+    "rigL:u2131:B1": 10.76784100452326,
+    "rigL:u2132:B1": 34.525244691038026,
+    "rigL:u2133:B1": 31.720258271854888,
+    "rigL:u2134:B1": 47.16062442853621,
+    "rigL:u2136:B1": 61.84344636711001,
+    "rigL:u2137:B1": 82.31741143806109,
+    "rigL:u2138:B1": 62.36103440386215,
+    "rigL:u2139:B1": 103.9623001308159,
+    "rigL:u2141:B1": 28.56738459307424,
+    "rigL:u2142:B1": 24.586699475817294,
+    "rigL:u2143:B1": 50.015362675976945,
+    "rigL:u2144:B1": 28.37983940739931,
+    "rigL:u2146:B1": 125.84651372384054,
+    "rigL:u2147:B1": 106.18548329017032,
+    "rigL:u2148:B1": 31.332961338633137,
+    "rigL:u2149:B1": 157.13948223592124,
+    "rigL:u2151:B1": 36.52905650885289,
+    "rigL:u2152:B1": 15.501367251868158,
+    "rigL:u2153:B1": 16.118823814546026,
+    "rigL:u2154:B1": 53.01474751461198,
+    "rigL:u2156:B1": 127.53174450292019,
+    "rigL:u2157:B1": 136.9054493853565,
+    "rigL:u2158:B1": 17.629518433248958,
+    "rigL:u2159:B1": 189.17520557926278,
+    "rigL:u2161:B1": 37.24410529159054,
+    "rigL:u2162:B1": 30.717763611772874,
+    "rigL:u2163:B1": 26.952527785270565,
+    "rigL:u2164:B1": 62.347214212015366,
+    "rigL:u2166:B1": 97.02048407937485,
+    "rigL:u2167:B1": 19.788578457254978,
+    "rigL:u2168:B1": 30.58291501290934,
+    "rigL:u2169:B1": 34.75063381190531,
+    "rigL:u2171:B1": 6.0146516647575465,
+    "rigL:u2172:B1": 16.98480378964485,
+    "rigL:u2173:B1": 40.39262520858156,
+    "rigL:u2174:B1": 32.291177257739776,
+    "rigL:u2176:B1": 169.8883102312116,
+    "rigL:u2177:B1": 93.18370229613105,
+    "rigL:u2178:B1": 17.582756427117598,
+    "rigL:u2179:B1": 201.69152668285594,
+    "rigL:u2181:B1": 46.78159261026767,
+    "rigL:u2182:B1": 17.27101950374328,
+    "rigL:u2183:B1": 32.601687781355814,
+    "rigL:u2184:B1": 29.019629736506342,
+    "rigL:u2186:B1": 203.5666834131582,
+    "rigL:u2187:B1": 30.430655338219708,
+    "rigL:u2188:B1": 32.31810148899466,
+    "rigL:u2189:B1": 280.89117674589284,
+    "rigL:u2191:B1": 57.085789939325316,
+    "rigL:u2192:B1": 17.970408916568648,
+    "rigL:u2193:B1": 16.382536697659,
+    "rigL:u2194:B1": 43.288895604553126,
+    "rigL:u2196:B1": 140.79952829515963,
+    "rigL:u2197:B1": 87.37879084880925,
+    "rigL:u2198:B1": 17.242731598030435,
+    "rigL:u2199:B1": 197.7807343219998
+   },
+   "per_bearing_summary": {
+    "median": 33.563466236196916,
+    "p90": 155.73427701667563,
+    "max": 280.89117674589284,
+    "frac_le_15": 0.075
+   },
+   "window_ape_pct": {
+    "median": 33.50396723108793,
+    "p90": 112.12104791110235
+   },
+   "rmse_hours": 14.251569506756368,
+   "alt_percent_of_life_error_pts": 15.449065765913298,
+   "alt_mape_full_degradation_pct": 84.64754586634493,
+   "error_vs_life_fraction": {
+    "0.0-0.1": {
+     "mape_pct": 42.20553589736642,
+     "median_ape_pct": 23.470029445064235,
+     "bias_pct": 20.496047041187474,
+     "n": 2077
+    },
+    "0.1-0.2": {
+     "mape_pct": 42.83789769420833,
+     "median_ape_pct": 25.915069350013376,
+     "bias_pct": 19.908654961384272,
+     "n": 2044
+    },
+    "0.2-0.3": {
+     "mape_pct": 43.25288483696244,
+     "median_ape_pct": 25.69909584518402,
+     "bias_pct": 17.138861161360786,
+     "n": 2061
+    },
+    "0.3-0.4": {
+     "mape_pct": 43.667687732679326,
+     "median_ape_pct": 30.833020625769358,
+     "bias_pct": 10.00724765593012,
+     "n": 2029
+    },
+    "0.4-0.5": {
+     "mape_pct": 46.12884290708098,
+     "median_ape_pct": 36.317792112201374,
+     "bias_pct": 1.5924607716981585,
+     "n": 2035
+    },
+    "0.5-0.6": {
+     "mape_pct": 48.42468286001483,
+     "median_ape_pct": 45.46379952525568,
+     "bias_pct": -8.157972379484338,
+     "n": 2080
+    },
+    "0.6-0.7": {
+     "mape_pct": 48.24557949648411,
+     "median_ape_pct": 42.94664381229323,
+     "bias_pct": -9.319106422899912,
+     "n": 2038
+    },
+    "0.7-0.8": {
+     "mape_pct": 47.79696635464277,
+     "median_ape_pct": 36.90453374730491,
+     "bias_pct": -4.681058022882616,
+     "n": 2034
+    },
+    "0.8-0.9": {
+     "mape_pct": 51.647085435462,
+     "median_ape_pct": 33.64101055462789,
+     "bias_pct": 12.205907115379931,
+     "n": 2053
+    }
+   },
+   "error_vs_life_fraction_window": "true-onset window, u = true elapsed fraction",
+   "per_rpm_mode": {
+    "1800": 29.301251010093093,
+    "3600": 121.05164502515335
+   },
+   "per_fault_class": {
+    "ball": 29.290018046243183,
+    "cage": 96.05232373561307,
+    "inner_race": 82.20144441563038,
+    "outer_race": 47.28680886547615
+   }
+  },
+  "IS3_classification": {
+   "n_windows": 75556,
+   "n_bearings": 200,
+   "macro_f1": 0.8485866125664424,
+   "accuracy": 0.9416062258457303,
+   "per_class_f1": {
+    "healthy": 0.9880939456447002,
+    "outer_race": 0.7523006877845587,
+    "inner_race": 0.7447619047619047,
+    "ball": 0.8735537868220234,
+    "cage": 0.8842227378190255
+   },
+   "per_class_recall": {
+    "healthy": 0.9925298533233974,
+    "outer_race": 0.8268739352640545,
+    "inner_race": 0.693672383205204,
+    "ball": 0.8318487263634943,
+    "cage": 0.872281986724651
+   },
+   "per_class_support": {
+    "healthy": 55019,
+    "outer_race": 4696,
+    "inner_race": 5073,
+    "ball": 6399,
+    "cage": 4369
+   },
+   "confusion": {
+    "labels": [
+     "healthy",
+     "outer_race",
+     "inner_race",
+     "ball",
+     "cage"
+    ],
+    "rows": "true",
+    "cols": "pred",
+    "matrix": [
+     [
+      54608,
+      252,
+      104,
+      24,
+      31
+     ],
+     [
+      259,
+      3883,
+      281,
+      202,
+      71
+     ],
+     [
+      281,
+      889,
+      3519,
+      139,
+      245
+     ],
+     [
+      205,
+      462,
+      316,
+      5323,
+      93
+     ],
+     [
+      160,
+      141,
+      157,
+      100,
+      3811
+     ]
+    ]
+   },
+   "missed_fault_rate": 0.0440668062521303,
+   "false_alarm_rate": 0.0074701466766026285
+  },
+  "IS3_caught": {
+   "rtf_bearings": 80,
+   "caught_by_stage3": 76,
+   "caught_by_stage3_frac": 0.95,
+   "never_caught": 0,
+   "caught_at_stage_hist": {
+    "1": 3,
+    "2": 63,
+    "3": 10,
+    "4": 4
+   },
+   "per_class_by_stage3": {
+    "ball": "20/20",
+    "cage": "20/20",
+    "inner_race": "16/20",
+    "outer_race": "20/20"
+   },
+   "false_early_calls": null
+  },
+  "IS3_caught_per_unit": [
+   {
+    "unit_id": "rigL:u2101:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 203,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.148
+   },
+   {
+    "unit_id": "rigL:u2102:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 244,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.14563106796116504
+   },
+   {
+    "unit_id": "rigL:u2103:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 190,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.05
+   },
+   {
+    "unit_id": "rigL:u2104:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 101,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.10317460317460317
+   },
+   {
+    "unit_id": "rigL:u2106:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 107,
+    "caught_at_stage": 3,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.2348993288590604
+   },
+   {
+    "unit_id": "rigL:u2107:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 88,
+    "caught_at_stage": 1,
+    "caught_by_stage3": true,
+    "caught_at_u": -1.0
+   },
+   {
+    "unit_id": "rigL:u2108:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 178,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.05934718100890208
+   },
+   {
+    "unit_id": "rigL:u2109:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 170,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.07352941176470588
+   },
+   {
+    "unit_id": "rigL:u2111:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 269,
+    "caught_at_stage": 4,
+    "caught_by_stage3": false,
+    "caught_at_u": 0.5121951219512195
+   },
+   {
+    "unit_id": "rigL:u2112:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 164,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.08015267175572519
+   },
+   {
+    "unit_id": "rigL:u2113:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 189,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.0405727923627685
+   },
+   {
+    "unit_id": "rigL:u2114:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 135,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.05045871559633028
+   },
+   {
+    "unit_id": "rigL:u2116:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 182,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.09259259259259259
+   },
+   {
+    "unit_id": "rigL:u2117:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 246,
+    "caught_at_stage": 3,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.26545454545454544
+   },
+   {
+    "unit_id": "rigL:u2118:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 196,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.05397727272727273
+   },
+   {
+    "unit_id": "rigL:u2119:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 76,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.1
+   },
+   {
+    "unit_id": "rigL:u2121:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 220,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.11377245508982035
+   },
+   {
+    "unit_id": "rigL:u2122:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 274,
+    "caught_at_stage": 3,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.3713235294117647
+   },
+   {
+    "unit_id": "rigL:u2123:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 172,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.16055045871559634
+   },
+   {
+    "unit_id": "rigL:u2124:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 77,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.06756756756756757
+   },
+   {
+    "unit_id": "rigL:u2126:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 205,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.19727891156462585
+   },
+   {
+    "unit_id": "rigL:u2127:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 131,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.044
+   },
+   {
+    "unit_id": "rigL:u2128:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 141,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.05389221556886228
+   },
+   {
+    "unit_id": "rigL:u2129:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 212,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.08759124087591241
+   },
+   {
+    "unit_id": "rigL:u2131:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 204,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.10285714285714286
+   },
+   {
+    "unit_id": "rigL:u2132:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 251,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.15895953757225434
+   },
+   {
+    "unit_id": "rigL:u2133:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 227,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.1174785100286533
+   },
+   {
+    "unit_id": "rigL:u2134:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 162,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.04437869822485207
+   },
+   {
+    "unit_id": "rigL:u2136:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 151,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.1267605633802817
+   },
+   {
+    "unit_id": "rigL:u2137:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 171,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.1232876712328767
+   },
+   {
+    "unit_id": "rigL:u2138:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 86,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.03265940902021773
+   },
+   {
+    "unit_id": "rigL:u2139:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 195,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.10869565217391304
+   },
+   {
+    "unit_id": "rigL:u2141:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 138,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.11182795698924732
+   },
+   {
+    "unit_id": "rigL:u2142:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 88,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.10526315789473684
+   },
+   {
+    "unit_id": "rigL:u2143:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 142,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.07407407407407407
+   },
+   {
+    "unit_id": "rigL:u2144:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 151,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.05078125
+   },
+   {
+    "unit_id": "rigL:u2146:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 103,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.10135135135135136
+   },
+   {
+    "unit_id": "rigL:u2147:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 26,
+    "caught_at_stage": 1,
+    "caught_by_stage3": true,
+    "caught_at_u": -1.0
+   },
+   {
+    "unit_id": "rigL:u2148:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 118,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.10601719197707736
+   },
+   {
+    "unit_id": "rigL:u2149:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 87,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.11504424778761062
+   },
+   {
+    "unit_id": "rigL:u2151:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 273,
+    "caught_at_stage": 4,
+    "caught_by_stage3": false,
+    "caught_at_u": 0.5648854961832062
+   },
+   {
+    "unit_id": "rigL:u2152:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 264,
+    "caught_at_stage": 3,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.2910958904109589
+   },
+   {
+    "unit_id": "rigL:u2153:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 150,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.10077519379844961
+   },
+   {
+    "unit_id": "rigL:u2154:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 186,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.11311053984575835
+   },
+   {
+    "unit_id": "rigL:u2156:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 135,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.09333333333333334
+   },
+   {
+    "unit_id": "rigL:u2157:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 58,
+    "caught_at_stage": 1,
+    "caught_by_stage3": true,
+    "caught_at_u": -1.0
+   },
+   {
+    "unit_id": "rigL:u2158:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 151,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.043795620437956206
+   },
+   {
+    "unit_id": "rigL:u2159:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 149,
+    "caught_at_stage": 3,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.2169811320754717
+   },
+   {
+    "unit_id": "rigL:u2161:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 166,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.05415860735009671
+   },
+   {
+    "unit_id": "rigL:u2162:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 192,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.05507246376811594
+   },
+   {
+    "unit_id": "rigL:u2163:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 97,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.03902439024390244
+   },
+   {
+    "unit_id": "rigL:u2164:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 234,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.13398058252427184
+   },
+   {
+    "unit_id": "rigL:u2166:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 147,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.15568862275449102
+   },
+   {
+    "unit_id": "rigL:u2167:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 106,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.14224137931034483
+   },
+   {
+    "unit_id": "rigL:u2168:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 107,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.08092485549132948
+   },
+   {
+    "unit_id": "rigL:u2169:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 215,
+    "caught_at_stage": 3,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.2968036529680365
+   },
+   {
+    "unit_id": "rigL:u2171:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 145,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.1901840490797546
+   },
+   {
+    "unit_id": "rigL:u2172:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 218,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.12734082397003746
+   },
+   {
+    "unit_id": "rigL:u2173:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 151,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.0798004987531172
+   },
+   {
+    "unit_id": "rigL:u2174:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 138,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.10276679841897234
+   },
+   {
+    "unit_id": "rigL:u2176:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 152,
+    "caught_at_stage": 3,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.33858267716535434
+   },
+   {
+    "unit_id": "rigL:u2177:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 213,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.15328467153284672
+   },
+   {
+    "unit_id": "rigL:u2178:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 86,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.04609929078014184
+   },
+   {
+    "unit_id": "rigL:u2179:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 128,
+    "caught_at_stage": 3,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.21649484536082475
+   },
+   {
+    "unit_id": "rigL:u2181:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 139,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.11375212224108659
+   },
+   {
+    "unit_id": "rigL:u2182:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 114,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.16556291390728478
+   },
+   {
+    "unit_id": "rigL:u2183:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 109,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.0480225988700565
+   },
+   {
+    "unit_id": "rigL:u2184:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 91,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.09905660377358491
+   },
+   {
+    "unit_id": "rigL:u2186:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 211,
+    "caught_at_stage": 4,
+    "caught_by_stage3": false,
+    "caught_at_u": 0.49122807017543857
+   },
+   {
+    "unit_id": "rigL:u2187:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 132,
+    "caught_at_stage": 3,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.2523809523809524
+   },
+   {
+    "unit_id": "rigL:u2188:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 145,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.19832402234636873
+   },
+   {
+    "unit_id": "rigL:u2189:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 151,
+    "caught_at_stage": 3,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.3037974683544304
+   },
+   {
+    "unit_id": "rigL:u2191:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 228,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.13953488372093023
+   },
+   {
+    "unit_id": "rigL:u2192:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 199,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.07
+   },
+   {
+    "unit_id": "rigL:u2193:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 196,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.11020408163265306
+   },
+   {
+    "unit_id": "rigL:u2194:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 202,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.16463414634146342
+   },
+   {
+    "unit_id": "rigL:u2196:B1",
+    "fault_class": "inner_race",
+    "caught": true,
+    "caught_at_window": 180,
+    "caught_at_stage": 4,
+    "caught_by_stage3": false,
+    "caught_at_u": 0.5037037037037037
+   },
+   {
+    "unit_id": "rigL:u2197:B1",
+    "fault_class": "outer_race",
+    "caught": true,
+    "caught_at_window": 179,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.19736842105263158
+   },
+   {
+    "unit_id": "rigL:u2198:B1",
+    "fault_class": "ball",
+    "caught": true,
+    "caught_at_window": 179,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.054945054945054944
+   },
+   {
+    "unit_id": "rigL:u2199:B1",
+    "fault_class": "cage",
+    "caught": true,
+    "caught_at_window": 99,
+    "caught_at_stage": 2,
+    "caught_by_stage3": true,
+    "caught_at_u": 0.17894736842105263
+   }
+  ],
+  "IS3_stage": {
+   "n_windows": 28981,
+   "max_abs_error": 1,
+   "within1_frac": 1.0,
+   "mae": 0.12263206928677409,
+   "exact_frac": 0.8773679307132259,
+   "error_hist": {
+    "0": 25427,
+    "1": 3554
+   },
+   "windows_error_ge2": 0,
+   "bearings_with_error_ge2": 0
+  },
+  "stage_healthy_bearings": {
+   "n_windows": 46575,
+   "max_abs_error": 1,
+   "within1_frac": 1.0,
+   "mae": 0.004057971014492754,
+   "exact_frac": 0.9959420289855072,
+   "error_hist": {
+    "0": 46386,
+    "1": 189
+   },
+   "windows_error_ge2": 0,
+   "bearings_with_error_ge2": 0
+  },
+  "healthy_alarms": {
+   "windows": 55019,
+   "false_alarm_rate": 0.0074701466766026285,
+   "healthy_unit": {
+    "windows": 17594,
+    "false_alarm_rate": 0.010685460952597476
+   },
+   "partner_of_faulted_bearing": {
+    "windows": 28981,
+    "false_alarm_rate": 0.0
+   },
+   "pre_onset_faulted_bearing": {
+    "windows": 8444,
+    "false_alarm_rate": 0.026409284699194693
+   },
+   "healthy_bearing_units": 120,
+   "healthy_bearing_units_with_3_consecutive_alarms": 7
+  },
+  "per_rpm_macro_f1": {
+   "1800": 0.8462128861661183,
+   "3600": 0.6753591594275967
+  }
+ },
+ "gates": {
+  "S7_mape_le_15": true,
+  "IS3_macro_f1_ge_0.85": false,
+  "IS3_stage_error_le_1": true,
+  "IS3_caught_by_stage3_all": false
+ },
+ "controls": {
+  "trivial_baseline_log_linear_on_HI": {
+   "S7_mape_pct": 63.70764876574069,
+   "fit": {
+    "a": 5.837489867843819,
+    "b": -2.2924737820865646,
+    "feature": "mean of the last 6 rows of the health index hi (aggregate 'mean6:hi')",
+    "rul_alpha": 1.0
+   },
+   "per_bearing_summary": {
+    "median": 33.563466236196916,
+    "p90": 155.73427701667563,
+    "max": 280.89117674589284,
+    "frac_le_15": 0.075
+   }
+  },
+  "wrong_shape": {
+   "description": "control: same unit ids, L profile, near-linear damage curves (a .85-.95, p 1.0-1.2)",
+   "S7_mape_pct": 24.603952045748287,
+   "S7_true_onset_pct": 24.708750675922023,
+   "S7_n_bearings": 80,
+   "S7_per_bearing_summary": {
+    "median": 24.222809672689113,
+    "p90": 33.204174855662174,
+    "max": 35.76062404162152,
+    "frac_le_15": 0.0375
+   },
+   "S7_baseline_mape_pct": 54.31225592646483,
+   "IS3_macro_f1": 0.886853717116549,
+   "IS3_stage_max": 2,
+   "IS3_stage_within1": 0.9996204409785722,
+   "IS3_caught": {
+    "rtf_bearings": 80,
+    "caught_by_stage3": 80,
+    "caught_by_stage3_frac": 1.0,
+    "never_caught": 0,
+    "caught_at_stage_hist": {
+     "1": 3,
+     "2": 65,
+     "3": 12
+    },
+    "per_class_by_stage3": {
+     "ball": "20/20",
+     "cage": "20/20",
+     "inner_race": "20/20",
+     "outer_race": "20/20"
+    },
+    "false_early_calls": null
+   }
+  }
+ },
+ "side_by_side_same_units": {
+  "test_wide": {
+   "description": "robustness: same unit ids, L profile but the full registered wide shape ranges (a .05-.60, p 1.5-4)",
+   "S7_mape_pct": 14.95069593750012,
+   "S7_true_onset_pct": 16.523064382537687,
+   "S7_n_bearings": 80,
+   "S7_per_bearing_summary": {
+    "median": 12.972010556603305,
+    "p90": 23.959864188441827,
+    "max": 44.604748073177035,
+    "frac_le_15": 0.65
+   },
+   "S7_baseline_mape_pct": 64.00883754624199,
+   "IS3_macro_f1": 0.8471803363042827,
+   "IS3_stage_max": 1,
+   "IS3_stage_within1": 1.0,
+   "IS3_caught": {
+    "rtf_bearings": 80,
+    "caught_by_stage3": 76,
+    "caught_by_stage3_frac": 0.95,
+    "never_caught": 0,
+    "caught_at_stage_hist": {
+     "1": 3,
+     "2": 59,
+     "3": 14,
+     "4": 3,
+     "5": 1
+    },
+    "per_class_by_stage3": {
+     "ball": "20/20",
+     "cage": "19/20",
+     "inner_race": "17/20",
+     "outer_race": "20/20"
+    },
+    "false_early_calls": null
+   }
+  },
+  "test_hard": {
+   "description": "robustness: same unit ids, HARD profile (life_sigma .35, late .35, jitter .04, wide shapes) = the rig_anchor test conditions",
+   "S7_mape_pct": 21.094377484585813,
+   "S7_true_onset_pct": 22.32350639417314,
+   "S7_n_bearings": 80,
+   "S7_per_bearing_summary": {
+    "median": 18.565465606963414,
+    "p90": 33.4873302251463,
+    "max": 95.60298374690362,
+    "frac_le_15": 0.3875
+   },
+   "S7_baseline_mape_pct": 73.01797551152254,
+   "IS3_macro_f1": 0.8407681622338409,
+   "IS3_stage_max": 2,
+   "IS3_stage_within1": 0.99989816700611,
+   "IS3_caught": {
+    "rtf_bearings": 80,
+    "caught_by_stage3": 76,
+    "caught_by_stage3_frac": 0.95,
+    "never_caught": 0,
+    "caught_at_stage_hist": {
+     "1": 5,
+     "2": 56,
+     "3": 15,
+     "4": 4
+    },
+    "per_class_by_stage3": {
+     "ball": "19/20",
+     "cage": "20/20",
+     "inner_race": "17/20",
+     "outer_race": "20/20"
+    },
+    "false_early_calls": null
+   }
+  },
+  "test_wrong": {
+   "description": "control: same unit ids, L profile, near-linear damage curves (a .85-.95, p 1.0-1.2)",
+   "S7_mape_pct": 24.603952045748287,
+   "S7_true_onset_pct": 24.708750675922023,
+   "S7_n_bearings": 80,
+   "S7_per_bearing_summary": {
+    "median": 24.222809672689113,
+    "p90": 33.204174855662174,
+    "max": 35.76062404162152,
+    "frac_le_15": 0.0375
+   },
+   "S7_baseline_mape_pct": 54.31225592646483,
+   "IS3_macro_f1": 0.886853717116549,
+   "IS3_stage_max": 2,
+   "IS3_stage_within1": 0.9996204409785722,
+   "IS3_caught": {
+    "rtf_bearings": 80,
+    "caught_by_stage3": 80,
+    "caught_by_stage3_frac": 1.0,
+    "never_caught": 0,
+    "caught_at_stage_hist": {
+     "1": 3,
+     "2": 65,
+     "3": 12
+    },
+    "per_class_by_stage3": {
+     "ball": "20/20",
+     "cage": "20/20",
+     "inner_race": "20/20",
+     "outer_race": "20/20"
+    },
+    "false_early_calls": null
+   }
+  }
+ },
+ "test_set_definitions": {
+  "test_L": "PRIMARY: L profile, test shape range SHAPE_TEST_L (OOD vs train)",
+  "test_wide": "robustness: same unit ids, L profile but the full registered wide shape ranges (a .05-.60, p 1.5-4)",
+  "test_hard": "robustness: same unit ids, HARD profile (life_sigma .35, late .35, jitter .04, wide shapes) = the rig_anchor test conditions",
+  "test_wrong": "control: same unit ids, L profile, near-linear damage curves (a .85-.95, p 1.0-1.2)"
+ },
+ "reported_not_gated": {
+  "cross_speed_1800_to_3600": {
+   "train": "train units at 1800 rpm only (frozen hyper-parameters, early stopping on val 1800)",
+   "test": "test units at 3600 rpm (ball has none)",
+   "macro_f1_over_classes_present": 0.5187466816861455,
+   "per_class_f1": {
+    "healthy": 0.970345426895503,
+    "outer_race": 0.7746878547105562,
+    "inner_race": 0.03680276020701553,
+    "ball": 0.0,
+    "cage": 0.29315068493150687
+   },
+   "classes_present": [
+    "healthy",
+    "outer_race",
+    "inner_race",
+    "cage"
+   ],
+   "macro_f1_up2_definition_5_classes": 0.41499734534891636,
+   "false_alarm_rate": 0.04679080189937577,
+   "missed_fault_rate": 0.04798036152644499,
+   "windows": 23224
+  },
+  "per_rpm_macro_f1": {
+   "1800": 0.8462128861661183,
+   "3600": 0.6753591594275967
+  },
+  "real_checks": {
+   "real_windows": {
+    "tag": "[MEASURED on rig; anchor-source windows, NOT independent]",
+    "per_run_bearing": [
+     {
+      "run_id": "run_20261114_230240",
+      "rpm": 1800,
+      "bearing": 1,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 169,
+      "predicted": {
+       "healthy": 169
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261114_230240",
+      "rpm": 1800,
+      "bearing": 2,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 169,
+      "predicted": {
+       "healthy": 169
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261114_233020",
+      "rpm": 3600,
+      "bearing": 1,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 159,
+      "predicted": {
+       "healthy": 144,
+       "outer_race": 14,
+       "inner_race": 1
+      },
+      "frac_correct": 0.9056603773584906,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261114_233020",
+      "rpm": 3600,
+      "bearing": 2,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 159,
+      "predicted": {
+       "healthy": 159
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261114_234701",
+      "rpm": 1800,
+      "bearing": 1,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 68,
+      "predicted": {
+       "healthy": 68
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261114_234701",
+      "rpm": 1800,
+      "bearing": 2,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 68,
+      "predicted": {
+       "healthy": 68
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261115_002457",
+      "rpm": 1800,
+      "bearing": 1,
+      "truth": "inner_race",
+      "severity_estimated": 3,
+      "windows": 158,
+      "predicted": {
+       "inner_race": 158
+      },
+      "frac_correct": 1.0,
+      "median_stage": 6.0,
+      "expected_stage_from_severity": 6
+     },
+     {
+      "run_id": "run_20261115_002457",
+      "rpm": 1800,
+      "bearing": 2,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 158,
+      "predicted": {
+       "healthy": 158
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261115_003233",
+      "rpm": 3600,
+      "bearing": 1,
+      "truth": "inner_race",
+      "severity_estimated": 3,
+      "windows": 341,
+      "predicted": {
+       "inner_race": 341
+      },
+      "frac_correct": 1.0,
+      "median_stage": 6.0,
+      "expected_stage_from_severity": 6
+     },
+     {
+      "run_id": "run_20261115_003233",
+      "rpm": 3600,
+      "bearing": 2,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 341,
+      "predicted": {
+       "healthy": 341
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261115_004354",
+      "rpm": 1800,
+      "bearing": 1,
+      "truth": "outer_race",
+      "severity_estimated": 3,
+      "windows": 158,
+      "predicted": {
+       "outer_race": 158
+      },
+      "frac_correct": 1.0,
+      "median_stage": 6.0,
+      "expected_stage_from_severity": 6
+     },
+     {
+      "run_id": "run_20261115_004354",
+      "rpm": 1800,
+      "bearing": 2,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 158,
+      "predicted": {
+       "healthy": 158
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261115_005124",
+      "rpm": 3600,
+      "bearing": 1,
+      "truth": "outer_race",
+      "severity_estimated": 3,
+      "windows": 341,
+      "predicted": {
+       "outer_race": 341
+      },
+      "frac_correct": 1.0,
+      "median_stage": 5.0,
+      "expected_stage_from_severity": 6
+     },
+     {
+      "run_id": "run_20261115_005124",
+      "rpm": 3600,
+      "bearing": 2,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 341,
+      "predicted": {
+       "healthy": 341
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261115_010018",
+      "rpm": 1800,
+      "bearing": 1,
+      "truth": "cage",
+      "severity_estimated": 2,
+      "windows": 158,
+      "predicted": {
+       "cage": 158
+      },
+      "frac_correct": 1.0,
+      "median_stage": 5.0,
+      "expected_stage_from_severity": 4
+     },
+     {
+      "run_id": "run_20261115_010018",
+      "rpm": 1800,
+      "bearing": 2,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 158,
+      "predicted": {
+       "healthy": 158
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261115_010524",
+      "rpm": 3600,
+      "bearing": 1,
+      "truth": "cage",
+      "severity_estimated": 2,
+      "windows": 337,
+      "predicted": {
+       "cage": 337
+      },
+      "frac_correct": 1.0,
+      "median_stage": 5.0,
+      "expected_stage_from_severity": 4
+     },
+     {
+      "run_id": "run_20261115_010524",
+      "rpm": 3600,
+      "bearing": 2,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 337,
+      "predicted": {
+       "healthy": 337
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     },
+     {
+      "run_id": "run_20261115_011243",
+      "rpm": 1800,
+      "bearing": 1,
+      "truth": "ball",
+      "severity_estimated": 2,
+      "windows": 157,
+      "predicted": {
+       "ball": 157
+      },
+      "frac_correct": 1.0,
+      "median_stage": 5.0,
+      "expected_stage_from_severity": 4
+     },
+     {
+      "run_id": "run_20261115_011243",
+      "rpm": 1800,
+      "bearing": 2,
+      "truth": "healthy",
+      "severity_estimated": 0,
+      "windows": 157,
+      "predicted": {
+       "healthy": 157
+      },
+      "frac_correct": 1.0,
+      "median_stage": 1.0,
+      "expected_stage_from_severity": 1
+     }
+    ],
+    "per_truth_class_window_recall": {
+     "healthy": 0.9938574938574939,
+     "inner_race": 1.0,
+     "outer_race": 1.0,
+     "cage": 1.0,
+     "ball": 1.0
+    },
+    "windows_by_truth": {
+     "healthy": 2442,
+     "inner_race": 499,
+     "outer_race": 499,
+     "cage": 495,
+     "ball": 157
+    },
+    "healthy_false_alarm_rate_all_real_healthy_bearing_windows": 0.00614250614250611,
+    "note": "healthy = H-01 post-baseline windows (both bearings) + bearing 2 of the single-housing fault runs (housing 2 always healthy)"
+   },
+   "failure_trace": {
+    "tag": "[MEASURED on rig, n=1 ball failure trace, rpm column invalid -> 3600]",
+    "windows_total": 144,
+    "scored_windows": 119,
+    "first_scored_window": 24,
+    "true_rul_definition": "windows-to-last-window (window 143 = end), 1 window = 20 rev at 3600 rpm = 0.333 s",
+    "v7_mape_pct_all": 83.17763271686313,
+    "v7_mape_pct_excl_last10pct": 81.77164601741205,
+    "baseline_mape_pct_all": 238.24590970210565,
+    "baseline_mape_pct_excl_last10pct": 36.41491983543397,
+    "v7_median_pred_over_true": 0.09379822080673707,
+    "v7_class_counts": {
+     "inner_race": 5,
+     "cage": 114,
+     "healthy": 1,
+     "warming_up": 24
+    },
+    "v7_stage_counts": {
+     "3": 3,
+     "4": 34,
+     "5": 30,
+     "6": 53
+    },
+    "samples": [
+     {
+      "i": 24,
+      "true_w": 119,
+      "v7_w": 155.53033447265628,
+      "stage": 4
+     },
+     {
+      "i": 36,
+      "true_w": 107,
+      "v7_w": 149.4768556403133,
+      "stage": 4
+     },
+     {
+      "i": 48,
+      "true_w": 95,
+      "v7_w": 9.576353810845818,
+      "stage": 4
+     },
+     {
+      "i": 60,
+      "true_w": 83,
+      "v7_w": 8.212943304232207,
+      "stage": 4
+     },
+     {
+      "i": 72,
+      "true_w": 71,
+      "v7_w": 4.0610087826217445,
+      "stage": 6
+     },
+     {
+      "i": 84,
+      "true_w": 59,
+      "v7_w": 2.4844835749993797,
+      "stage": 6
+     },
+     {
+      "i": 96,
+      "true_w": 47,
+      "v7_w": 2.8795983429711383,
+      "stage": 5
+     },
+     {
+      "i": 108,
+      "true_w": 35,
+      "v7_w": 4.656394625022396,
+      "stage": 6
+     },
+     {
+      "i": 120,
+      "true_w": 23,
+      "v7_w": 1.228024290037,
+      "stage": 6
+     },
+     {
+      "i": 132,
+      "true_w": 11,
+      "v7_w": 0.09756947238858724,
+      "stage": 6
+     }
+    ],
+    "caveat": "not gated; n=1 trace; the generator's late amplification is MEASURED from this same trace, so this is not independent; if the trivial baseline matches v5 the number measures the assumed curve"
+   },
+   "latency": {
+    "tag": "[MEASURED host]",
+    "windows": 456,
+    "p50_ms": 8.317200001329184,
+    "p95_ms": 10.480224995262688,
+    "max_ms": 12.596300002769567,
+    "engine_only_per_bearing_p95_ms": 4.937250000000001,
+    "spec_S8_ms": 200,
+    "note": "NodeEngine.predict end-to-end per window (both bearings, validation + features + ONNX + post-process), 1 thread, this laptop"
+   }
+  }
+ }
+}

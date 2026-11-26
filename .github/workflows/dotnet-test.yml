@@ -1,0 +1,17 @@
+name: dotnet test
+on:
+  push:
+    branches: [main, 'feature/**', 'fix/**']
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Twin tests (ME FE model)
+        run: dotnet test tests/DigitalTwin.Twin.Tests -c Release
+      - name: Backend tests
+        run: dotnet test tests/DigitalTwin.Backend.Tests -c Release

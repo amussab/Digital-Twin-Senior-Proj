@@ -17,12 +17,15 @@ public sealed class Pipeline
     private readonly int _baselineOverride;
     private readonly object _gate = new();
     private long _count;
+    private readonly LiveFeTwin? _feTwin;
     private long? _t0Ms; private long _wrap; private long _lastMs = -1;
 
     public Pipeline(IInferenceEngine engine, IPhysicsTwin twin, StateStore store, SnapshotFactory factory,
-        SnapshotPublisher pub, LatencyRecorder lat, IOptions<BackendOptions> opt, ILogger<Pipeline> log)
+        SnapshotPublisher pub, LatencyRecorder lat, IOptions<BackendOptions> opt, ILogger<Pipeline> log,
+        LiveFeTwin? feTwin = null)
     {
         _engine = engine; _twin = twin; _store = store; _factory = factory; _pub = pub; _lat = lat; _log = log;
+        _feTwin = feTwin;
         _baselineOverride = opt.Value.BaselineWindowsOverride;
         _trackers = NewTrackers();
     }
@@ -106,6 +109,48 @@ public sealed class Pipeline
         var t3 = Stopwatch.GetTimestamp();
         _lat.Record("broadcast", LatencyRecorder.ToMs(t3 - t2));
         _lat.Record("total_ingest_to_broadcast", LatencyRecorder.ToMs(t3 - t0));
+        return (true, "");
+    }
+
+    private long _liveSeen;
+    /// <summary>Live path: the Python NodeEngine already produced the per-bearing result; we only map it to state and broadcast.
+    /// No C# model runs (the C# ONNX contracts are v3b, not valid for node firmware features). Physics twin = n/a (node sends features only).</summary>
+    public async Task<(bool Ok, string Error)> IngestLiveAsync(LiveWindow w, CancellationToken ct = default)
+    {
+        var t0 = Stopwatch.GetTimestamp();
+        if (w.Features.Length != 32 || w.Features.Any(x => !double.IsFinite(x))) { _lat.CountReject(); return (false, "features must be 32 finite numbers"); }
+        if (w.Bearings.Count == 0) return (false, "no bearings");
+        var ackMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var results = w.Bearings.Select(b =>
+        {
+            var ok = b.Status == "ok";
+            var det = ok ? new BearingDetails(b.HealthStage ?? 0, b.OnsetDetected ?? false, "", Array.Empty<double>(), 0, 0, 0, 0) : null;
+            // RUL only when the engine marks it valid (simulated-trajectory replay, faulted bearing, stage >= 2); live node -> null -> n/a
+            double? rul = ok && b.RulValid == true && b.AiRulHours is double ai && double.IsFinite(ai) ? ai : null;
+            return new BearingResult(b.Bearing, ok ? BearingStates.Ready : BearingStates.WarmingUp,
+                ok ? b.FaultClass : "warming_up", (b.Confidence ?? 0) * 100, b.HealthIndex, rul, b.ClassProbs, 0, 0, det);
+        }).ToList();
+        var physRul = w.Bearings.Where(b => b.RulValid == true && b.PhysicsRulHours is double pr && double.IsFinite(pr))
+            .OrderBy(b => b.AiRulHours ?? double.MaxValue).Select(b => b.PhysicsRulHours).FirstOrDefault();
+        // ME FE twin: own lock, never fails the window
+        LiveTwinInfo? fe = null;
+        try { fe = _feTwin?.Update(w); }
+        catch (Exception e) { _log.LogWarning(e, "FE twin update failed for window {Window}", w.WindowId); }
+        PipelineState state;
+        lock (_gate)
+        {
+            var info = new LiveInfo(w.Seq, w.WindowId, w.Rpm, w.ValidChannels, w.DeviceId, w.SessionId, w.Contract, w.Provenance,
+                w.Features, w.BaselinePhase, w.InferenceMs, w.ReceivedAtMs, w.PredictedAtMs, w.PostedAtMs, ackMs, w.PostsDropped, w.Bearings,
+                w.RulSource, w.RulContract, w.ClassContract, w.RulTimescale, fe);
+            var win = new WindowPayload((float)w.Rpm, w.Features.Select(x => (float)x).ToArray(), new float[4], 0);
+            state = new PipelineState(win, results, DateTimeOffset.UtcNow, w.InferenceMs, ++_liveSeen, physRul, info);
+            _store.Set(state);
+        }
+        if (w.ReceivedAtMs > 0) _lat.Record("live_recv_to_backend_ack", ackMs - w.ReceivedAtMs);
+        if (w.PostedAtMs > 0) _lat.Record("live_post_to_backend_ack", Math.Max(0, ackMs - w.PostedAtMs));
+        _lat.Record("live_inference", w.InferenceMs);
+        await _pub.PublishAsync(_factory.Build(state, DateTimeOffset.UtcNow), ct);
+        _lat.Record("live_ingest_to_broadcast", LatencyRecorder.ToMs(Stopwatch.GetTimestamp() - t0));
         return (true, "");
     }
 }

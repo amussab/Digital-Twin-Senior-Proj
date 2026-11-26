@@ -32,7 +32,10 @@ through and note what replaced it.
   use 152 and must be updated.
 - Feature order per channel: bp_rms, kurtosis, crest, env_rms, FTF, BSF, BPFO, BPFI band
   magnitudes. Channels: B1-X, B1-Y, B2-X, B2-Y (indices 0-7, 8-15, 16-23, 24-31).
-- Rig bearing orders: FTF 0.38, BSF 1.98, BPFO 3.05, BPFI 4.95 (8 elements, d/D ≈ 0.2375).
+- ~~Rig bearing orders: FTF 0.38, BSF 1.98, BPFO 3.05, BPFI 4.95 (8 elements, d/D ≈ 0.2375).~~
+  Replaced 2026-11-12: new rig bearing **S6700/61700 open, 10×15×3 mm, 11 balls × 1.2 mm (measured; re-check
+  ball Ø with calipers on rig day — 1/16" = 1.5875 mm would change BSF 25 %), pitch 12.45 mm, 0°** →
+  FTF 0.4518, BSF 5.1393, BPFO 4.9699, BPFI 6.0301, band half width 0.08 order (0.10 made BPFO/BSF overlap).
 
 ## AI design decisions
 - Hybrid AI = N-HiTS (health-index forecast → RUL by threshold crossing) + TFT (per-window fault
@@ -100,3 +103,24 @@ through and note what replaced it.
 - Docker profiles (docker-compose.yml): default `backend` (v3b + up2 replay, :5080, UDP 5005); `coe` (backend-coe + coe-sim, :5081); `ai` (ai-engine selftest / up2_eval); `test` (pytest + test-dotnet); `evidence` (executes the notebook headless -> artifacts/evidence/UP2_Evidence.html); `notebook` (Jupyter :8888). `tests/up2d` (IS2 v2) is in the `test` profile (81 tests pass in Docker).
 - Resume ledger: `.claude/UP2_STATE.md`. Rebuild the evidence: `cd AI-engine/notebooks; ../.venv/Scripts/python.exe -m jupyter nbconvert --to notebook --execute UP2_Evidence.ipynb --inplace --ExecutePreprocessor.timeout=-1` then `--to html` (about 6 min).
 - Public datasets are on disk (read-only, not in the repo): AIENGINE_DATA_DIR=C:\Users\lenovo\Documents\KFUPM\Term261\ICS414\Repo\Digital-Twin-Senior-Proj\AI-engine\data.
+
+## Real node + rig (2026-11-12/13, coordinator) — supersedes the simulator-era rig facts above where they conflict
+- The real node sends **HTTP POST JSON to the laptop :8000 `/features`** over Wi-Fi **COE-NODE** (ESP32 AP
+  192.168.4.1; laptop must ACK `200 {"accepted": true}`), ~1 window per 20 rev. Not UDP, not the 152/160-byte
+  packet on the wire to the laptop (the 160-byte packet is STM32->ESP32 UART only). Schema in `COE/README.md`.
+- Channels B1X, B1Y, B2X, B2Y; **B2X is a copy of B1Y** (4th sensor has no cable). Features in **g**.
+- **The node has no tachometer.** RPM is a setting; at boot = 1800. Since build `release/rig_runtime_config`
+  (built 2026-11-13, flashed + verified on hardware 2026-11-14) RPM and bearing orders are set at runtime over the
+  ST-LINK USB COM port: `python COE/training/node_config.py --rpm N | --bearing ftf bsf bpfo bpfi [hw] | --query`
+  (also the recorder page's speed buttons). Not persisted across power cycles. Typed RPM must match the VFD.
+- Old firmware said 250 rpm while the rig ran 1800 → the 4 order bands of that capture are invalid.
+- Rig speeds: **1800 and 3600 rpm** (VFD). Envelope band limit 400 Hz (BPFI at 3600 = 362 Hz).
+- Models for node features: `v3e_node` (default; baseline-relative classifier on node-matched sim, macro-F1 0.877
+  [SIMULATION]); `v4_real` = TRAINED 2026-11-15 on rig data (1 bearing/fault, estimated severities; B2X:=B2Y policy; see RIG_STATE + evidence/RIG_SPEC_SCORECARD.md; IS3 not scorable on rig). RUL/physics twin are NOT valid on
+  node data (features only, no raw waveform/prox) → dashboard shows n/a.
+- Commissioning baseline policy: drop 120 s settle, median over next 60 s, per rpm (contract `3e-node.1`).
+- Only HEALTHY real data exists so far: `Repo/rig_data/probe_1800rpm_fw250_healthy.jsonl` (931 windows, dev file).
+  v3e_node with settle policy: B1 81.1 % / B2 94.9 % healthy [MEASURED on rig, healthy, DEV, fw250].
+- Rig-day runbook `RIG_DAY.md`; preflight `scripts/preflight.ps1`; run-sheet driver `COE/training/rig_session.py`;
+  live chain `scripts/run-rig-live.ps1` (receiver -> NodeEngine -> backend `/api/live/prediction` -> dashboard).
+- Branch **`fix/rig-new-bearing`** (worktree `Repo/DT-main`), NOT pushed as of 2026-11-13.

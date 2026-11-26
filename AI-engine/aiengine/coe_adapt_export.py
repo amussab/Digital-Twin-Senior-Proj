@@ -23,7 +23,7 @@ from . import coe_adapt as A
 from . import up2
 from . import up2_export as X
 from .config import CHECKPOINT_DIR, MODELS_DIR
-from .coe_adapt_eval import (BASE_CLS, BASE_CONTRACT, NEW_CLS, NEW_CONTRACT, NEW_GOLDEN, RUN_DIR, load_coe,
+from .coe_adapt_eval import (NODE, BASE_CLS, BASE_CONTRACT, NEW_CLS, NEW_CONTRACT, NEW_GOLDEN, RUN_DIR, load_coe,
                              selected_probs)
 
 
@@ -106,7 +106,7 @@ def gate_block(sel: dict) -> dict | None:
                       "fault_class_k = 'healthy' (report transmitted_from_partner = true; class_probs unchanged, "
                       "diagnostic). If the partner is warming up, no gate."),
         "reference_impl": "aiengine/coe_adapt.py::gate (offline), aiengine/engine.py::HybridEngine._gate (streaming)",
-        "selected_on": "synth_coe COE-val runs only",
+        "selected_on": "synth_coe_node val runs only" if NODE else "synth_coe COE-val runs only",
     }
 
 
@@ -133,10 +133,10 @@ def run() -> dict:
     par = parity(MODELS_DIR / NEW_CLS, sel, B)
     con = json.loads((MODELS_DIR / BASE_CONTRACT).read_text())
     from .train import git_commit
-    con["contract_version"] = "3b-coe"
+    con["contract_version"] = "3d-node" if NODE else "3b-coe"
     con["generated_utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     con["generated_by"] = "AI-engine/aiengine/coe_adapt_export.py (copy of model_contract_v3b.json, classifier swapped)"
-    con["provenance"]["datasets"] = list(con["provenance"]["datasets"]) + ["synth_coe (COE simulator -> CoePipeline; train/val)"]
+    con["provenance"]["datasets"] = list(con["provenance"]["datasets"]) + [("synth_coe_node (node-matched simulator: new bearing, 1800/3600 rpm, g, B2X=B1Y; train/val)" if NODE else "synth_coe (COE simulator -> CoePipeline; train/val)")]
     con["provenance"]["coe_adapt"] = {"git_commit": git_commit(), "selection": sel,
                                       "note": "[SIMULATION]+[SYNTHETIC] classifier adapted to COE-pipeline features; "
                                               "selected on COE-val only; RUL/z/stage heads = v3b unchanged"}

@@ -15,6 +15,12 @@
         <span>@(Snapshot?.IsConnected == true ? "Live" : "Disconnected")</span>
         <span class="divider"></span>
         <span>@(Snapshot?.MachineId ?? "Waiting...")</span>
+        @if (Snapshot?.Live is { } lv)
+        {
+            <span class="divider"></span>
+            <span class="tag @(lv.Provenance.Contains("SIMULATION") ? "" : "success")">@(lv.Provenance.Contains("SIMULATION") ? "Source: simulated replay" : "Source: Node (live)")</span>
+            <span class="tag @(lv.Provenance.Contains("REPLAY") ? "" : "success")">@lv.Provenance</span>
+        }
     </div>
 </header>
 
@@ -30,6 +36,8 @@ else
 
         <section class="dashboard-main">
 
+            <LivePanel Live="Snapshot.Live" />
+
             <section class="metrics-grid">
                 <MetricCard Label="Health Index"
                             Value="@($"{Snapshot.HealthIndexPercent:F0}%")"
@@ -37,8 +45,8 @@ else
                             AccentClass="accent-cyan" />
 
                 <MetricCard Label="AI Remaining Life"
-                            Value="@($"{Snapshot.AiRulHours:F0} h")"
-                            Detail="N-HiTS estimate"
+                            Value="@(Snapshot.AiRulHours < 0 ? "n/a" : $"{Snapshot.AiRulHours:F0} h")"
+                            Detail="@(Snapshot.Live is null ? "N-HiTS estimate" : Snapshot.AiRulHours >= 0 ? (Snapshot.Live.RulSource is not null ? "Remaining life estimate" : "RUL head, simulated hours") : Snapshot.Live.RulSource is not null ? "n/a (healthy or warming up)" : "n/a: no RUL model validated on live node windows")"
                             AccentClass="accent-violet" />
 
                 <MetricCard Label="Fault State"
@@ -60,7 +68,7 @@ else
             </section>
 
             <TrendChart Title="AI RUL Trend"
-                        CurrentValue="@($"{Snapshot.AiRulHours:F0} hours")"
+                        CurrentValue="@(Snapshot.AiRulHours < 0 ? "n/a" : $"{Snapshot.AiRulHours:F0} hours")"
                         Values="RulHistory" />
 
             <section class="lower-grid">
@@ -70,7 +78,21 @@ else
                         <span class="tag">Optional input</span>
                     </div>
 
-                    @if (Snapshot.PhysicsRulHours is double physicsRul)
+                    @if (Snapshot.Live is not null)
+                    {
+                        @if (Snapshot.PhysicsRulHours is double lp && Snapshot.AiRulHours >= 0)
+                        {
+                            <div class="comparison-row"><span>Physics RUL (feature twin)</span><strong>@lp.ToString("F1") h</strong></div>
+                            <div class="comparison-row"><span>AI RUL</span><strong>@Snapshot.AiRulHours.ToString("F1") h</strong></div>
+                            <div class="comparison-row"><span>Residual |phys-AI| / AI</span><strong>@Snapshot.RulResidualPercent?.ToString("F0")%</strong></div>
+                            <div class="comparison-row"><span>Provenance</span><strong>@Snapshot.Live.Provenance</strong></div>
+                        }
+                        else
+                        {
+                            <div class="comparison-row"><span>Physics RUL / AI RUL</span><strong>n/a (@(Snapshot.Live.Provenance.Contains("SIMULATION") ? "shown for a bearing classified faulted at stage 2 or later" : (Snapshot.Live.RulSource is not null ? "shown for a bearing classified faulted" : "live node: no RUL model validated, twin reads features only")))</strong></div>
+                        }
+                    }
+                    else if (Snapshot.PhysicsRulHours is double physicsRul)
                     {
                         <div class="comparison-row">
                             <span>Physics RUL</span>
@@ -174,7 +196,10 @@ else
                 var snapshot in DataSource.StreamAsync(_cancellation.Token))
             {
                 Snapshot = snapshot;
-                _rulHistory.Add(snapshot.AiRulHours);
+                if (snapshot.AiRulHours >= 0)      // -1 = n/a (live node): never plot it
+                {
+                    _rulHistory.Add(snapshot.AiRulHours);
+                }
 
                 if (_rulHistory.Count > 40)
                 {

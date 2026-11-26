@@ -1,0 +1,120 @@
+@using System.Net.Http.Json
+@implements IDisposable
+@inject HttpClient Http
+
+@if (Live is not null)
+{
+    <section class="live-panel system-panel">
+        <div class="panel-heading">
+            <span>@(IsSim ? "Simulated replay" : "Node (live)") &middot; per-bearing AI output</span>
+            <span class="tag @(Live.Provenance.Contains("LIVE") ? "success" : "") live-badge">@Live.Provenance</span>
+        </div>
+        <p class="live-note">Source: @(IsSim ? "simulated trajectory replay" : "Node (live)") &mdash; @Live.DeviceId, contract <strong>@Live.Contract</strong>, window @Live.WindowId, @Live.Rpm.ToString("F0") rpm.
+            @if (IsSim) {<text>[SIMULATION; rig-anchored replay]: windows are resampled from real rig windows along an ASSUMED damage curve; RUL values are in simulated hours (10-min snapshots) and are NOT measurements of a real bearing. Physics RUL = feature-only twin (reads the same features as the AI).</text>}
+            else if (Live.RulSource is not null) {<text>Live node; class, stage and remaining life per bearing.</text>}
+            else {<text>The node sends features only (no raw waveform, no proximity probes): RUL and physics RUL are n/a. Stage and health index come from heads not validated on live node data.</text>}</p>
+
+        <div class="live-bearings">
+            @foreach (var b in Live.Bearings)
+            {
+                <article class="live-bearing">
+                    <h3>Bearing @b.Bearing @(b.Bearing == 2 ? "(B2X = copy of B1Y)" : "")</h3>
+                    @if (b.Status != "ok")
+                    {
+                        <div class="comparison-row"><span>State</span><strong>warming up</strong></div>
+                        <div class="comparison-row"><span>Progress</span><strong>@(b.Reason ?? Live.BaselinePhase)</strong></div>
+                    }
+                    else
+                    {
+                        <div class="comparison-row"><span>Class</span><strong>@b.FaultClass</strong></div>
+                        <div class="comparison-row"><span>Onset detected</span><strong>@(b.OnsetDetected == true ? "YES" : "no")</strong></div>
+                        <div class="comparison-row"><span>Health stage / index</span><strong>@(b.HealthStage?.ToString() ?? "n/a") / @((b.HealthIndex * 100)?.ToString("F0") ?? "n/a")%</strong></div>
+                        <div class="comparison-row"><span>AI RUL</span><strong>@(b.RulValid == true && b.AiRulHours is double ar ? $"{ar:F1} h" : "n/a")</strong></div>
+                        <div class="comparison-row"><span>Physics RUL / Miner D</span><strong>@(b.RulValid == true && b.PhysicsRulHours is double pr ? $"{pr:F1} h" : "n/a") / @(b.MinerD is double md ? md.ToString("F2") : "n/a")</strong></div>
+                        @if (b.ClassProbs is not null)
+                        {
+                            @foreach (var kv in b.ClassProbs.OrderByDescending(k => k.Value))
+                            {
+                                <div class="prob-row"><span>@kv.Key</span><div class="prob-bar"><i style="width:@((kv.Value * 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></i></div><em>@kv.Value.ToString("P0")</em></div>
+                            }
+                        }
+                    }
+                </article>
+            }
+        </div>
+
+        @if (Live.FeTwin is { } fe)
+        {
+            <h3 class="live-sub">FE digital twin (ME) &mdash; shaft model vs proximity probes</h3>
+            <p class="live-note">Finite-element model of this rig (S6700 bearings, measured geometry). It learns the rig unbalance from the first @fe.CommissionNeeded windows, then predicts the 1X shaft vibration at both probes and identifies the bearing stiffness K every window.</p>
+            <div class="comparison-row"><span>State</span><strong>@fe.Status@(fe.Status == "commissioning" ? $" ({fe.CommissionDone}/{fe.CommissionNeeded})" : "")</strong></div>
+            <div class="comparison-row"><span>Note</span><strong>@fe.Note</strong></div>
+            <div class="comparison-row"><span>Keyphasor speed</span><strong>@(fe.MeasuredRpm is double mr ? $"{mr:F0} rpm" : "n/a")</strong></div>
+            <div class="comparison-row"><span>PROX 1: measured / model (1X, &micro;m pk-pk)</span><strong>@Um(fe.MeasP1UmPp) / @Um(fe.ModelP1UmPp)</strong></div>
+            <div class="comparison-row"><span>PROX 3: measured / model (1X, &micro;m pk-pk)</span><strong>@Um(fe.MeasP3UmPp) / @Um(fe.ModelP3UmPp)</strong></div>
+            <div class="comparison-row"><span>Model mismatch (residual)</span><strong>@(fe.ResidualPct is double rp ? $"{rp:F0}%" : "n/a")</strong></div>
+            <div class="comparison-row"><span>Bearing stiffness K1 / K2 (healthy K0)</span><strong>@Mn(fe.K1) / @Mn(fe.K2) (@Mn(fe.K0A) / @Mn(fe.K0D)) MN/m</strong></div>
+            <div class="comparison-row"><span>Stiffness drop</span><strong>@(fe.StiffnessDropPct is double sd ? $"{sd:F1}%" : "n/a")</strong></div>
+            <div class="comparison-row"><span>FE physics RUL</span><strong>@(fe.PhysicsRulHours is double fr ? $"{fr:F1} h" : "n/a")</strong></div>
+            <div class="comparison-row"><span>Rig unbalance (learned)</span><strong>@(fe.UnbalanceGmm is double ug ? $"{ug:F1} g·mm" : "n/a")</strong></div>
+            <div class="comparison-row"><span>Model first critical speed</span><strong>@fe.ModelCriticalRpm.ToString("F0") rpm (calculated, not yet confirmed by a run-up)</strong></div>
+            <TrendChart Title="FE model mismatch (%)" CurrentValue="@(fe.ResidualPct?.ToString("F0") ?? "n/a")" Values="Resid" />
+        }
+
+        <div class="comparison-row"><span>Latency: inference</span><strong>@Live.InferenceMs.ToString("F1") ms</strong></div>
+        <div class="comparison-row"><span>Latency: laptop receive &rarr; backend ack</span><strong>@(Live.BackendAckMs - Live.ReceivedAtMs) ms</strong></div>
+        <div class="comparison-row"><span>Latency: laptop receive &rarr; dashboard (sensor&rarr;dashboard excl. node&rarr;Wi-Fi hop)</span><strong>@(RenderMs is double r ? $"{r:F0} ms" : "measuring")</strong></div>
+        <div class="comparison-row"><span>Posts dropped (receiver&rarr;backend)</span><strong>@Live.PostsDropped</strong></div>
+
+        <h3 class="live-sub">Features (32) &mdash; latest window</h3>
+        <table class="feat-table">
+            <thead><tr><th></th>@foreach (var f in FeatureNames) {<th>@f</th>}</tr></thead>
+            <tbody>
+            @for (var ch = 0; ch < 4; ch++)
+            {
+                <tr><th>@Channels[ch]</th>@for (var k = 0; k < 8; k++) {<td>@Fmt(Live.Features[ch * 8 + k], k)</td>}</tr>
+            }
+            </tbody>
+        </table>
+
+        <div class="live-trends">
+            <TrendChart Title="B1Y rms (g)" CurrentValue="@Live.Features[8].ToString("F4")" Values="B1YRms" />
+            <TrendChart Title="B2Y rms (g)" CurrentValue="@Live.Features[24].ToString("F4")" Values="B2YRms" />
+            <TrendChart Title="B1Y kurtosis" CurrentValue="@Live.Features[9].ToString("F2")" Values="B1YKurt" />
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public LiveInfo? Live { get; set; }
+
+    private static readonly string[] Channels = { "B1X", "B1Y", "B2X", "B2Y" };
+    private static readonly string[] FeatureNames = { "rms", "kurt", "crest", "env_rms", "ftf", "bsf", "bpfo", "bpfi" };
+    private readonly List<double> _rms1 = new(), _rms2 = new(), _kurt = new();
+    private IReadOnlyList<double> B1YRms => _rms1;
+    private IReadOnlyList<double> B2YRms => _rms2;
+    private IReadOnlyList<double> B1YKurt => _kurt;
+    private readonly List<double> _resid = new();
+    private IReadOnlyList<double> Resid => _resid;
+    private static string Um(double? v) => v is double x ? x.ToString("F1") : "n/a";
+    private static string Mn(double? v) => v is double x ? (x / 1e6).ToString("F2") : "n/a";
+    private long _lastSeq = long.MinValue;
+    public double? RenderMs { get; private set; }
+    private bool IsSim => Live?.Provenance.Contains("SIMULATION") == true;
+
+    private static string Fmt(double v, int k) => k is 1 or 2 ? v.ToString("F2") : v.ToString("0.0000");
+
+    protected override void OnParametersSet()
+    {
+        if (Live is null || Live.Seq == _lastSeq) return;
+        _lastSeq = Live.Seq;
+        void Add(List<double> l, double v) { l.Add(v); if (l.Count > 120) l.RemoveAt(0); }
+        Add(_rms1, Live.Features[8]); Add(_rms2, Live.Features[24]); Add(_kurt, Live.Features[9]);
+        if (Live.FeTwin?.ResidualPct is double rp) Add(_resid, rp);
+        // browser and backend run on the same laptop: epoch ms are comparable
+        RenderMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - Live.ReceivedAtMs;
+        _ = Http.PostAsJsonAsync("api/live/render-ack", new { seq = Live.Seq, renderMs = RenderMs }).ContinueWith(_ => { });
+    }
+
+    public void Dispose() { }
+}

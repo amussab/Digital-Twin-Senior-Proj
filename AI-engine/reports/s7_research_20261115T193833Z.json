@@ -1,0 +1,314 @@
+{
+ "tag": "[SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape + life variance assumed]",
+ "utc": "2026-11-15T19:38:33+00:00",
+ "scope": "TRAIN/VAL units only (registered rig_anchor plan units of split train/val); no test unit was generated or scored",
+ "recipe": "v5 recipe: xgb log1p(RUL windows), NL=48 aggregate features + HI levels, depth 6, alpha 1, no scales; S7 = up2_metrics unchanged; 240 train units unless stated",
+ "sensitivity_table": [
+  {
+   "profile": "hard (registered rig_anchor: shapes a .2-.4 p 2-3, late sigma .20, jitter .04)",
+   "life_sigma": 0.35,
+   "nuisances": "registered defaults",
+   "val_S7": 20.339043872851473
+  },
+  {
+   "profile": "ls025",
+   "life_sigma": 0.25,
+   "nuisances": "registered defaults otherwise",
+   "val_S7": 19.39870304543061
+  },
+  {
+   "profile": "ls015",
+   "life_sigma": 0.15,
+   "nuisances": "registered defaults otherwise",
+   "val_S7": 15.93066838009058
+  },
+  {
+   "profile": "ls010",
+   "life_sigma": 0.1,
+   "nuisances": "registered defaults otherwise",
+   "val_S7": 14.9780476542112
+  },
+  {
+   "profile": "narrow shapes only",
+   "life_sigma": 0.35,
+   "nuisances": "shapes a .28-.32 p 2.3-2.7",
+   "val_S7": 19.458153906326263
+  },
+  {
+   "profile": "ls025 + narrow shapes",
+   "life_sigma": 0.25,
+   "nuisances": "shapes a .28-.32 p 2.3-2.7",
+   "val_S7": 18.459563509659358
+  },
+  {
+   "profile": "ls015 + narrow shapes",
+   "life_sigma": 0.15,
+   "nuisances": "shapes a .28-.32 p 2.3-2.7",
+   "val_S7": 15.70532141716492
+  },
+  {
+   "profile": "ls010 + narrow shapes",
+   "life_sigma": 0.1,
+   "nuisances": "shapes a .28-.32 p 2.3-2.7",
+   "val_S7": 14.584111617364274
+  },
+  {
+   "profile": "N_ls035 (narrow shapes + late sigma .05 + anchor jitter .01)",
+   "life_sigma": 0.35,
+   "nuisances": "narrow shapes, late .05, jitter .01",
+   "val_S7": 16.647521711012974
+  },
+  {
+   "profile": "N_ls025",
+   "life_sigma": 0.25,
+   "nuisances": "narrow shapes, late .05, jitter .01",
+   "val_S7": 15.238203708496377
+  },
+  {
+   "profile": "N_ls015",
+   "life_sigma": 0.15,
+   "nuisances": "narrow shapes, late .05, jitter .01",
+   "val_S7": 12.800208675714075
+  },
+  {
+   "profile": "N_ls010 (=ls010_narrow_l05_j01)",
+   "life_sigma": 0.1,
+   "nuisances": "narrow shapes, late .05, jitter .01",
+   "val_S7": 11.574133953846628
+  },
+  {
+   "profile": "floor_probe (everything unobservable switched off: sigma .03, fixed shape, late .02, jitter 0)",
+   "life_sigma": 0.03,
+   "nuisances": "all nuisances ~0",
+   "val_S7": 6.562262276048007
+  }
+ ],
+ "hard_profile_decomposition": {
+  "per_bearing_mape_summary": {
+   "mean": 20.339043872851473,
+   "median": 17.14306198211149,
+   "p90": 37.7618233862932
+  },
+  "corr_unit_mape_vs_abs_ln_lifefactor": 0.10714870361641465,
+  "corr_unit_mape_vs_abs_ln_late_scale": -0.082508891328591,
+  "corr_unit_bias_vs_ln_lifefactor": -0.530433888273055,
+  "by_life_factor_bin": {
+   "(0.0, 0.6]": {
+    "units": 6,
+    "mape": 22.471050698347227,
+    "bias": 19.15963056343954
+   },
+   "(0.6, 0.8]": {
+    "units": 11,
+    "mape": 23.32874988596839,
+    "bias": 14.531699362678193
+   },
+   "(0.8, 1.25]": {
+    "units": 21,
+    "mape": 20.555518931191678,
+    "bias": 0.6741619834185792
+   },
+   "(1.25, 1.6]": {
+    "units": 8,
+    "mape": 14.668220362640861,
+    "bias": -6.681877190579971
+   },
+   "(1.6, 100.0]": {
+    "units": 2,
+    "mape": 17.909946252491462,
+    "bias": -17.393149098891733
+   }
+  },
+  "by_rpm": {
+   "1800": 21.026598596223252,
+   "3600": 19.193119333898508
+  },
+  "by_class": {
+   "ball": 17.465170467530267,
+   "cage": 20.496068096032,
+   "inner_race": 31.00236781658954,
+   "outer_race": 12.392569111254083
+  },
+  "window_mape_by_true_u": {
+   "(-0.01, 0.1]": {
+    "mape": 19.655510320279685,
+    "bias": 4.6602184385162015,
+    "n": 4
+   },
+   "(0.1, 0.2]": {
+    "mape": 23.93507138434423,
+    "bias": -2.5346013202379845,
+    "n": 431
+   },
+   "(0.2, 0.4]": {
+    "mape": 18.693134023582992,
+    "bias": 1.7566018753006452,
+    "n": 2258
+   },
+   "(0.4, 0.6]": {
+    "mape": 19.328719096960626,
+    "bias": -1.23214661463141,
+    "n": 2347
+   },
+   "(0.6, 0.8]": {
+    "mape": 17.752989725933997,
+    "bias": -4.661430736039029,
+    "n": 2347
+   },
+   "(0.8, 1.0]": {
+    "mape": 23.066632094752904,
+    "bias": 6.650237911879526,
+    "n": 1373
+   }
+  },
+  "window_mape_by_true_stage": {
+   "2": {
+    "mape": 23.92467035324597,
+    "bias": -2.5763501535960684,
+    "n": 430
+   },
+   "3": {
+    "mape": 18.669693367677162,
+    "bias": 1.7023434413475824,
+    "n": 2253
+   },
+   "4": {
+    "mape": 19.376045898846552,
+    "bias": -1.1436454946586334,
+    "n": 2347
+   },
+   "5": {
+    "mape": 17.734851557290213,
+    "bias": -4.702862198913628,
+    "n": 2347
+   },
+   "6": {
+    "mape": 23.033468667959426,
+    "bias": 6.641641142192135,
+    "n": 1383
+   }
+  },
+  "share_of_S7_windows_u_lt_0.2": 0.04908675799086758,
+  "onset_detection_lag_frac_of_degradation": {
+   "median": 0.16438632414991305,
+   "p90": 0.23018487394957998,
+   "max": 0.26865671641791045,
+   "undetected_units": 0
+  },
+  "n_units": 48,
+  "deg_windows_per_unit_median": 175.5
+ },
+ "hard_error_vs_life_fraction": {
+  "0.0-0.1": {
+   "mape_pct": 29.787587609993842,
+   "median_ape_pct": 25.42171692905253,
+   "bias_pct": 3.2545715465266403,
+   "n": 1194
+  },
+  "0.1-0.2": {
+   "mape_pct": 22.176466621216655,
+   "median_ape_pct": 17.051470820965907,
+   "bias_pct": 0.5769702290562151,
+   "n": 1172
+  },
+  "0.2-0.3": {
+   "mape_pct": 18.629788301659794,
+   "median_ape_pct": 14.524486882419657,
+   "bias_pct": 1.188912632577238,
+   "n": 1184
+  },
+  "0.3-0.4": {
+   "mape_pct": 18.903107343339194,
+   "median_ape_pct": 13.48536394644475,
+   "bias_pct": 3.4240747404061334,
+   "n": 1163
+  },
+  "0.4-0.5": {
+   "mape_pct": 18.098027891543044,
+   "median_ape_pct": 13.851910981141142,
+   "bias_pct": 2.82829075744754,
+   "n": 1166
+  },
+  "0.5-0.6": {
+   "mape_pct": 20.583971639747155,
+   "median_ape_pct": 15.931236580626598,
+   "bias_pct": -5.058395966308308,
+   "n": 1191
+  },
+  "0.6-0.7": {
+   "mape_pct": 18.57411895955206,
+   "median_ape_pct": 13.98891102183949,
+   "bias_pct": -6.411562938317163,
+   "n": 1169
+  },
+  "0.7-0.8": {
+   "mape_pct": 16.92493195321796,
+   "median_ape_pct": 14.63408629099529,
+   "bias_pct": -2.99646738804107,
+   "n": 1168
+  },
+  "0.8-0.9": {
+   "mape_pct": 22.538416966952624,
+   "median_ape_pct": 18.474712774584585,
+   "bias_pct": 7.215395770009129,
+   "n": 1176
+  }
+ },
+ "oracles_hard_profile": {
+  "clock_only_prior_floor_S7_like": {
+   "floor_probe": 7.605753162895847,
+   "hard": 70.01863315144897,
+   "hardn": 69.80459404399387,
+   "ls010": 26.61689864969479,
+   "ls010_narrow": 26.656388339914873,
+   "ls010_narrow_l05": 26.656388339914873,
+   "ls010_narrow_l05_j01": 26.48358886714856,
+   "ls015": 37.94339918891669,
+   "ls015n": 37.82746418513667,
+   "ls025": 56.03088244792216,
+   "ls025n": 55.9343370168177,
+   "nu0": 65.4107612395398,
+   "nu05": 66.94125556994152,
+   "N_ls015": 37.83616243483168,
+   "N_ls025": 55.816700454598184,
+   "N_ls035": 69.77417052304229
+  },
+  "recipe_plus_true_onset_clock": {
+   "val_S7_pct": 19.97822141146227,
+   "val_S7_true_onset_pct": 21.69607227234903,
+   "note": "ORACLE (true onset time)"
+  },
+  "recipe_plus_detected_onset_clock": {
+   "val_S7_pct": 20.10100012695531,
+   "val_S7_true_onset_pct": 20.363075668894712,
+   "note": "causal: hours since detected onset appended as one feature (needs host state)"
+  }
+ },
+ "noise_ablation_hard_profile": {
+  "window noise kept (nu=1)": 20.339043872851473,
+  "window noise x0.5": 19.74297986638811,
+  "window noise x0 (run-median windows)": 17.872568694256312
+ },
+ "units_scaling": {
+  "N_ls035 (late .05, jitter .01)": {
+   "240 train units": 16.647521711012974,
+   "900": 13.89,
+   "2000": 13.05
+  },
+  "N_ls025": {
+   "240": 15.238203708496377,
+   "900": 12.83,
+   "2000": "not run (L profile fit uses 2000)"
+  }
+ },
+ "context_ablation_N_ls035_240units_depth6": {
+  "v7_agg NL48": 16.43,
+  "NL144": 18.82,
+  "NL288": "not completed"
+ },
+ "two_stage_progress_ratio_hard": {
+  "direct e(1-u)/u": 29.76,
+  "two-stage trees": 21.1,
+  "u_hat MAE": 0.0388
+ }
+}

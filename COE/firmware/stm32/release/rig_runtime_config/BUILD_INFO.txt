@@ -1,0 +1,8 @@
+Firmware: LIVE (CM7) + idle CM4, runtime config (RPM, BEARING, CONFIG?)
+Source commit: 639376b (branch fix/rig-new-bearing); fw= string in CONFIG? is the same hash
+Built: 2026-11-13
+Toolchain: GNU Tools for STM32 14.3.rel1 (arm-none-eabi-gcc 14.3.1), bundle 14.3.1+st.2; cmake 4.4.0, ninja 1.13.2
+Build: tools/build.ps1 -Mode LIVE, Debug, 0 warnings
+Memory CM7: FLASH 155744 B, RAM 79520 B, RAM_D1 123456 B
+Power-up defaults: 1800 RPM, bearing ftf 0.4518 bsf 5.1393 bpfo 4.9699 bpfi 6.0301, half width 0.08; nothing persisted
+Flash: tools/preflight_fw.ps1 then tools/flash_release.ps1 (24 V off). NOT flashed or run on hardware.

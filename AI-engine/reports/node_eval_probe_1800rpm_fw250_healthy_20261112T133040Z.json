@@ -1,0 +1,51 @@
+{
+ "file": "..\\..\\rig_data\\probe_1800rpm_fw250_healthy.jsonl",
+ "contract": "v3e_node",
+ "rpm_override": null,
+ "utc": "2026-11-12T13:30:38+00:00",
+ "runs": {
+  "probe_1800rpm_fw250_healthy": {
+   "windows": 931,
+   "skipped_invalid": 0,
+   "latency_ms": {
+    "p50": 1.8784000003506662,
+    "p95": 2.154099999643222
+   },
+   "bearings": {
+    "1": {
+     "windows_after_warmup": 907,
+     "class_counts": {
+      "ball": 102,
+      "healthy": 332,
+      "cage": 468,
+      "outer_race": 5
+     },
+     "class_fraction": {
+      "ball": 0.11245865490628446,
+      "healthy": 0.36604189636163176,
+      "cage": 0.515986769570011,
+      "outer_race": 0.005512679162072767
+     },
+     "first_onset_window_index": null
+    },
+    "2": {
+     "windows_after_warmup": 907,
+     "class_counts": {
+      "healthy": 903,
+      "cage": 1,
+      "outer_race": 1,
+      "ball": 2
+     },
+     "class_fraction": {
+      "healthy": 0.9955898566703418,
+      "cage": 0.0011025358324145535,
+      "outer_race": 0.0011025358324145535,
+      "ball": 0.002205071664829107
+     },
+     "first_onset_window_index": null
+    }
+   },
+   "label": null
+  }
+ }
+}

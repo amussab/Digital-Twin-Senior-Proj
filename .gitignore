@@ -567,3 +567,7 @@ Project architecture/**/*.pdf
 
 # Claude Code local-only settings
 .claude/settings.local.json
+
+# rig live runs
+logs/
+artifacts/

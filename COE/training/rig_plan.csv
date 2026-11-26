@@ -1,0 +1,2 @@
+step,mount,rpm,label,severity,bearing_id,position,is_baseline,minutes,note
+12,6,3600,ball,2,BA-1,b1,0,4.0,ball fault gold bearing; severity ESTIMATED level 2 (not measured)

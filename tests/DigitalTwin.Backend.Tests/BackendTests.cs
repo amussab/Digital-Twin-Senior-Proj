@@ -626,3 +626,109 @@ public class V3StreamTests : IClassFixture<V3EngineFactory>
         Assert.True(maxStage >= 3);
     }
 }
+
+public class LiveNodeTests : IClassFixture<BackendFactory>
+{
+    private readonly BackendFactory _f;
+    public LiveNodeTests(BackendFactory f) => _f = f;
+
+    private static object Body(int seq, double[]? feats = null) => new
+    {
+        seq, windowId = seq, rpm = 1800.0, deviceId = "coe-node-01", sessionId = "0123456789abcdef", contract = "v3e_node",
+        provenance = "[LIVE rig data]", features = feats ?? Enumerable.Range(0, 32).Select(i => 0.01 * (i + 1)).ToArray(),
+        inferenceMs = 5.0, receivedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), predictedAtMs = 0, postedAtMs = 0,
+        bearings = new object[]
+        {
+            new { bearing = 1, status = "ok", faultClass = "healthy", confidence = 0.8, healthStage = 2, onsetDetected = false,
+                  classProbs = new Dictionary<string, double> { ["healthy"] = 0.8, ["cage"] = 0.2 } },
+            new { bearing = 2, status = "warming_up", faultClass = "warming_up", reason = "baseline 3/90" },
+        },
+    };
+
+    [Fact]
+    public async Task LivePrediction_ReachesSnapshotWithProvenance_AndNoPhysics()
+    {
+        var c = _f.CreateClient();
+        var r = await c.PostAsJsonAsync("/api/live/prediction", Body(1));
+        Assert.Equal(HttpStatusCode.Accepted, r.StatusCode);
+        var live = await c.GetFromJsonAsync<JsonElement>("/api/live/latest");
+        Assert.Equal("[LIVE rig data]", live.GetProperty("provenance").GetString());
+        Assert.Equal(32, live.GetProperty("features").GetArrayLength());
+        var state = await c.GetFromJsonAsync<JsonElement>("/api/state");
+        var snap = state.GetProperty("snapshot");
+        Assert.Equal("Healthy", snap.GetProperty("faultClass").GetString());
+        Assert.Contains("[Node (live)]", snap.GetProperty("machineId").GetString());
+        Assert.Equal(JsonValueKind.Null, snap.GetProperty("physicsRulHours").ValueKind);
+        Assert.True(snap.GetProperty("aiRulHours").GetDouble() < 0);   // RUL n/a on node features
+    }
+
+    private static object SimBody(int seq, bool valid) => new
+    {
+        seq, windowId = seq, rpm = 1800.0, deviceId = "rig-anchor-sim", sessionId = "0123456789abcdef", contract = "v5_node",
+        provenance = "[SIMULATION; rig-anchored replay]", features = Enumerable.Range(0, 32).Select(i => 0.01 * (i + 1)).ToArray(),
+        inferenceMs = 5.0, receivedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), predictedAtMs = 0, postedAtMs = 0,
+        bearings = new object[]
+        {
+            new { bearing = 1, status = "ok", faultClass = "inner_race", confidence = 0.9, healthStage = valid ? 4 : 1, healthIndex = 0.5, onsetDetected = true,
+                  aiRulHours = valid ? (double?)22.5 : null, physicsRulHours = valid ? (double?)18.0 : null, minerD = 0.4, physicsHealthIndex = 0.4,
+                  physicsSource = "trend", rulValid = valid, rulNote = "x", timeBase = "table",
+                  classProbs = new Dictionary<string, double> { ["inner_race"] = 0.9, ["healthy"] = 0.1 } },
+            new { bearing = 2, status = "ok", faultClass = "healthy", confidence = 0.9, healthStage = 1, healthIndex = 0.0, onsetDetected = false,
+                  rulValid = false, timeBase = "table", classProbs = new Dictionary<string, double> { ["healthy"] = 0.9, ["cage"] = 0.1 } },
+        },
+    };
+
+    [Fact]
+    public async Task SimLivePrediction_CarriesAiAndPhysicsRul_WithSimulationProvenance()
+    {
+        var c = _f.CreateClient();
+        Assert.Equal(HttpStatusCode.Accepted, (await c.PostAsJsonAsync("/api/live/prediction", SimBody(10, true))).StatusCode);
+        var live = await c.GetFromJsonAsync<JsonElement>("/api/live/latest");
+        Assert.Equal("[SIMULATION; rig-anchored replay]", live.GetProperty("provenance").GetString());
+        var b1 = live.GetProperty("bearings")[0];
+        Assert.Equal(22.5, b1.GetProperty("aiRulHours").GetDouble(), 3);
+        Assert.Equal(18.0, b1.GetProperty("physicsRulHours").GetDouble(), 3);
+        var snap = (await c.GetFromJsonAsync<JsonElement>("/api/state")).GetProperty("snapshot");
+        Assert.Equal("Inner-race fault", snap.GetProperty("faultClass").GetString());
+        Assert.Equal(22.5, snap.GetProperty("aiRulHours").GetDouble(), 3);
+        Assert.Equal(18.0, snap.GetProperty("physicsRulHours").GetDouble(), 3);
+        Assert.Equal(4, snap.GetProperty("healthStage").GetInt32());
+    }
+
+    [Fact]
+    public async Task SimLivePrediction_RulNotValid_StaysNa()
+    {
+        var c = _f.CreateClient();
+        await c.PostAsJsonAsync("/api/live/prediction", SimBody(11, false));
+        var snap = (await c.GetFromJsonAsync<JsonElement>("/api/state")).GetProperty("snapshot");
+        Assert.True(snap.GetProperty("aiRulHours").GetDouble() < 0);
+        Assert.Equal(JsonValueKind.Null, snap.GetProperty("physicsRulHours").ValueKind);
+    }
+
+    [Fact]
+    public async Task HybridRigPrediction_CarriesRulWithLiveProvenance_AndNonVisualRulSource()
+    {
+        var c = _f.CreateClient();
+        var b = new Dictionary<string, object?>();
+        foreach (var p in SimBody(12, true).GetType().GetProperties()) b[char.ToLowerInvariant(p.Name[0]) + p.Name[1..]] = p.GetValue(SimBody(12, true));
+        b["contract"] = "hybrid_rig"; b["provenance"] = "[LIVE rig data]"; b["deviceId"] = "coe-node-01";
+        b["rulSource"] = "sim-trained head (hybrid_rig), not validated on rig"; b["rulContract"] = "v6_node"; b["classContract"] = "v4_real"; b["rulTimescale"] = 1.0;
+        Assert.Equal(HttpStatusCode.Accepted, (await c.PostAsJsonAsync("/api/live/prediction", b)).StatusCode);
+        var live = await c.GetFromJsonAsync<JsonElement>("/api/live/latest");
+        Assert.Equal("[LIVE rig data]", live.GetProperty("provenance").GetString());
+        Assert.Equal("sim-trained head (hybrid_rig), not validated on rig", live.GetProperty("rulSource").GetString());
+        Assert.Equal("v6_node", live.GetProperty("rulContract").GetString());
+        Assert.Equal(1.0, live.GetProperty("rulTimescale").GetDouble());
+        var snap = (await c.GetFromJsonAsync<JsonElement>("/api/state")).GetProperty("snapshot");
+        Assert.Equal(22.5, snap.GetProperty("aiRulHours").GetDouble(), 3);
+        Assert.Equal(18.0, snap.GetProperty("physicsRulHours").GetDouble(), 3);
+    }
+
+    [Fact]
+    public async Task LivePrediction_RejectsWrongFeatureCount()
+    {
+        var c = _f.CreateClient();
+        var r = await c.PostAsJsonAsync("/api/live/prediction", Body(2, new double[] { 1, 2, 3 }));
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+    }
+}

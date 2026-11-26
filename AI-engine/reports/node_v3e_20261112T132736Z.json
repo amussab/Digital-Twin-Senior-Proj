@@ -1,0 +1,113 @@
+{
+ "meta": {
+  "provenance": "[SIMULATION] node-matched simulator synth_coe_node (real CoePipeline); no rig data",
+  "seed": 20261004,
+  "git_commit": "d745253",
+  "git_dirty": true,
+  "command": "python -m aiengine.node_v3e test",
+  "utc": "2026-11-12T13:27:36+00:00",
+  "touch": "synth_coe_node test runs, first and only scoring"
+ },
+ "selected": {
+  "hp_id": 0,
+  "hp": {
+   "max_depth": 4,
+   "learning_rate": 0.05,
+   "min_child_weight": 5,
+   "colsample_bytree": 0.6,
+   "best_iteration": 126,
+   "fit_seconds": 5.5,
+   "rows_train": 22770
+  },
+  "gate_tau": 0.75,
+  "gate_signal": "family",
+  "val": {
+   "macro_f1": 0.8393,
+   "accuracy": 0.8536,
+   "per_class_f1": {
+    "healthy": 0.8814,
+    "outer_race": 0.9005,
+    "inner_race": 0.9258,
+    "ball": 0.8411,
+    "cage": 0.6474
+   },
+   "b2_transmitted_false_fault_rate": 0.10256410256410256,
+   "transmitted_false_fault_rate": 0.05465587044534413,
+   "clean_false_fault_rate": 0.0006858710562414266,
+   "missed_fault_rate": 0.25164835164835164,
+   "wrong_class_rate": 0.022344322344322345,
+   "spec": {
+    "healthy_windows": 2940,
+    "specificity_all": 0.972108843537415,
+    "specificity_partner_healthy": 0.9993141289437586,
+    "specificity_b1": 0.9986023759608665,
+    "specificity_b2": 0.9469847581179589,
+    "specificity_healthy_run": 0.9987654320987654
+   }
+  },
+  "val_httail": {
+   "macro_f1": 0.8281,
+   "accuracy": 0.8268,
+   "per_class_f1": {
+    "healthy": 0.8483,
+    "outer_race": 0.926,
+    "inner_race": 0.9412,
+    "ball": 0.8471,
+    "cage": 0.5781
+   },
+   "b2_transmitted_false_fault_rate": 0.11538461538461539,
+   "transmitted_false_fault_rate": 0.0883940620782726,
+   "clean_false_fault_rate": 0.09327846364883402,
+   "missed_fault_rate": 0.2523809523809524,
+   "wrong_class_rate": 0.009523809523809525,
+   "spec": {
+    "healthy_windows": 2940,
+    "specificity_all": 0.9091836734693878,
+    "specificity_partner_healthy": 0.906721536351166,
+    "specificity_b1": 0.9322152341020266,
+    "specificity_b2": 0.8873426110006627,
+    "specificity_healthy_run": 0.8851851851851852
+   }
+  }
+ },
+ "test": {
+  "macro_f1": 0.877,
+  "accuracy": 0.8951,
+  "per_class_f1": {
+   "healthy": 0.9146,
+   "outer_race": 0.8925,
+   "inner_race": 0.9267,
+   "ball": 0.9071,
+   "cage": 0.7439
+  },
+  "b2_transmitted_false_fault_rate": 0.04351204351204351,
+  "transmitted_false_fault_rate": 0.026048026048026047,
+  "clean_false_fault_rate": 0.00041356492969396195,
+  "missed_fault_rate": 0.18573021181716834,
+  "wrong_class_rate": 0.018729096989966554,
+  "spec": {
+   "healthy_windows": 4875,
+   "specificity_all": 0.9866666666666667,
+   "specificity_partner_healthy": 0.9995864350703061,
+   "specificity_b1": 0.9962168978562421,
+   "specificity_b2": 0.9775641025641025,
+   "specificity_healthy_run": 0.9992592592592593
+  },
+  "macro_f1_by_rpm": {
+   "1785.0": 0.5393083963322232,
+   "1800.0": 0.9024509950689886,
+   "3600.0": 0.8627348551920356,
+   "3620.0": 0.5609852216748769
+  },
+  "recall_by_severity": {
+   "(-0.001, 0.1]": 0.42592592592592593,
+   "(0.1, 0.2]": 0.6111619396157365,
+   "(0.2, 0.4]": 0.6407103825136612,
+   "(0.4, 0.6]": 0.9265700483091788,
+   "(0.6, 0.85]": 0.9576502732240437,
+   "(0.85, 1.0]": 0.9235668789808917
+  },
+  "n_windows": 9360
+ },
+ "ist3_target_macro_f1": 0.85
+}

@@ -35,14 +35,18 @@ N_BEARINGS_RIG = 2
 RIG_BEARING_SLICES = {1: slice(0, 16), 2: slice(16, 32)}
 
 # Rig bearing characteristic orders [COE "Fixed Design Values", from ME]
-RIG_BEARING_ORDERS = {"FTF": 0.38, "BSF": 1.98, "BPFO": 3.05, "BPFI": 4.95}
+# 12 Nov 2026 rig bearing (11 balls, d 1.2 mm, D 12.45 mm, contact angle 0), as multiples of shaft speed; identical to
+# COE/firmware/stm32/CM7/App/dsp/frequency_features/frequency_features.c::coe_project_bearing (commit fabb638).
+# Old provisional bearing (contracts <= v3b_coe): FTF 0.38, BSF 1.98, BPFO 3.05, BPFI 4.95, half width 0.10.
+RIG_BEARING_ORDERS = {"FTF": 0.4518, "BSF": 5.1393, "BPFO": 4.9699, "BPFI": 6.0301}
+RIG_HALF_WIDTH_ORDER = 0.08            # band half width in orders (firmware half_width_order)
 
 RIG_SAMPLE_RATE_HZ = 30_000.0          # [COE C1] AD7606, OS disabled
 BANDPASS_HZ = (2000.0, 8000.0)         # [COE C3]
 ENVELOPE_RATE_HZ = 5000.0              # [COE C5]
 FFT_SIZE = 4096                        # [COE C6]
 WINDOW_REVOLUTIONS = 20                # [COE C1]
-OPERATING_RPM = (1750.0, 3600.0)       # [COE] steady modes
+OPERATING_RPM = (1800.0, 3600.0)       # [COE firmware 12 Nov 2026] rig runs 1800 and 3600 rpm (was 1750/3600)
 RPM_TOLERANCE = 0.01                   # +/-1% steady-speed band [SPEC M5, via AI-test/config.py]
 
 # --- Fault taxonomy [SPEC IS3] ----------------------------------------------

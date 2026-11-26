@@ -1,0 +1,62 @@
+{
+ "tag": "[SIMULATION] held-out simulated val runs, NOT rig data",
+ "contract": "v4_real_w3p0",
+ "split": "val",
+ "windows": 5670,
+ "units": 126,
+ "macro_f1": 0.7678399563665228,
+ "accuracy": 0.7641975308641975,
+ "f1": {
+  "ball": 0.7410394265232975,
+  "cage": 0.6647807637906648,
+  "healthy": 0.7874841743534093,
+  "inner_race": 0.9140518417462483,
+  "outer_race": 0.7318435754189944
+ },
+ "confusion_labels": [
+  "ball",
+  "cage",
+  "healthy",
+  "inner_race",
+  "outer_race"
+ ],
+ "confusion": [
+  [
+   827,
+   14,
+   100,
+   0,
+   34
+  ],
+  [
+   0,
+   470,
+   233,
+   0,
+   77
+  ],
+  [
+   393,
+   150,
+   2177,
+   47,
+   173
+  ],
+  [
+   0,
+   0,
+   16,
+   335,
+   0
+  ],
+  [
+   37,
+   0,
+   63,
+   0,
+   524
+  ]
+ ],
+ "macro_f1_1800rpm": 0.7556638807734986,
+ "macro_f1_3600rpm": 0.7748600027116461
+}

@@ -5,6 +5,8 @@
 #   docker compose --profile ai run --rm ai-engine           selftest;  ... run --rm ai-engine python -m aiengine.up2_eval  (see below)
 #   docker compose --profile test run --rm test              pytest (coe, up2, up2c, coe_adapt, twin_up2)
 #   docker compose --profile test run --rm test-dotnet       dotnet test (backend + twin)
+#   docker compose --profile fpr-demo up --build backend-fpr fpr-replay   FPR demo (simulated rig-anchored trajectories) -> http://localhost:5080/
+#   docker compose --profile evidence run --rm evidence-fpr   executes notebooks/FPR_Evidence.ipynb -> ./artifacts/evidence/*.html
 #   docker compose --profile evidence run --rm evidence      executes UP2_Evidence.ipynb headless -> ./artifacts/evidence/UP2_Evidence.html
 #   docker compose --profile notebook up notebook            Jupyter lab -> http://localhost:8888/lab/tree/UP2_Evidence.ipynb
 #
@@ -75,6 +77,46 @@ services:
     command: ["python", "/work/scripts/coe_fault_scenario.py", "--udp", "backend-coe:5005", "--rate", "${DT_COE_RATE:-2}", "--hours-per-window", "0.1667"]
     restart: "no"
 
+  # ---- profile fpr-demo: FPR (2026-11-16) simulated-trajectory demo. ONE command:
+  #        docker compose --profile fpr-demo up --build backend-fpr fpr-replay        -> http://localhost:5080/
+  #      (name the two services: a plain `up` would also start the default `backend`, which owns the same port.)
+  #      fpr-replay replays the committed AI-engine/demo/fpr_*.jsonl [SIMULATION; rig-anchored replay]
+  #      through the receiver -> NodeEngine (contract FPR_CONTRACT, default v7_node) -> backend.
+  backend-fpr:
+    profiles: ["fpr-demo"]
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    image: dt-backend:integration
+    ports:
+      - "5080:5080/tcp"
+    environment:
+      Backend__Replay__Enabled: "false"
+      Backend__Replay__Source: "node-live"
+      Backend__PhysicsTwin: "None"
+      Backend__MachineId: "OH2-PUMP-01 [SIMULATION; rig-anchored replay]"
+    healthcheck: *backend-health
+    restart: unless-stopped
+
+  fpr-replay:
+    profiles: ["fpr-demo"]
+    build:
+      context: .
+      dockerfile: docker/ai-engine.Dockerfile
+    image: dt-ai-engine:integration
+    depends_on:
+      backend-fpr:
+        condition: service_healthy
+    working_dir: /work
+    environment:
+      NODE_CONTRACT: "${FPR_CONTRACT:-v7_node}"
+      BACKEND_URL: "http://backend-fpr:5080"
+      FPR_SPEED: "${FPR_SPEED:-12}"
+      FPR_LOOP: "1"
+      RIG_LOG_DIR: "/tmp/rig_logs"
+    command: ["python", "/work/scripts/fpr_replay.py"]
+    restart: "no"
+
   # ---- profile ai ----
   ai-engine:
     profiles: ["ai"]
@@ -101,6 +143,19 @@ services:
     # Cells that need git-ignored data or the dotnet SDK report "missing" (not a crash); the committed evidence/ is never overwritten.
     command: ["sh", "-c", "jupyter nbconvert --to html --execute UP2_Evidence.ipynb --ExecutePreprocessor.timeout=3600 --ExecutePreprocessor.kernel_name=python3 --output-dir /out && cp -r /work/evidence /out/evidence_regenerated"]
 
+  # ---- profile evidence: FPR notebook (written later by the evidence author; the command fails clearly until it exists) ----
+  evidence-fpr:
+    profiles: ["evidence"]
+    build:
+      context: .
+      dockerfile: docker/ai-engine.Dockerfile
+    image: dt-ai-engine:integration
+    volumes:
+      - ./AI-engine/data:/work/AI-engine/data:ro
+      - ./artifacts/evidence:/out
+    working_dir: /work/AI-engine/notebooks
+    command: ["sh", "-c", "test -f FPR_Evidence.ipynb || { echo 'notebooks/FPR_Evidence.ipynb not found (not built yet)'; exit 2; }; jupyter nbconvert --to html --execute FPR_Evidence.ipynb --ExecutePreprocessor.timeout=3600 --ExecutePreprocessor.kernel_name=python3 --output-dir /out"]
+
   # ---- profile notebook ----
   notebook:
     profiles: ["notebook"]
@@ -124,7 +179,8 @@ services:
     image: dt-ai-engine:integration
     volumes:
       - ./AI-engine/data:/work/AI-engine/data:ro
-    command: ["python", "-m", "pytest", "tests/coe", "tests/up2", "tests/up2c", "tests/coe_adapt", "tests/twin_up2", "tests/up2d", "-q", "-p", "no:cacheprovider"]
+    # tests/v6 is added only if it exists in the checkout; data-dependent tests skip when the git-ignored parquet is absent
+    command: ["sh", "-c", "python -m pytest tests/coe tests/up2 tests/up2c tests/coe_adapt tests/twin_up2 tests/up2d tests/v5 $$(test -d tests/v6 && echo tests/v6) tests/rig_anchor tests/twin_feature tests/fpr_integration -q -p no:cacheprovider"]
 
   test-dotnet:
     profiles: ["test"]

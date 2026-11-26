@@ -146,12 +146,21 @@ else()
     target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         App/acquisition/ad7606.c
         App/acquisition/acquisition_console.c
+        App/acquisition/rpm_command.c
     )
     if(COE_FIRMWARE_MODE STREQUAL "LIVE_RAW")
         target_sources(${CMAKE_PROJECT_NAME} PRIVATE App/acquisition/raw_monitor.c)
     else()
         target_sources(${CMAKE_PROJECT_NAME} PRIVATE App/acquisition/live_stream.c)
     endif()
+endif()
+
+# Firmware identification shown by CONFIG? (git short hash, else the build date).
+execute_process(COMMAND git rev-parse --short HEAD WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                OUTPUT_VARIABLE COE_FW_GIT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+if(COE_FW_GIT)
+    set_source_files_properties(App/acquisition/live_stream.c
+        PROPERTIES COMPILE_DEFINITIONS "COE_FW_VERSION=\"${COE_FW_GIT}\"")
 endif()
 
 # Optimize the production DSP even while the rest of the project is Debug.

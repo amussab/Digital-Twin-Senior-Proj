@@ -28,12 +28,17 @@ from . import coe_dataset as D
 from . import splits, up2
 from .config import CHECKPOINT_DIR, MODELS_DIR, REPORTS_DIR, SEED
 
-RUN_DIR = CHECKPOINT_DIR / "coe_adapt"
+import os as _os
+# AIENGINE_COE_VARIANT=node -> v3d_node study (new bearing, 1800/3600 rpm, node channel map; dataset synth_coe_node)
+NODE = _os.environ.get("AIENGINE_COE_VARIANT", "coe") == "node"
+PFX = "node_adapt" if NODE else "coe_adapt"
+RUN_DIR = CHECKPOINT_DIR / PFX
 PRED_DIR = REPORTS_DIR / "up2_preds"
 BASE_CONTRACT, BASE_CLS = "model_contract_v3b.json", "v3b_cls.onnx"
-NEW_CLS, NEW_CONTRACT, NEW_GOLDEN = "v3b_coe_cls.onnx", "model_contract_v3b_coe.json", "golden_vectors_v3b_coe.json"
+NEW_CLS, NEW_CONTRACT, NEW_GOLDEN = (("v3d_node_cls.onnx", "model_contract_v3d_node.json", "golden_vectors_v3d_node.json") if NODE else
+                                     ("v3b_coe_cls.onnx", "model_contract_v3b_coe.json", "golden_vectors_v3b_coe.json"))
 MIX_WEIGHTS = (0.3, 0.6)
-GATE_TAUS = (0.0, 0.3, 0.45, 0.6, 0.75)
+GATE_TAUS = (0.0, 0.3, 0.45, 0.6, 0.75, 1.0, 1.5) if NODE else (0.0, 0.3, 0.45, 0.6, 0.75)
 GATE_SIGNALS = ("family", "env")
 
 
@@ -201,7 +206,7 @@ def cmd_select(a) -> int:
                                  "tie (<0.002) -> lower transmitted false-fault rate",
                          "coe_provenance": coe.attrs.get("provenance", {})}),
            "grid": grid, "selected": sel}
-    path = REPORTS_DIR / f"model_selection_coe_adapt_{now_tag()}.json"
+    path = REPORTS_DIR / f"model_selection_{PFX}_{now_tag()}.json"
     path.write_text(json.dumps(out, indent=1, default=float))
     (RUN_DIR / "selection.json").write_text(json.dumps(sel, indent=1))
     print("selected", json.dumps(sel), "->", path, flush=True)
@@ -240,7 +245,7 @@ def rul_diag(df: pd.DataFrame, rul_onnx: Path) -> pd.DataFrame:
 
 
 def cmd_test(a) -> int:
-    prev = sorted(PRED_DIR.glob("coe_adapt_test_*.index.json"))
+    prev = sorted(PRED_DIR.glob(f"{PFX}_test_*.index.json"))
     if prev:
         raise SystemExit(f"COE-test was already scored ({prev[-1].name}); re-score with `python -m aiengine.coe_adapt_eval`")
     sel = json.loads((RUN_DIR / "selection.json").read_text())
@@ -253,11 +258,11 @@ def cmd_test(a) -> int:
     base = A.frame(idx, A.onnx_probs(MODELS_DIR / BASE_CLS, B))
     adapted = A.frame(idx, selected_probs(sel, B))
     for name, p in (("base", base), ("selected_nogate", adapted)):
-        f = PRED_DIR / f"coe_adapt_test_{name}_{tag}.cls.csv.gz"
+        f = PRED_DIR / f"{PFX}_test_{name}_{tag}.cls.csv.gz"
         p.to_csv(f, index=False, float_format="%.6g")
         files[name] = f.name
     diag = rul_diag(te, MODELS_DIR / "v3b_rul.onnx")
-    f = PRED_DIR / f"coe_adapt_test_rul_diag_{tag}.csv.gz"
+    f = PRED_DIR / f"{PFX}_test_rul_diag_{tag}.csv.gz"
     diag.to_csv(f, index=False, float_format="%.6g")
     files["rul_diag_raw_features"] = f.name
     if sel["candidate"] in ("affine", "quantile"):
@@ -267,12 +272,12 @@ def cmd_test(a) -> int:
         mte[A.COLS] = (A.apply_affine(rows, maps["affine"]) if sel["candidate"] == "affine"
                        else A.apply_quantile(rows, maps["quantile"]))[0]
         d2 = rul_diag(mte, MODELS_DIR / "v3b_rul.onnx")
-        f = PRED_DIR / f"coe_adapt_test_rul_diag_mapped_{tag}.csv.gz"
+        f = PRED_DIR / f"{PFX}_test_rul_diag_mapped_{tag}.csv.gz"
         d2.to_csv(f, index=False, float_format="%.6g")
         files["rul_diag_mapped_features"] = f.name
     out = {"meta": meta({"tag": tag, "touch": "synth_coe test runs: FIRST and only scoring pass (baseline + selected)",
                          "selected": sel}), "files": files}
-    (PRED_DIR / f"coe_adapt_test_{tag}.index.json").write_text(json.dumps(out, indent=1))
+    (PRED_DIR / f"{PFX}_test_{tag}.index.json").write_text(json.dumps(out, indent=1))
     print(json.dumps(out, indent=1))
     return cmd_report(a)
 
@@ -291,7 +296,7 @@ def _rul_summary(diag: pd.DataFrame, te: pd.DataFrame) -> dict:
 
 
 def cmd_report(a=None) -> int:
-    idxs = sorted(PRED_DIR.glob("coe_adapt_test_*.index.json"))
+    idxs = sorted(PRED_DIR.glob(f"{PFX}_test_*.index.json"))
     if not idxs:
         raise SystemExit("no COE-test predictions yet: run `python -m aiengine.coe_adapt_eval test` (once)")
     ix = json.loads(idxs[-1].read_text())
@@ -309,7 +314,7 @@ def cmd_report(a=None) -> int:
     rul = {"raw_features": _rul_summary(rd("rul_diag_raw_features"), te)}
     if "rul_diag_mapped_features" in ix["files"]:
         rul["mapped_features"] = _rul_summary(rd("rul_diag_mapped_features"), te)
-    sels = sorted(REPORTS_DIR.glob("model_selection_coe_adapt_*.json"))
+    sels = sorted(REPORTS_DIR.glob(f"model_selection_{PFX}_*.json"))
     selection = json.loads(sels[-1].read_text()) if sels else {}
     con_p = MODELS_DIR / NEW_CONTRACT
     tag = now_tag()
@@ -322,9 +327,9 @@ def cmd_report(a=None) -> int:
                                  "coe_val_b2_tff": r["coe_val"]["b2_transmitted_false_fault_rate"]}
                               for r in selection.get("grid", [])],
            "contract": json.loads(con_p.read_text()).get("coe_adaptation") if con_p.exists() else None}
-    jp = REPORTS_DIR / f"coe_adapt_{tag}.json"
+    jp = REPORTS_DIR / f"{PFX}_{tag}.json"
     jp.write_text(json.dumps(out, indent=1, default=float))
-    (REPORTS_DIR / f"coe_adapt_{tag}.md").write_text(markdown(out))
+    (REPORTS_DIR / f"{PFX}_{tag}.md").write_text(markdown(out))
     print(markdown(out))
     print("->", jp)
     return 0

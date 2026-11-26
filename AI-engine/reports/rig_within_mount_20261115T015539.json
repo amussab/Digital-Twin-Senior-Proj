@@ -1,0 +1,129 @@
+{
+ "tag": "[MEASURED on rig, WITHIN-MOUNT time-blocked: optimistic upper bound, NOT IS3]",
+ "hp": {
+  "max_depth": 5,
+  "n_estimators": 250,
+  "learning_rate": 0.06
+ },
+ "train_windows": 2364,
+ "test_windows": 1142,
+ "split": "first 60% of each run train, gap 25, rest test",
+ "variants": {
+  "real_only": {
+   "macro_f1": 0.9590341050535226,
+   "f1": {
+    "ball": 0.8307692307692308,
+    "cage": 0.9644012944983819,
+    "healthy": 1.0,
+    "inner_race": 1.0,
+    "outer_race": 1.0
+   },
+   "accuracy": 0.9903677758318739,
+   "healthy_false_alarm_rate": 0.0,
+   "missed_fault_rate": 0.0,
+   "confusion_labels": [
+    "ball",
+    "cage",
+    "healthy",
+    "inner_race",
+    "outer_race"
+   ],
+   "confusion": [
+    [
+     27,
+     11,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     149,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     653,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     151,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     151
+    ]
+   ]
+  },
+  "real_plus_sim": {
+   "macro_f1": 1.0,
+   "f1": {
+    "ball": 1.0,
+    "cage": 1.0,
+    "healthy": 1.0,
+    "inner_race": 1.0,
+    "outer_race": 1.0
+   },
+   "accuracy": 1.0,
+   "healthy_false_alarm_rate": 0.0,
+   "missed_fault_rate": 0.0,
+   "confusion_labels": [
+    "ball",
+    "cage",
+    "healthy",
+    "inner_race",
+    "outer_race"
+   ],
+   "confusion": [
+    [
+     38,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     149,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     653,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     151,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     151
+    ]
+   ]
+  }
+ },
+ "notes": [],
+ "seconds": 31.3
+}

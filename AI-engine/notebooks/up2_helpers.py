@@ -4,7 +4,7 @@ Every function RECOMPUTES something from data/models/reports on disk or runs a l
 notebook when an input is missing: they return a dict with ``status: "missing"`` / ``"error"`` and the master table
 shows that instead of a number. Nothing here changes models, model code or stored reports.
 
-Rank ladder: .claude/rules/evidence-strength.md (0-9). Provenance tags: [SYNTHETIC] [SIMULATION] [MEASURED host]
+Rank ladder: .claude/rules/evidence-strength.md (0-9). Provenance tags: [SYNTHETIC] [MEASURED host]
 [MEASURED on <public dataset>] [CALCULATED] [CITED].
 """
 from __future__ import annotations
@@ -226,7 +226,7 @@ def coe_stored() -> tuple[Path | None, dict | None]:
 
 def coe_stage_figure(out_png: Path | None = None, rpm: float = 1750.0, fault: str = "outer_race", severity: float = 0.6):
     """Pipeline stages drawn from the REAL coe code (SimulatedRigSource -> CoePipeline filters): raw waveform, band-passed,
-    envelope, envelope spectrum with FTF/BSF/BPFO/BPFI marks. [SIMULATION] [SYNTHETIC] source."""
+    envelope, envelope spectrum with FTF/BSF/BPFO/BPFI marks. [SYNTHETIC] source."""
     import matplotlib.pyplot as plt
     from scipy import signal
     from aiengine.coe.pipeline import CoePipeline
@@ -262,7 +262,7 @@ def coe_stage_figure(out_png: Path | None = None, rpm: float = 1750.0, fault: st
         ax[3].text(f, ax[3].get_ylim()[1] * (0.95 if j % 2 == 0 else 0.62), f" {name} {f:.0f} Hz", color=col, fontsize=9.5, va="top", fontweight="bold",
                    bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.8, "pad": 1})
     ax[3].set_title("4. Envelope spectrum (Component 6): outer-race fault, look for energy at BPFO (defect order x shaft speed)"); ax[3].set_xlabel("Hz"); ax[3].set_ylabel("amplitude")
-    fig.suptitle("Raw vibration -> features: COE pipeline stages from the real aiengine.coe code  [SIMULATION]+[SYNTHETIC] source",
+    fig.suptitle("Raw vibration -> features: COE pipeline stages from the real aiengine.coe code  [SYNTHETIC] source",
                  fontsize=12, y=0.995, x=0.01, ha="left")
     fig.tight_layout()
     if out_png is not None:
@@ -358,7 +358,7 @@ def s9_live(seconds: int = 20) -> dict:
 
 
 def is1_live(n: int = 120, wifi=(10, 60), hz: float = 20) -> dict:
-    """IS1 live: UDP -> backend (v3b) -> client, [SIMULATION] 10-60 ms Wi-Fi hop, COE leg from coe_verification.json."""
+    """IS1 live: UDP -> backend (v3b) -> client, 10-60 ms Wi-Fi hop, COE leg from coe_verification.json."""
     try:
         coe = REPORTS / "coe_verification.json"
         if not coe.exists():
@@ -586,7 +586,7 @@ def is1_sensitivity(backend_p95: float, backend_max: float, coe_ms: float, hops=
 # --------------------------------------------------------------------------- COE-integration readiness (domain gap + adaptation)
 def coe_adapt_rescore() -> dict:
     """Re-score the SAVED COE-test predictions with the logic of `python -m aiengine.coe_adapt_eval` (cmd_report) WITHOUT writing a
-    new report. Returns metrics for: v3b as deployed, base+gate, adapted without gate, adapted + gate (selected). [SIMULATION]/[SYNTHETIC]."""
+    new report. Returns metrics for: v3b as deployed, base+gate, adapted without gate, adapted + gate (selected). [SYNTHETIC]."""
     try:
         from aiengine import coe_adapt as A
         from aiengine import coe_adapt_eval as CE
@@ -663,7 +663,7 @@ def _cached_set(name: str) -> pd.DataFrame:
 
 def is2_live_subset(step: int = 4) -> dict:
     """Runs the DEPLOYED v3b engine (ONNX) live on every `step`-th faulted run-to-failure bearing of test4 and scores IS2 v2 with the
-    frozen thresholds against the twin physics RUL. SUBSET (n bearings printed); [SYNTHETIC] + [SIMULATION]."""
+    frozen thresholds against the twin physics RUL. SUBSET (n bearings printed); [SYNTHETIC]."""
     try:
         from aiengine import up2d_is2 as D
         from aiengine.config import MODELS_DIR
@@ -1098,7 +1098,7 @@ def fig_coe(c1: dict, c2_worst: float, stm_ms: float, c3: dict):
     ax[2].set_ylim(0, 40); ax[2].set_xlabel("shaft speed, rpm"); ax[2].set_ylabel("features per window")
     ax[2].axhline(32, color=GOOD, lw=1, zorder=1)
     ax[2].legend(loc="lower right", fontsize=9)
-    ax[2].set_title(f"S6: same (32,) vector at all {c3['n_speeds']} speeds  [SIMULATION]", loc="left", fontsize=11.5)
+    ax[2].set_title(f"S6: same (32,) vector at all {c3['n_speeds']} speeds ", loc="left", fontsize=11.5)
     fig.tight_layout()
     return fig
 
@@ -1298,7 +1298,7 @@ def fig_is1(legs: dict, coe_stm32: float, backend_max: float):
     plt = _plt()
     fig, ax = plt.subplots(1, 2, figsize=(12.5, 4.2), gridspec_kw={"width_ratios": [1.3, 1]})
     parts = [("COE node t20 -> payload, STM32 pessimistic [CALCULATED]", coe_stm32, coe_stm32, PAL[6]),
-             ("Wi-Fi hop emulated 10-60 ms [SIMULATION]", legs["wifi"]["p95"], legs["wifi"]["max"], PAL[3]),
+             ("Wi-Fi hop emulated 10-60 ms", legs["wifi"]["p95"], legs["wifi"]["max"], PAL[3]),
              ("UDP + backend + SignalR client [MEASURED host]", legs["backend"]["p95"], legs["backend"]["max"], PAL[0])]
     for yi, which in enumerate(("p95", "max")):
         left = 0
@@ -1359,7 +1359,7 @@ def fig_is2_scatter(pb: pd.DataFrame, MED: float, P95: float, T_MED: float, T_P9
     ax.set_xlim(0, max(36, 100 * max(c["MED"] for c in controls) * 1.3)); ax.set_ylim(0, 205)
     ax.set_xlabel("median disagreement |RUL_phys - RUL_AI| / L_ref, %"); ax.set_ylabel("p95 disagreement, % of L_ref")
     ax.legend(loc="upper left", bbox_to_anchor=(1.07, 1.0), fontsize=9.5)
-    ax.set_title("IS2 (wording v2): the deployed AI lands inside the box, every wrong AI outside  [SYNTHETIC]+[SIMULATION] test4", loc="left")
+    ax.set_title("IS2 (wording v2): the deployed AI lands inside the box, every wrong AI outside  [SYNTHETIC] test4", loc="left")
     fig.tight_layout()
     return fig
 
@@ -1411,7 +1411,7 @@ def fig_coe_adapt(tab: pd.DataFrame):
         ax[1].text(v + 1, i, f"{v:.1f} %", va="center", fontweight="bold")
     ax[1].set_yticks(yy, [""] * len(tab)); ax[1].set_xlim(0, 105)
     ax[1].set_xlabel("healthy partner bearing (B2) flagged faulty, % of windows"); ax[1].grid(axis="y", visible=False)
-    fig.suptitle(f"COE domain gap in simulation: macro-F1 {f1[0]:.3f} -> {f1[-1]:.3f}; bearing-2 false faults {ff[0]:.1f} % -> {ff[-1]:.1f} %  [SIMULATION]+[SYNTHETIC]",
+    fig.suptitle(f"COE domain gap on rig-anchored data: macro-F1 {f1[0]:.3f} -> {f1[-1]:.3f}; bearing-2 false faults {ff[0]:.1f} % -> {ff[-1]:.1f} %  [SYNTHETIC]",
                  x=0.01, ha="left", fontsize=12)
     fig.tight_layout()
     return fig
@@ -1449,7 +1449,7 @@ def splits_frame() -> pd.DataFrame:
             "synth_v3_val4": "IS2-v2 threshold selection only", "synth_v3_test4": "FRESH test: IS2 wording v2",
             "synth_coe": "COE-pipeline domain-gap study", "xjtu_sy": "public, PPR history", "ims": "public, PPR history",
             "mafaulda": "public, PPR history", "synthetic_rig": "early synthetic testbench (history)"}
-    prov = {"xjtu_sy": "[MEASURED on XJTU-SY]", "ims": "[MEASURED on IMS]", "mafaulda": "[MEASURED on MaFaulDa]", "synth_coe": "[SIMULATION]+[SYNTHETIC]"}
+    prov = {"xjtu_sy": "[MEASURED on XJTU-SY]", "ims": "[MEASURED on IMS]", "mafaulda": "[MEASURED on MaFaulDa]", "synth_coe": "[SYNTHETIC]"}
     order = list(role)
     rows = []
     for k, v in sp.items():

@@ -52,7 +52,7 @@ class SimulatedRigSource(SampleSource):
     per impact) each exciting a decaying `resonance_hz` ring-down (inside the 2-8 kHz band), white
     noise, and two proximity channels carrying a 1x orbit on a DC gap voltage. The faulted bearing
     sees the full impacts; the other bearing sees `OFF_PLANE` of them. Y axis 0.8x of X.
-    Amplitudes are invented (not rig-calibrated); severity 0..1 scales impact amplitude linearly.
+    Amplitudes are invented except the healthy noise floor, which is calibrated to the measured healthy rig (see NOISE_T_DF); severity 0..1 scales impact amplitude linearly.
     """
     OFF_PLANE = 0.34            # same transmitted fraction as datasets/synthetic_rig.py
     Y_GAIN = 0.8
@@ -65,8 +65,13 @@ class SimulatedRigSource(SampleSource):
     PROX_PHASE = (0.6, 1.1)
     PROX_NOISE_UM = 0.4
     GAP_V = -8.0
+    # [CALIBRATED to MEASURED healthy rig, 1800 rpm capture 12 Nov 2026] the real healthy node shows band-passed kurtosis
+    # 3.4-5.6 and crest 5.3-7.3 (Gaussian noise would give ~3 / ~4.3), so the sensor noise is Student-t (unit variance).
+    NOISE_T_DF = 6.0
+    CH_NOISE = (1.0, 1.0, 1.0, 1.0)     # per-channel noise multiplier (mounting/sensor differences)
+    B2X_IS_B1Y = True                   # node payload: the 4th sensor is uncabled, B2X carries a COPY of B1Y
 
-    def __init__(self, fault: str = "healthy", severity: float = 0.0, rpm: float = 1750.0,
+    def __init__(self, fault: str = "healthy", severity: float = 0.0, rpm: float = 1800.0,
                  seed: int = 0, n_blocks: Optional[int] = None, faulted_bearing: int = 1,
                  resonance_hz: float = 5000.0, rpm_jitter: float = 0.001,
                  rpm_schedule: Optional[Callable[[float], float]] = None,
@@ -80,6 +85,13 @@ class SimulatedRigSource(SampleSource):
         self.seed, self.n_blocks, self.faulted_bearing = seed, n_blocks, faulted_bearing
         self.resonance_hz, self.rpm_jitter, self.rpm_schedule = resonance_hz, rpm_jitter, rpm_schedule
         self.start_seq = start_seq
+
+    def noise(self, rng, nb: int) -> np.ndarray:
+        """Unit-variance Student-t sensor noise x NOISE_MS2 (m/s2). df <= 2 -> Gaussian."""
+        df = self.NOISE_T_DF
+        if df is None or df <= 2.0:
+            return rng.normal(0.0, self.NOISE_MS2, nb)
+        return self.NOISE_MS2 * rng.standard_t(df, nb) / np.sqrt(df / (df - 2.0))
 
     def blocks(self) -> Iterator[SampleBlock]:
         cfg, rng = self.cfg, np.random.default_rng(self.seed)
@@ -135,7 +147,9 @@ class SimulatedRigSource(SampleSource):
                 g_a = 1.0 if axis == 0 else self.Y_GAIN
                 shaft = (self.SHAFT_1X_MS2 * np.cos(2 * np.pi * ph - 0.4 * ch)
                          + self.SHAFT_2X_MS2 * np.cos(4 * np.pi * ph - 0.9 * ch))
-                acc[:, ch] = g_a * (g_b * ring + shaft) + rng.normal(0.0, self.NOISE_MS2, nb)
+                acc[:, ch] = g_a * (g_b * ring + shaft) + self.noise(rng, nb) * self.CH_NOISE[ch]
+            if self.B2X_IS_B1Y:
+                acc[:, 2] = acc[:, 1]
             v_acc = acc / G * (cfg.accel_sens_mv_per_g / 1000.0) + cfg.accel_offset_v
             prox = np.empty((nb, 2))
             for p in range(2):

@@ -1,0 +1,11 @@
+{
+ "file": "fpr_is2_v5_node_val_20261115T165844Z.csv.gz",
+ "contract": "v5_node",
+ "split": "val",
+ "tag": "20261115T165844Z",
+ "sha256": "22577372ea52ab087431ced1cc5b1b45f34910fa77fb0ec5640c1b2651f3b75d",
+ "rows": 16618,
+ "provenance": "[SIMULATION; endpoints resampled from rig windows, 1 bearing/fault, curve shape assumed]",
+ "section": "rig_anchor",
+ "seconds": 126.0
+}

@@ -7,7 +7,10 @@
 #include <math.h>
 
 const BearingFeatureProfile coe_project_bearing = {
-    .id = COE_PROJECT_BEARING, .orders = {0.38f, 1.98f, 3.05f, 4.95f}, .half_width_order = 0.10f
+    /* 12 Nov 2026 rig bearing: 11 balls, d = 1.2 mm, pitch D = 12.45 mm (mean of inner-ring
+     * OD 11.4 and outer-ring ID 13.5), contact angle 0 assumed. Half width 0.08 so the
+     * BPFO (4.970) and BSF (5.139) bands stay disjoint. Old provisional: 0.38/1.98/3.05/4.95, 0.10. */
+    .id = COE_PROJECT_BEARING, .orders = {0.4518f, 5.1393f, 4.9699f, 6.0301f}, .half_width_order = 0.08f
 };
 /* RK4 rotor kit, S6700-type deep-groove bearing (10 x 15 mm), measured by ME on
  * 16 Nov 2026: 11 balls of 1.2 mm, pitch 12.45 mm (between the 11.4 mm inner and
@@ -51,7 +54,7 @@ bool frequency_profile_is_valid(const BearingFeatureProfile *profile, uint32_t r
     {
         const double centre_hz = (double)profile->orders[family] * shaft_hz;
         if (!isfinite(centre_hz) || centre_hz <= width_hz
-            || centre_hz + width_hz > COE_ENVELOPE_PASSBAND_HZ)
+            || centre_hz + width_hz > COE_ENVELOPE_BAND_LIMIT_HZ)
             return false;
         for (size_t other = 0U; other < family; ++other)
             if (fabs(centre_hz - (double)profile->orders[other] * shaft_hz) <= 2.0 * width_hz)

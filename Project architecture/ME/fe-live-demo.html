@@ -470,23 +470,39 @@ summary{cursor:pointer;font-weight:600}
   }
   // ---------- run-up: measured critical speed ----------
   const RU={on:false, pts:[]};
-  function runupFit(){ // bin by 25 rpm, fit the model's shape (K = K0) with the unbalance and damping free
+  // Model response shape (K = K0) on a 20 rpm grid, per damping value, computed once and cached.
+  const RU_ETAS=[0.01,0.02,0.05,0.1,0.2], RU_SHAPE={};
+  function ruShape(eta){
+    if(RU_SHAPE[eta]) return RU_SHAPE[eta];
+    const a=[0]; for(let r=20;r<=10000;r+=20){ const w=r*Math.PI/30, c=responseC(P.K0,r,w*w,{eta}); a.push((Math.hypot(...c[P.j1])+Math.hypot(...c[P.j3]))/2); }
+    return RU_SHAPE[eta]=a;
+  }
+  function ruAt(eta,r){ const a=ruShape(eta), x=r/20, i=Math.floor(x); if(i<0) return 0; if(i>=a.length-1) return a[a.length-1]; return a[i]+(a[i+1]-a[i])*(x-i); }
+  function runupFit(){ // bin by 25 rpm; fit the model's shape with the critical speed FREE (frequency scale s), damping and unbalance free
     const bins=new Map();
     for(const q of RU.pts){ const a=[q.p1,q.p3].filter(v=>v!=null); if(!a.length) continue;
       const k=Math.round(q.rpm/25)*25; if(!bins.has(k)) bins.set(k,[]); bins.get(k).push(a.reduce((x,y)=>x+y,0)/a.length); }
     const B=[...bins].sort((x,y)=>x[0]-y[0]).map(([k,v])=>{v.sort((x,y)=>x-y); return {rpm:k, a:v[Math.floor(v.length/2)]*1e-6};});
-    if(B.length<4) return {B};
-    let ip=0; B.forEach((b,i)=>{ if(b.a>B[ip].a) ip=i; });
-    const before=Math.min(...B.slice(0,ip+1).map(b=>b.a)), after=Math.min(...B.slice(ip).map(b=>b.a));
-    const passed = ip>0 && ip<B.length-1 && before<0.7*B[ip].a && after<0.7*B[ip].a;
-    const unit=(eta,rpm)=>{const w=rpm*Math.PI/30, c=responseC(P.K0,rpm,w*w,{eta}); return (Math.hypot(...c[P.j1])+Math.hypot(...c[P.j3]))/2;};
+    if(B.length<6) return {B};
+    const crit=critSpeed(P.K0), amax=Math.max(...B.map(b=>b.a));
     let best=null;
-    for(const eta of [0.01,0.02,0.03,0.05,0.07,0.1,0.15,0.2,0.3]){
-      const u=B.map(b=>unit(eta,b.rpm)); let su=0,sm=0; u.forEach((x,i)=>{su+=x*x; sm+=x*B[i].a;});
-      const me=sm/su; let e=0; u.forEach((x,i)=>{e+=((me*x-B[i].a)/B[ip].a)**2;});
-      if(!best||e<best.e) best={eta,me,e:Math.sqrt(e/B.length)};
+    for(const eta of RU_ETAS) for(let s=0.5;s<=3.0001;s+=0.005){
+      const u=B.map(b=>ruAt(eta,b.rpm/s)); let su=0,sm=0; u.forEach((x,i)=>{su+=x*x; sm+=x*B[i].a;});
+      if(!(su>0)) continue; const me=sm/su; let e=0; u.forEach((x,i)=>{e+=((me*x-B[i].a)/amax)**2;});
+      e=Math.sqrt(e/B.length); if(!best||e<best.e) best={eta,s,me,e};
     }
-    return {B, ip, peak:B[ip].rpm, passed, best, unit};
+    const fc=Math.round(crit*best.s);
+    // honest verdict: the fitted peak must sit inside the tested range with data on both sides, the data must
+    // really fall after it, and the fit must be close. Otherwise no critical speed is claimed.
+    const below=B.filter(b=>b.rpm<fc-50), above=B.filter(b=>b.rpm>fc+50);
+    const near=B.filter(b=>Math.abs(b.rpm-fc)<=100), apk=near.length?Math.max(...near.map(b=>b.a)):0;
+    const falls=above.length>=3 && Math.min(...above.map(b=>b.a))<0.7*apk;
+    let reason='';
+    if(below.length<3) reason=`the fitted peak (${fc} rpm) is at the low end of the data: record from a lower speed`;
+    else if(above.length<3) reason=`no resonance peak inside the tested range: the amplitude is still rising at ${B[B.length-1].rpm} rpm, so the critical speed is above that. Continue the run-up slowly to a higher speed`;
+    else if(!falls) reason='the amplitude does not drop after the fitted peak: no clear resonance in this data';
+    else if(best.e>0.15) reason=`the model shape does not fit the data well (error ${(100*best.e).toFixed(0)}% of the largest reading)`;
+    return {B, best, fc, crit, passed:!reason, reason};
   }
   function drawRunup(){
     const svg=$('runup'), F=runupFit(), B=F.B||[];
@@ -495,7 +511,7 @@ summary{cursor:pointer;font-weight:600}
     const crit=critSpeed(P.K0);
     if(!B.length){ svg.innerHTML=`<text x="60" y="160" font-family="system-ui, sans-serif" font-size="14" fill="${mu}">Probe amplitude against speed appears here while recording. The model predicts the peak at ${crit} rpm.</text>`; $('ruVerdict').style.display='none'; return; }
     const r0=Math.min(400,B[0].rpm), r1=Math.max(2600,B[B.length-1].rpm), Lx=70,R=940,T=20,Bt=270;
-    const model=[]; if(F.best) for(let r=r0;r<=r1;r+=10) model.push([r,F.best.me*F.unit(F.best.eta,r)*2e6]);
+    const model=[]; if(F.best) for(let r=r0;r<=r1;r+=10) model.push([r,F.best.me*ruAt(F.best.eta,r/F.best.s)*2e6]);
     const ymax=Math.max(...B.map(b=>b.a*2e6), ...model.map(m=>m[1]).slice(0))*1.1||1;
     const X=r=>Lx+(R-Lx)*(r-r0)/(r1-r0), Y=v=>Bt-(Bt-T)*Math.min(v,ymax)/ymax;
     let ticks=''; for(let r=Math.ceil(r0/500)*500;r<=r1;r+=500) ticks+=`<line x1="${X(r)}" x2="${X(r)}" y1="${T}" y2="${Bt}" stroke="${ln}"/><text x="${X(r)}" y="${Bt+18}" text-anchor="middle">${r}</text>`;
@@ -505,13 +521,15 @@ summary{cursor:pointer;font-weight:600}
       <line x1="${X(crit)}" x2="${X(crit)}" y1="${T}" y2="${Bt}" stroke="${pr}" stroke-dasharray="6 4"/><text x="${X(crit)+6}" y="${T+14}" fill="${pr}">model ${crit} rpm</text>
       ${model.length?`<path d="${mpath}" fill="none" stroke="${pr}" stroke-width="2.5"/>`:''}
       ${B.map(b=>`<circle cx="${X(b.rpm)}" cy="${Y(b.a*2e6)}" r="4" fill="${sh}"/>`).join('')}
-      ${F.passed?`<line x1="${X(F.peak)}" x2="${X(F.peak)}" y1="${T}" y2="${Bt}" stroke="${ink}" stroke-width="1.5"/><text x="${X(F.peak)-6}" y="${T+30}" text-anchor="end" fill="${ink}">measured ${F.peak} rpm</text>`:''}
-      <text x="${(Lx+R)/2}" y="${Bt+40}" text-anchor="middle">Shaft speed (rpm). Dots: measured 1X, both probes averaged, µm pk-pk (25 rpm bins). Line: FE model fitted to the dots.</text></g>`;
+      ${F.passed?`<line x1="${X(F.fc)}" x2="${X(F.fc)}" y1="${T}" y2="${Bt}" stroke="${ink}" stroke-width="1.5"/><text x="${X(F.fc)-6}" y="${T+30}" text-anchor="end" fill="${ink}">measured ${F.fc} rpm</text>`:''}
+      <text x="${(Lx+R)/2}" y="${Bt+40}" text-anchor="middle">Shaft speed (rpm). Dots: measured 1X, both probes averaged, µm pk-pk (25 rpm bins). Line: FE model shape fitted to the dots with its critical speed free.</text></g>`;
     const v=$('ruVerdict');
-    if(F.passed){ const d=(F.peak-crit)/crit*100; v.style.display='flex'; v.className='verdict';
-      $('ruPeak').textContent=F.peak+' rpm'; $('ruTag').textContent=`Measured critical speed (model ${crit} rpm, difference ${d>=0?'+':''}${d.toFixed(1)}%)`;
-      $('ruText').textContent=`Fitted damping η ≈ ${F.best.eta}, rig unbalance ≈ ${(F.best.me*1e6).toFixed(1)} g·mm. Bins are 25 rpm wide, so the peak is known to about ±13 rpm.`; }
-    else { v.style.display='none'; }
+    if(!F.best){ v.style.display='none'; return; }
+    v.style.display='flex'; v.className='verdict';
+    if(F.passed){ const d=(F.fc-crit)/crit*100;
+      $('ruPeak').textContent=F.fc+' rpm'; $('ruTag').textContent=`Measured critical speed (model ${crit} rpm, difference ${d>=0?'+':''}${d.toFixed(1)}%)`;
+      $('ruText').textContent=`From the fitted curve. Damping η ≈ ${F.best.eta}, rig unbalance ≈ ${(F.best.me*1e6).toFixed(1)} g·mm, fit error ${(100*F.best.e).toFixed(0)}% of the largest reading.`; }
+    else { $('ruPeak').textContent='no peak yet'; $('ruTag').textContent=`No critical speed claimed (model ${crit} rpm)`; $('ruText').textContent='Reason: '+F.reason+'.'; }
   }
   function runupCsv(){
     const rows=['time,rpm,prox1_1x_um_pp,prox3_1x_um_pp'].concat(RU.pts.map(q=>[q.t,q.rpm.toFixed(1),q.p1==null?'':(2*q.p1).toFixed(3),q.p3==null?'':(2*q.p3).toFixed(3)].join(',')));

@@ -5,6 +5,7 @@
 #include "acquisition_console.h"
 #include "main.h"
 #include "processing_clock.h"
+#include "rpm_command.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -222,4 +223,54 @@ void console_update_leds(bool running, bool error)
         BSP_LED_On(LED_RED);
     else
         BSP_LED_Off(LED_RED);
+}
+
+/* Receive: the interrupt only stores bytes in a ring; lines are built in the main loop.
+ * The ring is written by the interrupt (head) and read by the main loop (tail). */
+#define RX_RING 128U /* 128 = power of two; holds a full 96-char line plus the next command. */
+static volatile uint8_t rx_ring[RX_RING];
+static volatile uint32_t rx_head;
+static volatile uint32_t rx_tail; /* Written by the main loop, read by the interrupt. */
+static rpm_line_t rx_line;
+
+void USART3_IRQHandler(void)
+{
+    const uint32_t flags = USART3->ISR;
+    if ((flags & USART_ISR_RXNE_RXFNE) != 0U)
+    {
+        const uint8_t byte = (uint8_t)USART3->RDR; /* Reading clears the flag. */
+        const uint32_t next = (rx_head + 1U) % RX_RING;
+        if (next != rx_tail) /* Full: drop the byte. */
+        {
+            rx_ring[rx_head] = byte;
+            rx_head = next;
+        }
+    }
+    if ((flags & (USART_ISR_ORE | USART_ISR_FE | USART_ISR_NE)) != 0U)
+        USART3->ICR = USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NECF;
+}
+
+void console_rx_init(void)
+{
+    rpm_line_clear(&rx_line);
+    HAL_NVIC_SetPriority(USART3_IRQn, 7U, 0U); /* Below the sampling and feature-UART interrupts. */
+    HAL_NVIC_EnableIRQ(USART3_IRQn);
+    USART3->CR1 |= USART_CR1_RXNEIE_RXFNEIE;
+}
+
+const char *console_rx_line(void)
+{
+    while (rx_tail != rx_head)
+    {
+        const char byte = (char)rx_ring[rx_tail];
+        rx_tail = (rx_tail + 1U) % RX_RING;
+        if (rpm_line_feed(&rx_line, byte))
+        {
+            static char line[RPM_LINE_MAX];
+            memcpy(line, rx_line.text, sizeof(line));
+            rpm_line_clear(&rx_line);
+            return line;
+        }
+    }
+    return NULL;
 }

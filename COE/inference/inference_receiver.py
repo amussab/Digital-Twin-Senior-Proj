@@ -2,21 +2,16 @@
 
 Run:
     python inference_receiver.py [--port 8000]
-The machine speed is not set here: the node measures it from the Keyphasor (ADC
-channel 7) and computes the features for that speed. Each window also carries the
-measured speed and the two proximity probe values (for the digital twin).
 Put the model in model_hook.py (setup() and predict()). Nothing else needs editing.
 
 How it works:
-- Every 2 s it announces this laptop on the network (UDP broadcast
-  "COE-HOST <port>" to port 8001). The node's ESP32 hears it and sends every window here.
+- Every 2 s it announces this laptop on the network (UDP broadcast "COE-HOST <port>"
+  to port 8001). The node's ESP32 hears it and sends every window here.
 - Each window arrives as an HTTP POST /features (JSON). host_receiver.py checks it
   (same rules as the training recorder) and the reply goes back at once.
 - A separate worker thread calls model_hook.predict() for each window, so a slow
   model never delays the node. If the model falls behind, the oldest waiting
   windows are dropped and counted.
-- GET /digital-twin returns the newest window's machine speed and proximity probe values
-  (and the model's latest answer) as JSON, for the digital twin's user interface.
 Do not run the training recorder at the same time (same port, same node).
 Standard library only (your model may need its own packages).
 """
@@ -31,6 +26,7 @@ import queue
 import socket
 import threading
 import time
+import urllib.request
 from http.server import ThreadingHTTPServer
 
 HERE = Path(__file__).resolve().parent
@@ -100,17 +96,21 @@ class WindowSink:
     def write(self, text):
         message = json.loads(text)
         window = {
+            'epoch_received': time.time(),
+            'device_id': message['device_id'], 'session_id': message['session_id'],
+            'sequence': message['sequence'], 'replay': bool(message.get('replay', False)),
             'received_at': datetime.now().astimezone().isoformat(timespec='milliseconds'),
             'rpm': message['rpm'],
             'window_id': message['window_id'],
             'valid_channels': message['valid_channels'],
             'features': list(message['features']),
             'named': dict(zip(model_hook.FEATURE_NAMES, message['features'])),
-            # Keyphasor speed and probe values (schema 2 firmware). None / {} from old firmware.
-            # A value whose shaft_flags bit is clear is 0 (see host_receiver.validate_shaft).
+            # New firmware (schema 2): the node measures the speed itself (Keyphasor); 'rpm' above is that
+            # measured speed in whole RPM. Old firmware (schema 1) has no measured_rpm / shaft values.
+            'schema_version': message.get('schema_version'), 'bearing_profile': message.get('bearing_profile'),
             'measured_rpm': message.get('measured_rpm') if message.get('shaft_flags', 0) & 1 else None,
-            'revolutions': message.get('revolutions'),
             'shaft_flags': message.get('shaft_flags'),
+            'revolutions': message.get('revolutions'),
             'shaft': {name: message[name] for name in host_receiver.SHAFT_FIELDS if name in message},
             # ADC samples per second per channel (schema 3 firmware; None before), e.g. 29998.5
             'sample_rate_hz': message.get('sample_rate_hz'),
@@ -174,6 +174,64 @@ class InferenceServer(ThreadingHTTPServer):
     daemon_threads = True
 
 
+BACKEND_URL = os.environ.get('BACKEND_URL', 'http://127.0.0.1:5080').rstrip('/')
+LOG_DIR = Path(os.environ.get('RIG_LOG_DIR', HERE.parents[1] / 'logs'))
+FWD_QUEUE_LIMIT = 20
+SIM_TAG = '[SIMULATION; rig-anchored replay]'
+
+
+def probes_body(window):
+    """1X probe readings for the ME FE twin in the backend (POST /api/live/prediction 'probes').
+    None from old firmware (schema 1). Units as sent by the node: um pk-pk, phase lag in degrees."""
+    flags = window.get('shaft_flags')
+    if flags is None:
+        return None
+    shaft = window['shaft']
+    body = {'measuredRpm': window['measured_rpm']}
+    for index, (probe, key) in enumerate(zip(host_receiver.PROBES, ('p1', 'p3'))):
+        valid, x1 = bool(flags & (2 << index)), bool(flags & (8 << index))
+        body[f'{key}GapUm'] = shaft.get(f'{probe}_gap_um') if valid else None
+        body[f'{key}X1UmPp'] = shaft.get(f'{probe}_x1_um_pp') if x1 else None
+        body[f'{key}X1PhaseDeg'] = shaft.get(f'{probe}_x1_phase_deg') if x1 else None
+        body[f'{key}X1Valid'] = x1
+    return body
+
+
+def backend_body(window, out, took_ms, contract):
+    """Camel-case JSON for POST /api/live/prediction."""
+    bearings = []
+    for b in (out or {}).get('bearings', []):
+        ok = b.get('status') == 'ok'
+        bearings.append({'bearing': b['bearing'], 'status': b.get('status', 'warming_up'),
+                         'faultClass': b.get('fault_class', 'warming_up'),
+                         'classProbs': b.get('class_probs') if ok else None,
+                         'confidence': b.get('confidence') if ok else None,
+                         'healthIndex': b.get('health_index') if ok else None,
+                         'healthStage': b.get('health_stage') if ok else None,
+                         'onsetDetected': b.get('onset_detected') if ok else None,
+                         'reason': b.get('reason'),
+                         # S9 fields (NodeEngine contracts with a RUL table cadence only; absent -> null -> dashboard n/a)
+                         'aiRulHours': b.get('ai_rul_hours'), 'physicsRulHours': b.get('physics_rul_hours'),
+                         'minerD': b.get('miner_d'), 'physicsHealthIndex': b.get('physics_health_index'),
+                         'physicsSource': b.get('physics_source'), 'rulValid': b.get('rul_valid'),
+                         'rulNote': b.get('rul_note'), 'timeBase': b.get('time_base')})
+    now = time.time()
+    return {'seq': window['sequence'], 'windowId': window['window_id'], 'rpm': float(window['rpm']),
+            'validChannels': window['valid_channels'], 'deviceId': window['device_id'],
+            'sessionId': window['session_id'], 'contract': contract,
+            # a table time base (NODE_TIME_BASE=table) exists only for the simulated rig_anchor replay: never label it as rig data
+            'provenance': SIM_TAG if os.environ.get('NODE_TIME_BASE') == 'table' else
+                          ('[REPLAY of recorded rig data]' if window['replay'] else '[LIVE rig data]'),
+            # hybrid_rig provenance (non-visual): None for every other contract
+            'rulSource': (out or {}).get('rul_source'), 'rulContract': (out or {}).get('rul_contract'),
+            'classContract': (out or {}).get('class_contract'), 'rulTimescale': (out or {}).get('rul_timescale'),
+            'features': window['features'], 'baselinePhase': (out or {}).get('baseline_phase'),
+            'inferenceMs': round(took_ms, 3),
+            'receivedAtMs': int(window['epoch_received'] * 1000), 'predictedAtMs': int(now * 1000),
+            'postedAtMs': int(now * 1000), 'bearings': bearings,
+            'probes': probes_body(window)}
+
+
 def shaft_text(window):
     """Short text of the Keyphasor speed and probe gaps for the terminal line."""
     if window['shaft_flags'] is None:
@@ -188,43 +246,92 @@ def shaft_text(window):
     return speed + ', ' + ', '.join(gaps)
 
 
-def run_model(windows, stats, stop):
-    model = model_hook.setup()
-    print('Model ready (model_hook.setup() done). Waiting for windows...', flush=True)
+def run_forwarder(fwd, stats, stop):
+    """Posts results to the backend. Never blocks the model or the node ACK; failures are counted and dropped."""
     while not stop.is_set():
         try:
-            window = windows.get(timeout=0.5)
+            body = fwd.get(timeout=0.5)
         except queue.Empty:
             continue
-        started = time.perf_counter()
+        body['postsDropped'] = stats['fwd_dropped']
+        body['postedAtMs'] = int(time.time() * 1000)
+        t = time.perf_counter()
         try:
-            result = model_hook.predict(window, model)
-        except Exception as error:  # keep receiving even if the model fails once
-            result = f'MODEL ERROR: {type(error).__name__}: {error}'
-        finished = time.perf_counter()
-        took_ms = (finished - started) * 1000
-        host_ms = (finished - window['host_started']) * 1000  # POST received -> AI result
-        node = window['latency']
-        end_to_end_ms = round(node['node_ms'] + host_ms, 1) if node else None
-        stats['done'] += 1
-        stats['ai_result'] = {'window_id': window['window_id'], 'result': str(result),
-                              'host_latency_ms': round(host_ms, 1), 'end_to_end_ms': end_to_end_ms,
-                              'latency_limit_ms': LATENCY_LIMIT_MS,
-                              'within_limit': None if end_to_end_ms is None
-                              else end_to_end_ms < LATENCY_LIMIT_MS}
-        if end_to_end_ms is None:
-            latency = 'end-to-end: needs schema 3 firmware'
-        else:
-            stats['latency_count'] = stats.get('latency_count', 0) + 1
-            stats['latency_max_ms'] = max(stats.get('latency_max_ms', 0.0), end_to_end_ms)
-            stats['latency_over'] = stats.get('latency_over', 0) + (end_to_end_ms >= LATENCY_LIMIT_MS)
-            latency = (f"end-to-end {end_to_end_ms:.0f} ms "
-                       f"{'OK' if end_to_end_ms < LATENCY_LIMIT_MS else 'OVER'} (limit 500: "
-                       f"STM32 {node['stm_ms']:.0f} + UART {node['uart_ms']:.0f} + ESP32 {node['esp_ms']:.0f}"
-                       f" + Wi-Fi {node['wifi_ms']:.0f} + laptop {host_ms:.0f})")
-        print(f"{window['received_at'][11:23]}  window {window['window_id']:>6}  "
-              f"{shaft_text(window)}  ->  {result}   (model {took_ms:.0f} ms; {latency})", flush=True)
-        health_warning(window['health'], stats)
+            req = urllib.request.Request(BACKEND_URL + '/api/live/prediction', json.dumps(body).encode(),
+                                         {'Content-Type': 'application/json'})
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                resp.read()
+            stats['fwd_ok'] += 1
+            stats['last_post_ms'] = (time.perf_counter() - t) * 1000
+        except Exception as error:
+            stats['fwd_dropped'] += 1
+            if stats['fwd_dropped'] in (1, 10) or stats['fwd_dropped'] % 100 == 0:
+                print(f"Backend {BACKEND_URL} unreachable ({type(error).__name__}); dropped {stats['fwd_dropped']} posts so far.", flush=True)
+
+
+def run_model(windows, stats, stop, fwd):
+    model = model_hook.setup()
+    contract = os.environ.get('NODE_CONTRACT', 'v3e_node')
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOG_DIR / f"live_{datetime.now():%Y%m%d_%H%M%S}.jsonl"
+    stats['log_path'] = str(log_path)
+    if hasattr(model, 'meta'):
+        print(f"HYBRID RIG: {json.dumps(model.meta())}", flush=True)
+    print(f'Model ready. Logging every window + prediction to {log_path}. Backend: {BACKEND_URL}', flush=True)
+    with open(log_path, 'a', encoding='utf-8') as log:
+        while not stop.is_set():
+            try:
+                window = windows.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            started = time.perf_counter()
+            out = None
+            try:
+                out, result = model_hook.predict_full(window, model)
+            except Exception as error:  # keep receiving even if the model fails once
+                result = f'MODEL ERROR: {type(error).__name__}: {error}'
+            finished = time.perf_counter()
+            stats['done'] += 1
+            took_ms = (finished - started) * 1000
+            host_ms = (finished - window['host_started']) * 1000  # POST received -> AI result
+            node = window['latency']
+            end_to_end_ms = round(node['node_ms'] + host_ms, 1) if node else None
+            stats['ai_result'] = {'window_id': window['window_id'], 'result': str(result),
+                                  'host_latency_ms': round(host_ms, 1), 'end_to_end_ms': end_to_end_ms,
+                                  'latency_limit_ms': LATENCY_LIMIT_MS,
+                                  'within_limit': None if end_to_end_ms is None
+                                  else end_to_end_ms < LATENCY_LIMIT_MS}
+            if end_to_end_ms is None:
+                latency = 'end-to-end: needs schema 3 firmware'
+            else:
+                stats['latency_count'] = stats.get('latency_count', 0) + 1
+                stats['latency_max_ms'] = max(stats.get('latency_max_ms', 0.0), end_to_end_ms)
+                stats['latency_over'] = stats.get('latency_over', 0) + (end_to_end_ms >= LATENCY_LIMIT_MS)
+                latency = (f"end-to-end {end_to_end_ms:.0f} ms "
+                           f"{'OK' if end_to_end_ms < LATENCY_LIMIT_MS else 'OVER'} (limit 500: "
+                           f"STM32 {node['stm_ms']:.0f} + UART {node['uart_ms']:.0f} + ESP32 {node['esp_ms']:.0f}"
+                           f" + Wi-Fi {node['wifi_ms']:.0f} + laptop {host_ms:.0f})")
+            body = backend_body(window, out, took_ms, contract)
+            e2e_pred_ms = (time.time() - window['epoch_received']) * 1000
+            try:
+                fwd.put_nowait(body)
+            except queue.Full:
+                stats['fwd_dropped'] += 1
+            log.write(json.dumps({'received_at': window['received_at'], 'device_id': window['device_id'],
+                                  'session_id': window['session_id'], 'sequence': window['sequence'],
+                                  'window_id': window['window_id'], 'rpm': window['rpm'],
+                                  'replay': window['replay'], 'contract': contract,
+                                  'rul_source': (out or {}).get('rul_source'), 'rul_contract': (out or {}).get('rul_contract'),
+                                  'rul_timescale': (out or {}).get('rul_timescale'), 'features': window['features'],
+                                  'prediction': out, 'infer_ms': round(took_ms, 3),
+                                  'recv_to_prediction_ms': round(e2e_pred_ms, 3),
+                                  'last_post_ms': round(stats.get('last_post_ms', 0.0), 3),
+                                  'fwd_dropped': stats['fwd_dropped'],
+                                  'node_latency': node, 'end_to_end_ms': end_to_end_ms}) + '\n')
+            log.flush()
+            print(f"{window['received_at'][11:23]}  window {window['window_id']:>6}  "
+                  f"{shaft_text(window)}  ->  {result}   (recv->pred {e2e_pred_ms:.0f} ms; {latency})", flush=True)
+            health_warning(window['health'], stats)
 
 
 def health_warning(health, stats):
@@ -297,7 +404,7 @@ def main():
 
     windows = queue.Queue(maxsize=QUEUE_LIMIT)
     stats = {'last_seen': None, 'started': time.monotonic(), 'dropped': 0,
-             'dropped_reported': 0, 'done': 0, 'latest': None, 'ai_result': None}
+             'dropped_reported': 0, 'done': 0, 'fwd_ok': 0, 'fwd_dropped': 0, 'latest': None, 'ai_result': None}
     try:
         server = InferenceServer(('0.0.0.0', args.port), InferenceHandler)
     except OSError as error:
@@ -309,13 +416,13 @@ def main():
     server.feature_lock = threading.Lock()
 
     stop = threading.Event()
-    threading.Thread(target=run_model, args=(windows, stats, stop), daemon=True).start()
+    fwd = queue.Queue(maxsize=FWD_QUEUE_LIMIT)
+    threading.Thread(target=run_model, args=(windows, stats, stop, fwd), daemon=True).start()
+    threading.Thread(target=run_forwarder, args=(fwd, stats, stop), daemon=True).start()
     threading.Thread(target=run_beacon, args=(server.server_port, stop), daemon=True).start()
     threading.Thread(target=watch_feed, args=(stats, stop), daemon=True).start()
-    print(f'COE inference receiver on port {server.server_port} (the node measures the machine '
-          f'speed itself). Connect this laptop to the Wi-Fi COE-NODE. Ctrl+C stops.\n'
-          f'Digital twin: latest speed and probe values at http://localhost:{server.server_port}/digital-twin',
-          flush=True)
+    print(f'COE inference receiver on port {server.server_port}. Connect this laptop to the '
+          f'Wi-Fi COE-NODE. Ctrl+C stops.', flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -324,7 +431,7 @@ def main():
         stop.set()
         server.server_close()
         print(f"Stopped. Windows run through the model: {stats['done']}, "
-              f"dropped: {stats['dropped']}.", flush=True)
+              f"dropped: {stats['dropped']}. Backend posts ok: {stats['fwd_ok']}, dropped: {stats['fwd_dropped']}.", flush=True)
         if stats.get('latency_count'):
             print(f"End-to-end latency: max {stats['latency_max_ms']:.0f} ms over "
                   f"{stats['latency_count']} windows, {stats['latency_over']} at or over "
