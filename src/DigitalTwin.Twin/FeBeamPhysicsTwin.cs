@@ -22,6 +22,14 @@ public sealed class FeBeamPhysicsTwin
     private Complex? _unb;
     private DateTimeOffset? _t0;
 
+    /// <summary>Rotor parameters and FE model used by this twin (read only).</summary>
+    public RotorParams Params => _p;
+    public FeBeam Beam => _beam;
+    /// <summary>Unbalance [kg m] calibrated from the commissioning windows; null until commissioning ends.</summary>
+    public Complex? Unbalance => _unb;
+    /// <summary>Windows collected so far while commissioning (equals NCommission once it ends).</summary>
+    public int CommissionCount => _unb is null ? _buf.Count : _p.NCommission;
+
     public FeBeamPhysicsTwin(RotorParams? p = null)
     {
         _p = p ?? RotorParams.Default;

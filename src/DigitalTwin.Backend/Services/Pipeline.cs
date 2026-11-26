@@ -17,12 +17,15 @@ public sealed class Pipeline
     private readonly int _baselineOverride;
     private readonly object _gate = new();
     private long _count;
+    private readonly LiveFeTwin? _feTwin;
     private long? _t0Ms; private long _wrap; private long _lastMs = -1;
 
     public Pipeline(IInferenceEngine engine, IPhysicsTwin twin, StateStore store, SnapshotFactory factory,
-        SnapshotPublisher pub, LatencyRecorder lat, IOptions<BackendOptions> opt, ILogger<Pipeline> log)
+        SnapshotPublisher pub, LatencyRecorder lat, IOptions<BackendOptions> opt, ILogger<Pipeline> log,
+        LiveFeTwin? feTwin = null)
     {
         _engine = engine; _twin = twin; _store = store; _factory = factory; _pub = pub; _lat = lat; _log = log;
+        _feTwin = feTwin;
         _baselineOverride = opt.Value.BaselineWindowsOverride;
         _trackers = NewTrackers();
     }
@@ -129,12 +132,16 @@ public sealed class Pipeline
         }).ToList();
         var physRul = w.Bearings.Where(b => b.RulValid == true && b.PhysicsRulHours is double pr && double.IsFinite(pr))
             .OrderBy(b => b.AiRulHours ?? double.MaxValue).Select(b => b.PhysicsRulHours).FirstOrDefault();
+        // ME FE twin: own lock, never fails the window
+        LiveTwinInfo? fe = null;
+        try { fe = _feTwin?.Update(w); }
+        catch (Exception e) { _log.LogWarning(e, "FE twin update failed for window {Window}", w.WindowId); }
         PipelineState state;
         lock (_gate)
         {
             var info = new LiveInfo(w.Seq, w.WindowId, w.Rpm, w.ValidChannels, w.DeviceId, w.SessionId, w.Contract, w.Provenance,
                 w.Features, w.BaselinePhase, w.InferenceMs, w.ReceivedAtMs, w.PredictedAtMs, w.PostedAtMs, ackMs, w.PostsDropped, w.Bearings,
-                w.RulSource, w.RulContract, w.ClassContract, w.RulTimescale);
+                w.RulSource, w.RulContract, w.ClassContract, w.RulTimescale, fe);
             var win = new WindowPayload((float)w.Rpm, w.Features.Select(x => (float)x).ToArray(), new float[4], 0);
             state = new PipelineState(win, results, DateTimeOffset.UtcNow, w.InferenceMs, ++_liveSeen, physRul, info);
             _store.Set(state);

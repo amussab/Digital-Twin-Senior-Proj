@@ -34,6 +34,8 @@ public sealed class LiveWindow
     public long PostedAtMs { get; set; }
     public long PostsDropped { get; set; }
     public List<LiveBearing> Bearings { get; set; } = new();
+    /// <summary>1X probe readings for the ME FE twin; null from old node firmware.</summary>
+    public LiveProbes? Probes { get; set; }
 }
 
 /// <summary>Live block attached to the dashboard snapshot (null for replay/sim sources).</summary>
@@ -42,6 +44,22 @@ public sealed record LiveInfo(
     double[] Features, string? BaselinePhase, double InferenceMs,
     long ReceivedAtMs, long PredictedAtMs, long PostedAtMs, long BackendAckMs, long PostsDropped,
     IReadOnlyList<LiveBearing> Bearings,
-    string? RulSource = null, string? RulContract = null, string? ClassContract = null, double? RulTimescale = null);
+    string? RulSource = null, string? RulContract = null, string? ClassContract = null, double? RulTimescale = null,
+    LiveTwinInfo? FeTwin = null);
+
+/// <summary>1X proximity probe readings of one live window (node firmware schema 2+), as sent by COE/inference.
+/// Amplitudes are peak-to-peak um, phases are lag degrees from the Keyphasor event.</summary>
+public sealed record LiveProbes(
+    double? MeasuredRpm,
+    double? P1GapUm, double? P1X1UmPp, double? P1X1PhaseDeg, bool P1X1Valid,
+    double? P3GapUm, double? P3X1UmPp, double? P3X1PhaseDeg, bool P3X1Valid);
+
+/// <summary>ME FE digital twin on the live rig (see Services/LiveFeTwin). Amplitudes um pk-pk, stiffness N/m.
+/// Status: waiting | commissioning | running | holding.</summary>
+public sealed record LiveTwinInfo(
+    string Status, string Note, int CommissionDone, int CommissionNeeded, double? MeasuredRpm,
+    double? MeasP1UmPp, double? MeasP3UmPp, double? ModelP1UmPp, double? ModelP3UmPp, double? ResidualPct,
+    double? K1, double? K2, double? StiffnessDropPct, double K0A, double K0D,
+    double? PhysicsRulHours, double? UnbalanceGmm, double ModelCriticalRpm);
 
 public sealed record RenderAck(long Seq, double RenderMs);

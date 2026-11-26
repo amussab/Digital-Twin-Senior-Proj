@@ -49,6 +49,7 @@ builder.Services.AddSingleton<StateStore>();
 builder.Services.AddSingleton<SnapshotFactory>();
 builder.Services.AddSingleton<SnapshotPublisher>();
 builder.Services.AddSingleton<LatencyRecorder>();
+builder.Services.AddSingleton<LiveFeTwin>();
 builder.Services.AddSingleton<Pipeline>();
 builder.Services.AddHostedService<BroadcastTimer>();
 builder.Services.AddHostedService<UdpIngestService>();
@@ -120,6 +121,8 @@ app.MapPost("/api/live/prediction", async (LiveWindow w, Pipeline pipe, DemoCont
 // The dashboard reports how long a window took from laptop receipt to being drawn (browser and backend share the laptop clock).
 app.MapPost("/api/live/render-ack", (RenderAck a, LatencyRecorder l) => { l.Record("live_recv_to_dashboard_render", a.RenderMs); return Results.Accepted(); });
 app.MapGet("/api/live/latest", (StateStore s) => Results.Ok(s.Current.Live));
+// ME FE twin: forget the calibrated unbalance and K baseline (after rebalancing or rebuilding the rig)
+app.MapPost("/api/live/fe-twin/reset", (LiveFeTwin t) => { t.Reset(); return Results.Ok(); });
 
 app.MapGet("/api/demo", (DemoControl c) => Results.Ok(new { source = c.Source, machine = c.MachineLabel }));
 app.MapPost("/api/demo/source", (string name, DemoControl c) =>

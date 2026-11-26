@@ -30,4 +30,12 @@ public sealed record LiveInfo(
     double[] Features, string? BaselinePhase, double InferenceMs,
     long ReceivedAtMs, long PredictedAtMs, long PostedAtMs, long BackendAckMs, long PostsDropped,
     IReadOnlyList<LiveBearing> Bearings,
-    string? RulSource = null, string? RulContract = null, string? ClassContract = null, double? RulTimescale = null);
+    string? RulSource = null, string? RulContract = null, string? ClassContract = null, double? RulTimescale = null,
+    LiveTwinInfo? FeTwin = null);
+
+/// <summary>ME FE digital twin on the live rig (copy of the backend record).</summary>
+public sealed record LiveTwinInfo(
+    string Status, string Note, int CommissionDone, int CommissionNeeded, double? MeasuredRpm,
+    double? MeasP1UmPp, double? MeasP3UmPp, double? ModelP1UmPp, double? ModelP3UmPp, double? ResidualPct,
+    double? K1, double? K2, double? StiffnessDropPct, double K0A, double K0D,
+    double? PhysicsRulHours, double? UnbalanceGmm, double ModelCriticalRpm);
