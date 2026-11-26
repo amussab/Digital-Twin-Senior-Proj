@@ -53,7 +53,7 @@ $checks = @(
     @('pipeline_batch_max_ms_3600', 'f32', '<=333', 'ms per window at 3600 RPM (saved: 47.87)'),
     @('pipeline_max_block_time_us', 'f32', 'info', 'longest single block call, us'),
     @('communication_checks_passed', 'bool', 'true', 'packet decoder cases'),
-    @('communication_checked_cases', 'u32', '=42', 'schema 1 + schema 2 (Keyphasor/probe block)'),
+    @('communication_checked_cases', 'u32', '=51', 'schema 1 + schema 3 (Keyphasor/probe block, latency, sample rate, speed min/max, health)'),
     @('communication_failed_check', 'u32', '=0', ''),
     @('shaft_checks_passed', 'bool', 'true', 'Keyphasor speed + probe values, known answers'),
     @('shaft_checked_cases', 'u32', '=109', ''),

@@ -12,15 +12,24 @@ int main(void)
     for (unsigned index = 0U; index < 32U; ++index)
         packet.features[index] = index % 2U == 0U ? FLT_MAX : FLT_MIN;
     unsigned char storage[FEATURE_JSON_BYTES + 32U];
-    for (unsigned schema = 1U; schema <= 2U; ++schema)
+    for (unsigned schema = 1U; schema <= 3U; ++schema)
     for (size_t capacity = 0U; capacity <= FEATURE_JSON_BYTES; ++capacity)
     {
-        packet.schema = schema; /* 2: also the Keyphasor and probe fields, longest values */
+        packet.schema = schema; /* 2: also the Keyphasor and probe fields; 3: also latency */
         packet.measured_rpm = FLT_MAX;
         packet.revolutions = UINT32_MAX;
         packet.shaft_flags = UINT32_MAX;
         for (unsigned index = 0U; index < 8U; ++index)
             packet.probes[index / 4U][index % 4U] = -FLT_MAX;
+        packet.stm_latency_us = FEATURE_PACKET_MAX_LATENCY_US; /* longest values that still fit u32 */
+        packet.esp_latency_us = 10000000U;
+        packet.wifi_latency_us = 10000000U;
+        packet.sample_rate_millihz = FEATURE_PACKET_MAX_RATE_MILLIHZ - 1U;
+        packet.rpm_min = packet.rpm_max = -FLT_MAX;
+        packet.adc_gaps = packet.unsteady_windows = packet.stm_send_failures = UINT32_MAX;
+        packet.esp_rx_rejected = packet.esp_dropped = UINT32_MAX;
+        packet.wifi_link = FEATURE_WIFI_LINK_HOTSPOT;
+        packet.wifi_rssi_dbm = -127;
         memset(storage, 0xCC, sizeof(storage));
         char *output = (char *)storage + 16U;
         const size_t length = feature_packet_to_json(&packet, "coe-memory-check", 42U, 1U,
@@ -34,7 +43,9 @@ int main(void)
             assert(length < capacity && strlen(output) == length);
         else if (capacity != 0U)
             assert(output[0] == '\0');
+        if (capacity == FEATURE_JSON_BYTES)
+            assert(length != 0U); /* the longest message of each schema fits the buffer */
     }
-    puts("PASS JSON bounds: 2 schemas x 2049 capacities, address/undefined-behavior sanitizers");
+    puts("PASS JSON bounds: 3 schemas x 2049 capacities, address/undefined-behavior sanitizers");
     return 0;
 }

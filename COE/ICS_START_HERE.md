@@ -115,6 +115,7 @@ The `rpm` column is the speed the node measured for that window (`measured_rpm` 
 value; the probe columns come after the features). All four channels are independent
 sensors (since 15 Nov 2026). Since 16 Nov 2026 the machine has new bearings (S6700) and the node
 uses **bearing profile 3**: `bsf` is the ball band at 2 × BSF. Don't mix older recordings with these.
+What the node sends since 16 Nov (speed, probes, latency, health): [`ICS_UPDATE_16NOV.md`](ICS_UPDATE_16NOV.md).
 
 When finished: **Ctrl+C** in the terminal, then switch the 24 V supply off.
 

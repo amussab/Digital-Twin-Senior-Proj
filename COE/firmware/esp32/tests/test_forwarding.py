@@ -24,7 +24,13 @@ class Packet(ctypes.Structure):
                 ('bearing_profile', ctypes.c_uint32), ('valid_channels', ctypes.c_uint32),
                 ('features', ctypes.c_float * 32), ('schema', ctypes.c_uint32),
                 ('measured_rpm', ctypes.c_float), ('revolutions', ctypes.c_uint32),
-                ('shaft_flags', ctypes.c_uint32), ('probes', ctypes.c_float * 8)]
+                ('shaft_flags', ctypes.c_uint32), ('probes', ctypes.c_float * 8),
+                ('stm_latency_us', ctypes.c_uint32), ('esp_latency_us', ctypes.c_uint32),
+                ('wifi_latency_us', ctypes.c_uint32), ('sample_rate_millihz', ctypes.c_uint32),
+                ('rpm_min', ctypes.c_float), ('rpm_max', ctypes.c_float), ('adc_gaps', ctypes.c_uint32),
+                ('unsteady_windows', ctypes.c_uint32), ('stm_send_failures', ctypes.c_uint32),
+                ('esp_rx_rejected', ctypes.c_uint32), ('esp_dropped', ctypes.c_uint32),
+                ('wifi_link', ctypes.c_uint32), ('wifi_rssi_dbm', ctypes.c_int32)]
 
 
 class ForwardingTests(unittest.TestCase):
@@ -120,6 +126,60 @@ class ForwardingTests(unittest.TestCase):
         # Schema 1 JSON has none of the shaft fields.
         self.assertNotIn('measured_rpm', json.loads(self.encode(self.packet())[1]))
 
+    def test_schema3_latency_fields(self):
+        packet = self.shaft()
+        packet.schema, packet.stm_latency_us, packet.esp_latency_us, packet.wifi_latency_us = 3, 4321, 250, 38000
+        packet.sample_rate_millihz = 29998500
+        packet.rpm_min, packet.rpm_max, packet.adc_gaps, packet.unsteady_windows = 1749.5, 1750.25, 3, 7
+        packet.stm_send_failures, packet.esp_rx_rejected, packet.esp_dropped = 1, 2, 4
+        packet.wifi_link, packet.wifi_rssi_dbm = 1, -48
+        length, body = self.encode(packet, sequence=50)
+        message = json.loads(body)
+        self.assertEqual(validate_vector(message), ('coe-test', '1234567890abcdef', 50))
+        self.assertEqual(message['schema_version'], 3)
+        uart = -(-(232 + 10) * 10 * 1000000 // 115200)  # wire time + idle timeout, rounded up
+        self.assertEqual((message['stm_latency_us'], message['uart_latency_us'], message['esp_latency_us'],
+                          message['wifi_latency_us'], message['node_latency_us']),
+                         (4321, uart, 250, 38000, 4321 + uart + 250 + 38000))
+        self.assertEqual(struct.pack('<f', message['measured_rpm']), struct.pack('<f', packet.measured_rpm))
+        self.assertEqual((message['sample_rate_hz'], message['revolutions']), (29998.5, 20))
+        self.assertIn('"sample_rate_hz":29998.500', body.decode())
+        self.assertEqual([message[name] for name in ('rpm_min', 'rpm_max', 'adc_gaps', 'unsteady_windows',
+                          'stm_send_failures', 'esp_rx_rejected', 'esp_dropped', 'wifi_link', 'wifi_rssi_dbm')],
+                         [1749.5, 1750.25, 3, 7, 1, 2, 4, 'node', -48])
+        # No Wi-Fi link: the signal is null.
+        packet.wifi_link, packet.wifi_rssi_dbm = 0, 0
+        unlinked = json.loads(self.encode(packet, sequence=51)[1])
+        self.assertEqual((unlinked['wifi_link'], unlinked['wifi_rssi_dbm']), ('none', None))
+        validate_vector(unlinked)
+        for link, rssi in ((0, -40), (1, 1), (1, -128), (3, -40)):
+            packet.wifi_link, packet.wifi_rssi_dbm = link, rssi
+            self.assertEqual(self.encode(packet), (0, b''))
+        packet.wifi_link, packet.wifi_rssi_dbm = 1, -48
+        self.assertEqual(self.post(message)[0], 200)
+        # Bearing profiles are 1..3.
+        with self.assertRaises(ValueError):
+            validate_vector(dict(message, bearing_profile=4))
+        # The STM32 part is never 0 in schema 3; the JSON encoder refuses it.
+        packet.stm_latency_us = 0
+        self.assertEqual(self.encode(packet), (0, b''))
+        packet.stm_latency_us, packet.sample_rate_millihz = 4321, 0
+        self.assertEqual(self.encode(packet), (0, b''))
+        # Schema 2 JSON has no latency fields.
+        self.assertNotIn('stm_latency_us', json.loads(self.encode(self.shaft())[1]))
+        for name, value in (('stm_latency_us', 0), ('node_latency_us', 1), ('esp_latency_us', -1),
+                            ('wifi_latency_us', 1.5), ('uart_latency_us', 'x'), ('sample_rate_hz', 999.9),
+                            ('sample_rate_hz', 200000.001), ('sample_rate_hz', 'fast'), ('sample_rate_hz', True),
+                            ('rpm_min', 1751), ('rpm_min', 0), ('rpm_max', 8001), ('adc_gaps', -1),
+                            ('esp_dropped', 1.0), ('wifi_link', 'wired'), ('wifi_rssi_dbm', None),
+                            ('wifi_rssi_dbm', 3), ('wifi_rssi_dbm', -48.5)):
+            with self.assertRaises(ValueError):
+                validate_vector(dict(message, **{name: value}))
+        missing = dict(message)
+        del missing['wifi_latency_us']
+        with self.assertRaises(ValueError):
+            validate_vector(missing)
+
     def test_schema2_rules_on_the_host(self):
         _, body = self.encode(self.shaft(), sequence=40)
         original = json.loads(body)
@@ -172,7 +232,7 @@ class ForwardingTests(unittest.TestCase):
         _, body = self.encode(self.packet(), sequence=28)
         original = json.loads(body)
         variants = []
-        for name, value in (('features', [1, 2]), ('rpm', 4001), ('schema_version', 2), ('schema_version', 3),
+        for name, value in (('features', [1, 2]), ('rpm', 4001), ('schema_version', 2), ('schema_version', 4),
                             ('valid_channels', 0), ('acceleration_unit', 'm/s2')):
             changed = dict(original)
             changed[name] = value

@@ -45,7 +45,16 @@ model_hook = load_module('model_hook')
 
 BEACON_PORT = 8001
 BEACON_PERIOD_S = 2.0
-QUEUE_LIMIT = 50  # windows waiting for the model (about 35 s at 250 RPM)
+QUEUE_LIMIT = 50  # windows waiting for the model (about 34 s at 1750 RPM, 17 s at 3600 RPM)
+LATENCY_LIMIT_MS = 500.0  # spec: end-to-end latency (window ready on the STM32 -> AI result)
+
+
+def node_latency(message):
+    """Schema 3: the node's latency parts in ms (STM32, UART, ESP32, Wi-Fi, sum); else None."""
+    if message.get('schema_version') != 3:
+        return None
+    names = ('stm', 'uart', 'esp', 'wifi', 'node')
+    return {f'{name}_ms': round(message[f'{name}_latency_us'] / 1000, 3) for name in names}
 
 
 def digital_twin_view(window, received_s):
@@ -54,10 +63,18 @@ def digital_twin_view(window, received_s):
     view = {'available': True, 'age_s': round(time.monotonic() - received_s, 2),
             'received_at': window['received_at'], 'window_id': window['window_id'],
             'rpm': window['rpm'], 'measured_rpm': window['measured_rpm'],
-            'revolutions': window['revolutions'], 'shaft_flags': window['shaft_flags']}
+            'revolutions': window['revolutions'], 'shaft_flags': window['shaft_flags'],
+            'sample_rate_hz': window['sample_rate_hz'],
+            # slowest / fastest turn in the window (schema 3; None before)
+            'rpm_min': window['health'].get('rpm_min'), 'rpm_max': window['health'].get('rpm_max'),
+            # node health (schema 3; None before): counters, Wi-Fi link and signal
+            'node_health': ({name: window['health'][name] for name in
+                             host_receiver.HEALTH_COUNTERS + ['wifi_link', 'wifi_rssi_dbm']}
+                            if window['health'] else None)}
     for index, probe in enumerate(host_receiver.PROBES):
         values = {name: window['shaft'].get(f'{probe}_{name}') for name in host_receiver.PROBE_VALUES}
         view[probe] = dict(values, valid=bool(flags & (2 << index)), x1_valid=bool(flags & (8 << index)))
+    view['node_latency'] = window['latency']  # None from older firmware
     return view
 
 
@@ -95,6 +112,14 @@ class WindowSink:
             'shaft_flags': message.get('shaft_flags'),
             'revolutions': message.get('revolutions'),
             'shaft': {name: message[name] for name in host_receiver.SHAFT_FIELDS if name in message},
+            # ADC samples per second per channel (schema 3 firmware; None before), e.g. 29998.5
+            'sample_rate_hz': message.get('sample_rate_hz'),
+            # Speed range and node health (schema 3; {} before), see host_receiver.NODE_FIELDS
+            'health': {name: message[name] for name in host_receiver.NODE_FIELDS if name in message},
+            # End-to-end latency chain (schema 3 firmware; None before). host_started is when
+            # this laptop got the POST; the worker adds its own time to the node's part.
+            'latency': node_latency(message),
+            'host_started': self.stats.get('post_started') or time.perf_counter(),
         }
         self.stats['last_seen'] = time.monotonic()
         self.stats['latest'] = (window, self.stats['last_seen'])  # for GET /digital-twin, before the model runs
@@ -112,7 +137,9 @@ class WindowSink:
 
 class InferenceHandler(host_receiver.FeatureHandler):
     def do_POST(self):
+        started = time.perf_counter()  # start of this laptop's part of the end-to-end latency
         with self.server.feature_lock:  # one node packet at a time, as in host_receiver
+            self.server.output.stats['post_started'] = started
             super().do_POST()
 
     def do_GET(self):
@@ -153,6 +180,23 @@ FWD_QUEUE_LIMIT = 20
 SIM_TAG = '[SIMULATION; rig-anchored replay]'
 
 
+def probes_body(window):
+    """1X probe readings for the ME FE twin in the backend (POST /api/live/prediction 'probes').
+    None from old firmware (schema 1). Units as sent by the node: um pk-pk, phase lag in degrees."""
+    flags = window.get('shaft_flags')
+    if flags is None:
+        return None
+    shaft = window['shaft']
+    body = {'measuredRpm': window['measured_rpm']}
+    for index, (probe, key) in enumerate(zip(host_receiver.PROBES, ('p1', 'p3'))):
+        valid, x1 = bool(flags & (2 << index)), bool(flags & (8 << index))
+        body[f'{key}GapUm'] = shaft.get(f'{probe}_gap_um') if valid else None
+        body[f'{key}X1UmPp'] = shaft.get(f'{probe}_x1_um_pp') if x1 else None
+        body[f'{key}X1PhaseDeg'] = shaft.get(f'{probe}_x1_phase_deg') if x1 else None
+        body[f'{key}X1Valid'] = x1
+    return body
+
+
 def backend_body(window, out, took_ms, contract):
     """Camel-case JSON for POST /api/live/prediction."""
     bearings = []
@@ -184,15 +228,16 @@ def backend_body(window, out, took_ms, contract):
             'features': window['features'], 'baselinePhase': (out or {}).get('baseline_phase'),
             'inferenceMs': round(took_ms, 3),
             'receivedAtMs': int(window['epoch_received'] * 1000), 'predictedAtMs': int(now * 1000),
-            'postedAtMs': int(now * 1000), 'bearings': bearings}
+            'postedAtMs': int(now * 1000), 'bearings': bearings,
+            'probes': probes_body(window)}
 
 
 def shaft_text(window):
     """Short text of the Keyphasor speed and probe gaps for the terminal line."""
     if window['shaft_flags'] is None:
         return f"{window['rpm']} RPM (old firmware: no Keyphasor or probe values)"
-    speed = (f"{window['measured_rpm']:.1f} RPM" if window['measured_rpm'] is not None
-             else f"{window['rpm']} RPM (no Keyphasor speed)")
+    speed = (f"{window['measured_rpm']:.1f} RPM ({window['revolutions']} turns)"
+             if window['measured_rpm'] is not None else f"{window['rpm']} RPM (no Keyphasor speed)")
     gaps = []
     for index, probe in enumerate(host_receiver.PROBES):
         valid = window['shaft_flags'] & (2 << index)
@@ -245,9 +290,27 @@ def run_model(windows, stats, stop, fwd):
                 out, result = model_hook.predict_full(window, model)
             except Exception as error:  # keep receiving even if the model fails once
                 result = f'MODEL ERROR: {type(error).__name__}: {error}'
+            finished = time.perf_counter()
             stats['done'] += 1
-            stats['ai_result'] = {'window_id': window['window_id'], 'result': str(result)}
-            took_ms = (time.perf_counter() - started) * 1000
+            took_ms = (finished - started) * 1000
+            host_ms = (finished - window['host_started']) * 1000  # POST received -> AI result
+            node = window['latency']
+            end_to_end_ms = round(node['node_ms'] + host_ms, 1) if node else None
+            stats['ai_result'] = {'window_id': window['window_id'], 'result': str(result),
+                                  'host_latency_ms': round(host_ms, 1), 'end_to_end_ms': end_to_end_ms,
+                                  'latency_limit_ms': LATENCY_LIMIT_MS,
+                                  'within_limit': None if end_to_end_ms is None
+                                  else end_to_end_ms < LATENCY_LIMIT_MS}
+            if end_to_end_ms is None:
+                latency = 'end-to-end: needs schema 3 firmware'
+            else:
+                stats['latency_count'] = stats.get('latency_count', 0) + 1
+                stats['latency_max_ms'] = max(stats.get('latency_max_ms', 0.0), end_to_end_ms)
+                stats['latency_over'] = stats.get('latency_over', 0) + (end_to_end_ms >= LATENCY_LIMIT_MS)
+                latency = (f"end-to-end {end_to_end_ms:.0f} ms "
+                           f"{'OK' if end_to_end_ms < LATENCY_LIMIT_MS else 'OVER'} (limit 500: "
+                           f"STM32 {node['stm_ms']:.0f} + UART {node['uart_ms']:.0f} + ESP32 {node['esp_ms']:.0f}"
+                           f" + Wi-Fi {node['wifi_ms']:.0f} + laptop {host_ms:.0f})")
             body = backend_body(window, out, took_ms, contract)
             e2e_pred_ms = (time.time() - window['epoch_received']) * 1000
             try:
@@ -263,10 +326,25 @@ def run_model(windows, stats, stop, fwd):
                                   'prediction': out, 'infer_ms': round(took_ms, 3),
                                   'recv_to_prediction_ms': round(e2e_pred_ms, 3),
                                   'last_post_ms': round(stats.get('last_post_ms', 0.0), 3),
-                                  'fwd_dropped': stats['fwd_dropped']}) + '\n')
+                                  'fwd_dropped': stats['fwd_dropped'],
+                                  'node_latency': node, 'end_to_end_ms': end_to_end_ms}) + '\n')
             log.flush()
             print(f"{window['received_at'][11:23]}  window {window['window_id']:>6}  "
-                  f"{shaft_text(window)}  ->  {result}   (recv->pred {e2e_pred_ms:.0f} ms)", flush=True)
+                  f"{shaft_text(window)}  ->  {result}   (recv->pred {e2e_pred_ms:.0f} ms; {latency})", flush=True)
+            health_warning(window['health'], stats)
+
+
+def health_warning(health, stats):
+    """Print a line when a node health counter goes up (counts restart when the node restarts)."""
+    if not health:
+        return
+    last = stats.get('health_last') or {}
+    rising = [f"{name.replace('_', ' ')} {health[name]}" for name in host_receiver.HEALTH_COUNTERS
+              if health[name] > last.get(name, 0)]
+    stats['health_last'] = health
+    if rising:
+        print(f"NODE HEALTH: {', '.join(rising)} (counts since the node started; Wi-Fi "
+              f"{health['wifi_link']}, signal {health['wifi_rssi_dbm']} dBm)", flush=True)
 
 
 def local_ipv4s():
@@ -354,6 +432,10 @@ def main():
         server.server_close()
         print(f"Stopped. Windows run through the model: {stats['done']}, "
               f"dropped: {stats['dropped']}. Backend posts ok: {stats['fwd_ok']}, dropped: {stats['fwd_dropped']}.", flush=True)
+        if stats.get('latency_count'):
+            print(f"End-to-end latency: max {stats['latency_max_ms']:.0f} ms over "
+                  f"{stats['latency_count']} windows, {stats['latency_over']} at or over "
+                  f"{LATENCY_LIMIT_MS:.0f} ms.", flush=True)
 
 
 if __name__ == '__main__':

@@ -30,11 +30,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *handle);
 void DMA1_Stream0_IRQHandler(void);
 void USART2_IRQHandler(void);
 
-/** Execute the same 42 decoder tests compiled into the MCU plus button edge checks. */
+/** Execute the same 51 decoder tests compiled into the MCU plus button edge checks. */
 static void test_decoder(void)
 {
     run_communication_demo();
-    assert(communication_checks_passed && communication_checked_cases == 42U);
+    assert(communication_checks_passed && communication_checked_cases == 51U);
     assert(communication_failed_check == 0U);
     feature_uart_ready = true;
     poll_communication_replay();
@@ -100,14 +100,14 @@ static void test_queue(void)
     assert(feature_uart_packets_sent == 2U && feature_uart_errors == 0U);
     assert(feature_uart_send(third, 160U));
     assert(fake_buffer[0] == 33U && fake_start_calls == 3U && fake_size == 160U);
-    /* Schema 2 packets are 204 bytes; a slot holds at most FEATURE_UART_SLOT_BYTES. */
+    /* Schema 3 packets are 232 bytes; a slot holds at most FEATURE_UART_SLOT_BYTES. */
     HAL_UART_TxCpltCallback(fake_uart);
     feature_uart_process();
     uint8_t big[FEATURE_UART_SLOT_BYTES + 1U];
     memset(big, 44, sizeof(big));
     assert(!feature_uart_send(big, 0U) && !feature_uart_send(big, FEATURE_UART_SLOT_BYTES + 1U));
-    assert(feature_uart_send(big, 204U));
-    assert(fake_start_calls == 4U && fake_size == 204U && fake_buffer[203] == 44U);
+    assert(feature_uart_send(big, 232U));
+    assert(fake_start_calls == 4U && fake_size == 232U && fake_buffer[231] == 44U);
 }
 
 /** Measure at UART completion, including DWT wrap; main polling adds no time. */

@@ -64,11 +64,18 @@ Allowed: 60..3600, where the bearing bands still fit (3600 is the top).
 - **Bearing profile 3** (since 16 Nov 2026, new RK4 bearings, S6700): the band features are at
   FTF 0.452, **bsf = 2 × BSF = 10.28**, BPFO 4.970, BPFI 6.030 times the shaft speed. Each packet
   carries `bearing_profile`; never mix profile-1 (old bearing) data with profile-3 data.
+  What changed on 16 Nov for the AI host: [`ICS_UPDATE_16NOV.md`](ICS_UPDATE_16NOV.md).
 - **Machine speed: measured by the node** (since 16 Nov 2026). Nobody sets it: the node reads the
   Keyphasor on ADC channel 7 and computes the features for the speed it measures (any 60–4000 RPM;
   the rig runs 1750 and 3600). `rpm` is that speed in whole RPM; `measured_rpm` is the exact mean
   speed of the window. A window is sent only while the speed is steady (within 1 %).
-- **Shaft values for the digital twin** (same JSON, `schema_version` 2): `measured_rpm`,
+- **Sampling and window** (`schema_version` 3): `sample_rate_hz` = ADC samples per second per channel
+  (29998.5), `revolutions` = whole shaft turns in the window (about 20), `rpm_min` / `rpm_max` = the
+  slowest and fastest turn in the window.
+- **Node health** (`schema_version` 3): counters `adc_gaps`, `unsteady_windows`, `stm_send_failures`
+  (STM32), `esp_rx_rejected`, `esp_dropped` (ESP32), and the Wi-Fi link `wifi_link` + `wifi_rssi_dbm`.
+  All 0 = nothing lost. Details: `inference/README.md`.
+- **Shaft values for the digital twin** (same JSON, `schema_version` 2 and 3): `measured_rpm`,
   `revolutions`, `shaft_flags`, and per proximity probe (`prox1` = AIN5, `prox3` = AIN6):
   `_gap_um` (mean gap), `_pkpk_um` (pk-pk vibration), `_x1_um_pp` and `_x1_phase_deg`
   (once-per-turn vibration and its phase lag from the Keyphasor notch). `shaft_flags` bits:

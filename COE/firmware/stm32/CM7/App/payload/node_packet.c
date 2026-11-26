@@ -1,12 +1,12 @@
 /**
  * @file node_packet.c
- * Schema-2 packet: schema-1 features + shaft block (see node_packet.h).
+ * Schema-3 packet: schema-1 features + shaft block + STM32 latency (see node_packet.h).
  */
 #include "node_packet.h"
 #include <math.h>
 #include <string.h>
 
-_Static_assert(COE_NODE_PACKET_BYTES == 204U, "Schema 2 is 204 bytes");
+_Static_assert(COE_NODE_PACKET_BYTES == 232U, "Schema 3 is 232 bytes");
 
 static uint32_t read_u32(const uint8_t *p)
 {
@@ -44,12 +44,15 @@ static bool usable(float value)
 }
 
 bool node_packet_encode(const uint8_t feature_packet[COE_PAYLOAD_BYTES], const ShaftWindow *shaft,
-                        uint8_t output[COE_NODE_PACKET_BYTES])
+                        uint32_t stm_latency_us, uint32_t sample_rate_millihz,
+                        const NodeHealth *health, uint8_t output[COE_NODE_PACKET_BYTES])
 {
     if (output == NULL)
         return false;
     memset(output, 0, COE_NODE_PACKET_BYTES);
-    if (feature_packet == NULL || shaft == NULL || memcmp(feature_packet, "COE1", 4U) != 0
+    if (feature_packet == NULL || shaft == NULL || health == NULL || stm_latency_us == 0U
+        || stm_latency_us > COE_NODE_MAX_LATENCY_US || sample_rate_millihz < COE_NODE_MIN_RATE_MILLIHZ
+        || sample_rate_millihz > COE_NODE_MAX_RATE_MILLIHZ || memcmp(feature_packet, "COE1", 4U) != 0
         || read_u32(feature_packet + 4U) != (COE_PAYLOAD_SCHEMA_VERSION | (COE_FEATURE_COUNT << 16U))
         || crc32(feature_packet, COE_PAYLOAD_BYTES - 4U) != read_u32(feature_packet + COE_PAYLOAD_BYTES - 4U))
         return false;
@@ -58,7 +61,9 @@ bool node_packet_encode(const uint8_t feature_packet[COE_PAYLOAD_BYTES], const S
     if (shaft->speed_measured)
     {
         if (!isfinite(shaft->rpm) || shaft->rpm < (float)COE_MIN_RPM || shaft->rpm > (float)COE_MAX_RPM
-            || shaft->revolutions == 0U)
+            || shaft->revolutions == 0U || !isfinite(shaft->rpm_min) || !isfinite(shaft->rpm_max)
+            || !(shaft->rpm_min > 0.0f) || shaft->rpm_min > shaft->rpm_max
+            || shaft->rpm_max > COE_NODE_MAX_TURN_RPM)
             return false;
         flags |= COE_SHAFT_SPEED_MEASURED;
     }
@@ -92,6 +97,13 @@ bool node_packet_encode(const uint8_t feature_packet[COE_PAYLOAD_BYTES], const S
         write_f32(field + 12U, probe->x1_phase_deg);
     }
     write_u32(output + 164U, flags);
+    write_u32(output + 200U, stm_latency_us);
+    write_u32(output + 204U, sample_rate_millihz);
+    write_f32(output + 208U, shaft->speed_measured ? shaft->rpm_min : 0.0f); /* slowest turn */
+    write_f32(output + 212U, shaft->speed_measured ? shaft->rpm_max : 0.0f); /* fastest turn */
+    write_u32(output + 216U, health->adc_gaps);
+    write_u32(output + 220U, health->unsteady_windows);
+    write_u32(output + 224U, health->send_failures);
     write_u32(output + COE_NODE_PACKET_BYTES - 4U, crc32(output, COE_NODE_PACKET_BYTES - 4U));
     return true;
 }

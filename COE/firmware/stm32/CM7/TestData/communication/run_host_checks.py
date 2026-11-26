@@ -46,6 +46,6 @@ for case in ('decoder', 'queue', 'timeout', 'start_failure', 'uart_error', 'init
 report = {'compiler': subprocess.check_output(['gcc', '--version'], text=True).splitlines()[0],
           'actual_sources_compiled': [str(p) for p in sources[1:]],
           'sanitizers': ['address', 'undefined_behavior'], 'strict_compile': 'passed',
-          'scenarios': results, 'decoder_cases': 42, 'additional_stream_cases': 480,
+          'scenarios': results, 'decoder_cases': 51, 'additional_stream_cases': 480,
           'scope': 'C software logic with mocked HAL; no ESP-IDF build or physical UART proof'}
 (here / 'host_test_report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')

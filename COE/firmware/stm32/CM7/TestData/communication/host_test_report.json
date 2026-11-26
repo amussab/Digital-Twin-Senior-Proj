@@ -26,7 +26,7 @@
     "speed_command": "passed",
     "rx_error": "passed"
   },
-  "decoder_cases": 42,
+  "decoder_cases": 51,
   "additional_stream_cases": 480,
   "scope": "C software logic with mocked HAL; no ESP-IDF build or physical UART proof"
 }

@@ -10,7 +10,8 @@ does not build the ESP application. Keep the sibling folder names unchanged.
 The two phases are independent:
 
 1. **UART reception:** collect a full COE1 packet (schema 1, 160 bytes, REPLAY; or
-   schema 2, 204 bytes, LIVE: also the Keyphasor speed and both proximity probes),
+   schema 3, 232 bytes, LIVE: also the Keyphasor speed, both proximity probes, the
+   STM32's latency, the ADC sample rate, the speed range and the STM32 health counters; schema 2, 204 bytes, without the latency, is still accepted),
    verify CRC/schema/metadata/values, then latch the RGB LED **green** and display
    the 32 actual features (and the shaft values).
 2. **Wi-Fi forwarding:** copy the validated vector into a bounded queue; a
@@ -156,7 +157,7 @@ Each JSON object contains:
 | acceleration_unit | g (kurtosis/crest factor remain dimensionless) |
 | features | 32 ordered numeric values, unchanged Float32 values |
 
-Schema 2 adds (all numbers; a value whose `shaft_flags` bit is clear is 0):
+Schema 2 and 3 add (all numbers; a value whose `shaft_flags` bit is clear is 0):
 
 | Field | Meaning |
 | --- | --- |
@@ -166,6 +167,26 @@ Schema 2 adds (all numbers; a value whose `shaft_flags` bit is clear is 0):
 | prox1_gap_um, prox1_pkpk_um | PROX 1 (AIN5): mean gap and pk-pk vibration, µm |
 | prox1_x1_um_pp, prox1_x1_phase_deg | PROX 1 once-per-turn (1X) vibration, µm pp, and its phase lag from the Keyphasor notch, 0–360° |
 | prox3_... | The same four values for PROX 3 (AIN6) |
+
+Schema 3 (LIVE since 16 Nov 2026) also adds the node's part of the end-to-end latency, whole
+microseconds (spec: window's last sample -> AI result under 500 ms):
+
+| Field | Meaning |
+| --- | --- |
+| stm_latency_us | STM32: window's last sample -> packet handed to its UART (from the packet, ≥ 1) |
+| uart_latency_us | 232 bytes + the 10-character idle timeout at 115200 baud (fixed, 21007) |
+| esp_latency_us | ESP32: packet complete -> this HTTP request starts |
+| wifi_latency_us | Round trip of the previous accepted HTTP request (0 for the first one) |
+| node_latency_us | The sum of the four; the host adds its own time (receive -> AI result) |
+| sample_rate_hz | ADC samples per second per channel, 3 decimals (the board: 29998.500); with `revolutions` (turns in the window) |
+| rpm_min, rpm_max | Slowest and fastest single turn in the window, RPM (0 without a measured speed) |
+| adc_gaps | STM32: ADC sample gaps that broke the stream (the window restarted), since LIVE started |
+| unsteady_windows | STM32: windows withheld because the speed moved, since LIVE started |
+| stm_send_failures | STM32: packets it could not send (encoding refused or UART queue full) |
+| esp_rx_rejected | ESP32: UART packets rejected (CRC, rules) plus UART errors, since the ESP32 started |
+| esp_dropped | ESP32: windows not delivered (queue full, or HTTP failed after retries), since it started |
+| wifi_link | `node` (a laptop is on COE-NODE; preferred), `hotspot` (the ESP32 joined a hotspot) or `none` |
+| wifi_rssi_dbm | Signal of that link, dBm (-127..0; about -60 or better is good); `null` with `none`. Several laptops on COE-NODE: the weakest |
 
 The 32 features are for the AI model; the speed and probe values are for the digital
 twin. The ESP checks the same rules as the STM32 encoder (flag bits, ranges, finite values)

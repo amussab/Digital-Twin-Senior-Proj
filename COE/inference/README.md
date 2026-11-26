@@ -23,8 +23,13 @@ model. It prints one line per window with the model's answer.
 
 You will see one line per window:
 ```
-21:42:15.011  window    118  1750.3 RPM, PROX1 gap 1227 um, PROX3 gap 1024 um  ->  healthy   (3 ms)
+21:42:15.011  window    118  1750.3 RPM (20 turns), PROX1 gap 1227 um, PROX3 gap 1024 um  ->  healthy   (model 3 ms; end-to-end 62 ms OK (limit 500: STM32 4 + UART 19 + ESP32 0 + Wi-Fi 35 + laptop 4))
 ```
+**End-to-end latency** (spec: under 500 ms from the window's last sample to the AI result; collecting
+the window is not counted). The node (firmware schema 3, 16 Nov 2026) sends its part in the JSON:
+STM32 processing, UART wire time, ESP32 queue time and the Wi-Fi time (the previous request's round
+trip, a close estimate). The receiver adds the laptop's time (POST received -> `predict()` done)
+and prints the total per window; Ctrl+C prints the maximum and how many were over 500 ms.
 `window` also has `window['measured_rpm']` (the Keyphasor speed, or None), `window['rpm']` (the
 speed the features were computed for, whole RPM) and `window['shaft']` (the probe values by name,
 e.g. `window['shaft']['prox1_gap_um']`). These are for the digital twin; the model needs only
@@ -39,21 +44,37 @@ so ask about once per second. Any program or web page can read it (CORS is open)
 
 ```json
 {"available": true, "age_s": 0.4, "window_id": 1356, "received_at": "2026-11-16T01:58:12.411+03:00",
- "rpm": 1747, "measured_rpm": 1749.3, "revolutions": 20, "shaft_flags": 31,
+ "rpm": 1747, "measured_rpm": 1749.3, "revolutions": 20, "shaft_flags": 31, "sample_rate_hz": 29998.5,
+ "rpm_min": 1748.9, "rpm_max": 1749.8,
+ "node_health": {"adc_gaps": 0, "unsteady_windows": 2, "stm_send_failures": 0, "esp_rx_rejected": 0,
+                 "esp_dropped": 0, "wifi_link": "node", "wifi_rssi_dbm": -52},
  "prox1": {"gap_um": 1225.9, "pkpk_um": 24.9, "x1_um_pp": 16.4, "x1_phase_deg": 63.5, "valid": true, "x1_valid": true},
  "prox3": {"gap_um": 1024.0, "pkpk_um": 26.8, "x1_um_pp": 19.3, "x1_phase_deg": 70.3, "valid": true, "x1_valid": true},
- "ai_result": {"window_id": 1356, "result": "healthy"}}
+ "node_latency": {"stm_ms": 4.2, "uart_ms": 21.007, "esp_ms": 0.15, "wifi_ms": 35.0, "node_ms": 58.274},
+ "ai_result": {"window_id": 1356, "result": "healthy", "host_latency_ms": 3.8, "end_to_end_ms": 62.1,
+               "latency_limit_ms": 500.0, "within_limit": true}}
 ```
 
 - `measured_rpm`: machine speed measured by the node from the Keyphasor (ADC channel 7); `null` if
   the node has no steady speed. `rpm` is the whole-RPM speed the features were computed for.
+- `revolutions`: whole shaft turns in the window. `sample_rate_hz`: ADC samples per second per
+  channel (29998.5; `null` with older firmware). `rpm_min` / `rpm_max`: slowest and fastest turn in
+  the window (a wide range means the machine was speeding up or slowing down).
+- `node_health` (`null` with older firmware): counts of problems since the node started; all 0 means
+  nothing was lost. `adc_gaps` (ADC samples missed, the window restarted), `unsteady_windows`
+  (windows held back because the speed moved), `stm_send_failures` (STM32 could not send),
+  `esp_rx_rejected` (ESP32 got a damaged packet), `esp_dropped` (ESP32 could not deliver a window).
+  `wifi_link` is `node` (laptop on COE-NODE), `hotspot` or `none`; `wifi_rssi_dbm` its signal
+  (-60 or better good, below -75 weak). The terminal prints `NODE HEALTH: ...` when a count goes up.
 - `prox1` (ADC channel 5) and `prox3` (channel 6): each probe measures the **distance between its tip
   and the shaft**, in µm. `gap_um` = average distance (where the shaft sits), `pkpk_um` = how much it
   swings while turning (vibration, peak to peak), `x1_um_pp` = the part that repeats once per turn,
   `x1_phase_deg` = where in the turn the shaft comes closest to the probe, measured from the
   Keyphasor mark (0-360°). Use a value only when its `valid` / `x1_valid` is true.
 - `age_s`: seconds since this window arrived. If it keeps growing, no data is coming in.
-- `ai_result`: the model's answer for the latest window it finished (text).
+- `ai_result`: the model's answer for the latest window it finished (text), with the end-to-end
+  latency of that window (`end_to_end_ms` = the node's part + `host_latency_ms`; `within_limit` =
+  under 500 ms). `node_latency` (ms per part) and the latency values are `null` with older firmware.
 - Before the first window: `{"available": false, "ai_result": null}`.
 
 ## Good to know

@@ -15,6 +15,15 @@ import re
 PROBES = ('prox1', 'prox3')
 PROBE_VALUES = ('gap_um', 'pkpk_um', 'x1_um_pp', 'x1_phase_deg')
 SHAFT_FIELDS = [f'{probe}_{value}' for probe in PROBES for value in PROBE_VALUES]
+# Schema 3: the node's part of the end-to-end latency, in microseconds. node = the sum of
+# the other four. The host adds its own time (receive -> AI result) to node_latency_us.
+LATENCY_FIELDS = ['stm_latency_us', 'uart_latency_us', 'esp_latency_us', 'wifi_latency_us',
+                  'node_latency_us']
+# Schema 3: speed range in the window and node health. Counters: STM32 since LIVE started
+# (B1), ESP32 since it started. wifi_link 'node' (laptop on COE-NODE), 'hotspot' or 'none';
+# wifi_rssi_dbm is its signal (null when 'none').
+HEALTH_COUNTERS = ['adc_gaps', 'unsteady_windows', 'stm_send_failures', 'esp_rx_rejected', 'esp_dropped']
+NODE_FIELDS = ['sample_rate_hz', 'rpm_min', 'rpm_max'] + HEALTH_COUNTERS + ['wifi_link', 'wifi_rssi_dbm']
 
 
 def number(message, name):
@@ -57,6 +66,35 @@ def validate_shaft(message):
                 raise ValueError(f'{name} must be 0 when not valid')
 
 
+def validate_latency(message):
+    """Schema 3: latency in whole microseconds (STM32 part >= 1 us, node = the sum) and
+    the ADC sample rate per channel (sample_rate_hz)."""
+    for name in LATENCY_FIELDS:
+        value = message.get(name)
+        if type(value) is not int or not 0 <= value <= 0xFFFFFFFF:
+            raise ValueError(f'{name} must be a whole number of microseconds')
+    if message['stm_latency_us'] < 1:
+        raise ValueError('stm_latency_us must be at least 1')
+    if message['node_latency_us'] != sum(message[name] for name in LATENCY_FIELDS[:4]):
+        raise ValueError('node_latency_us must be the sum of the other four')
+    if not 1000 <= number(message, 'sample_rate_hz') <= 200000:
+        raise ValueError('sample_rate_hz must be 1000..200000')
+    low, high = number(message, 'rpm_min'), number(message, 'rpm_max')
+    if message['shaft_flags'] & 1:
+        if not 0 < low <= high <= 8000:
+            raise ValueError('rpm_min/rpm_max must be 0 < min <= max <= 8000')
+    elif low != 0 or high != 0:
+        raise ValueError('rpm_min/rpm_max must be 0 without a measured speed')
+    for name in HEALTH_COUNTERS:
+        if type(message.get(name)) is not int or not 0 <= message[name] <= 0xFFFFFFFF:
+            raise ValueError(f'{name} must be a counter')
+    link, rssi = message.get('wifi_link'), message.get('wifi_rssi_dbm', 0)
+    if link not in ('none', 'node', 'hotspot'):
+        raise ValueError('wifi_link must be none, node or hotspot')
+    if (rssi is not None) if link == 'none' else (type(rssi) is not int or not -127 <= rssi <= 0):
+        raise ValueError('wifi_rssi_dbm must be -127..0 dBm (null without a link)')
+
+
 def validate_vector(message):
     """Reject wrong metadata/order length and unusable numeric values."""
     if not isinstance(message, dict):
@@ -64,7 +102,7 @@ def validate_vector(message):
     for name in ('schema_version', 'sequence', 'window_id', 'rpm', 'bearing_profile', 'valid_channels'):
         if type(message.get(name)) is not int:
             raise ValueError(f'{name} must be an integer')
-    if message['schema_version'] not in (1, 2) or not 60 <= message['rpm'] <= 4000:
+    if message['schema_version'] not in (1, 2, 3) or not 60 <= message['rpm'] <= 4000:
         raise ValueError('Unsupported schema or speed')
     if message['bearing_profile'] not in (1, 2, 3) or message.get('acceleration_unit') != 'g':
         raise ValueError('Unsupported bearing profile or unit')
@@ -85,8 +123,10 @@ def validate_vector(message):
             raise ValueError(f'Invalid feature {index}')
         if not mask & (1 << (index // 8)) and value != 0:
             raise ValueError('An invalid channel must have zero placeholders')
-    if message['schema_version'] == 2:
+    if message['schema_version'] >= 2:
         validate_shaft(message)
+    if message['schema_version'] == 3:
+        validate_latency(message)
     return (message['device_id'], message['session_id'], message['sequence'])
 
 
@@ -143,7 +183,10 @@ class FeatureHandler(BaseHTTPRequestHandler):
             self.server.seen.popitem(last=False)
         if not getattr(self.server, 'quiet', False):
             speed = f", Keyphasor {message['measured_rpm']:.2f} RPM" if message.get('shaft_flags', 0) & 1 else ''
-            print(f"Saved window={message['window_id']}, RPM={message['rpm']}{speed}, features=32", flush=True)
+            node = (f", node latency {message['node_latency_us'] / 1000:.1f} ms"
+                    if message['schema_version'] == 3 else '')
+            print(f"Saved window={message['window_id']}, RPM={message['rpm']}{speed}, features=32{node}",
+                  flush=True)
         self.reply(200, {'accepted': True, 'duplicate': False})
 
 

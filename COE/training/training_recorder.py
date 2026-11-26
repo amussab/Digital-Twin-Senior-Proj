@@ -70,8 +70,10 @@ CHANNELS = ('B1X', 'B1Y', 'B2X', 'B2Y')
 FEATURES = ('rms', 'kurtosis', 'crest', 'envelope_rms', 'ftf', 'bsf', 'bpfo', 'bpfi')
 FEATURE_COLUMNS = [f'{channel}_{feature}' for channel in CHANNELS for feature in FEATURES]
 # Shaft columns come after the features, so the feature columns keep their place.
-# They are empty for windows from old firmware (schema 1).
-SHAFT_COLUMNS = ['schema_version', 'measured_rpm', 'revolutions', 'shaft_flags'] + host_receiver.SHAFT_FIELDS
+# They are empty for windows from old firmware (schema 1). The latency columns (us) are
+# filled from schema 3 firmware on (the node's part of the end-to-end latency).
+SHAFT_COLUMNS = (['schema_version', 'measured_rpm', 'revolutions', 'shaft_flags'] + host_receiver.SHAFT_FIELDS
+                 + host_receiver.LATENCY_FIELDS + host_receiver.NODE_FIELDS)
 CSV_COLUMNS = ['run_id', 'label', 'note', 'received_at', 'rpm', 'window_id', 'sequence',
                'device_id', 'valid_channels'] + FEATURE_COLUMNS + SHAFT_COLUMNS
 # Added later: appended at the END so older readers/CSVs keep working (read by header name).
@@ -117,7 +119,7 @@ def rpm_text(rpm_range):
 
 def shaft_view(message):
     """Keyphasor speed and probe values of a window for the page (None for old firmware)."""
-    if message.get('schema_version') != 2:
+    if message.get('schema_version', 1) < 2:  # schema 2 and 3 carry the shaft values
         return {'measured_rpm': None}
     flags = message.get('shaft_flags', 0)
     probes = []
@@ -126,7 +128,12 @@ def shaft_view(message):
         probes.append(dict(values, name=probe.replace('prox', 'PROX '),
                            valid=bool(flags & (2 << index)), x1=bool(flags & (8 << index))))
     return {'measured_rpm': message.get('measured_rpm'), 'revolutions': message.get('revolutions'),
-            'speed_measured': bool(flags & 1), 'probes': probes}
+            'speed_measured': bool(flags & 1), 'probes': probes,
+            'sample_rate_hz': message.get('sample_rate_hz'),  # schema 3
+            'node_latency_ms': (message['node_latency_us'] / 1000 if 'node_latency_us' in message else None),
+            'rpm_min': message.get('rpm_min'), 'rpm_max': message.get('rpm_max'),
+            'health': ({name: message[name] for name in host_receiver.HEALTH_COUNTERS + ['wifi_link', 'wifi_rssi_dbm']}
+                       if 'adc_gaps' in message else None)}
 
 
 class Recorder:
@@ -562,6 +569,8 @@ h2 { margin:0 0 14px; font-size:17px; font-weight:600; color:var(--muted); }
 .probe div { display:flex; justify-content:space-between; gap:12px; font-size:15px; }
 .probe div span { color:var(--muted); }
 .probe.off { opacity:.55; }
+.probe.warn { border:2px solid #d9822b; }
+.probe.warn h3 { color:#b5611a; }
 .speedstate { margin-top:14px; padding:10px 14px; border-radius:10px; font-weight:600; background:#e9edf1; color:var(--muted); }
 .speedstate.ok { background:#e3f4ea; color:var(--go); }
 .speedstate.wait { background:#fdf0e1; color:#a8590b; }
@@ -738,7 +747,10 @@ function renderSpeed() {
   }
   if (lp.speed_measured) {
     s.className = 'speedstate ok';
-    s.textContent = 'Speed (Keyphasor): ' + num(lp.measured_rpm, 1) + ' RPM, ' + lp.revolutions + ' turns in the last window';
+    s.textContent = 'Speed (Keyphasor): ' + num(lp.measured_rpm, 1) + ' RPM, ' + lp.revolutions + ' turns in the last window' +
+      (lp.rpm_min != null ? ' (turns ' + num(lp.rpm_min, 1) + ' to ' + num(lp.rpm_max, 1) + ' RPM)' : '') +
+      (lp.sample_rate_hz != null ? ', sampling ' + num(lp.sample_rate_hz, 1) + ' samples/s per channel' : '') +
+      (lp.node_latency_ms != null ? ', node latency ' + num(lp.node_latency_ms, 0) + ' ms' : '');
   } else {
     s.className = 'speedstate wait';
     s.textContent = 'Speed: the Keyphasor gives no steady speed (check the Keyphasor probe on channel 7).';
@@ -748,7 +760,20 @@ function renderSpeed() {
     '<div><span>Gap</span><b>' + (p.valid ? num(p.gap_um, 1) + ' &micro;m' : '-') + '</b></div>' +
     '<div><span>Vibration pk-pk</span><b>' + (p.valid ? num(p.pkpk_um, 1) + ' &micro;m' : '-') + '</b></div>' +
     '<div><span>1X (once per turn)</span><b>' + (p.x1 ? num(p.x1_um_pp, 1) + ' &micro;m pp at ' + num(p.x1_phase_deg, 0) + '&deg;' : '-') +
-    '</b></div></div>').join('');
+    '</b></div></div>').join('') + healthCard(lp.health);
+}
+
+function healthCard(h) {
+  if (!h) return '';
+  const bad = h.adc_gaps + h.unsteady_windows + h.stm_send_failures + h.esp_rx_rejected + h.esp_dropped > 0;
+  const wifi = h.wifi_link === 'none' ? 'no link' :
+    (h.wifi_link === 'node' ? 'COE-NODE' : 'hotspot') + ', ' + h.wifi_rssi_dbm + ' dBm' +
+    (h.wifi_rssi_dbm >= -60 ? ' (good)' : h.wifi_rssi_dbm >= -75 ? ' (fair)' : ' (weak: move closer)');
+  const row = (label, value) => '<div><span>' + label + '</span><b>' + value + '</b></div>';
+  return '<div class="probe' + (bad ? ' warn' : '') + '"><h3>Node health' + (bad ? ' (problems counted since the node started)' : ': OK') + '</h3>' +
+    row('ADC sample gaps', h.adc_gaps) + row('Windows withheld (speed moved)', h.unsteady_windows) +
+    row('STM32 send failures', h.stm_send_failures) + row('ESP32 rejected packets', h.esp_rx_rejected) +
+    row('ESP32 windows not delivered', h.esp_dropped) + row('Wi-Fi', wifi) + '</div>';
 }
 
 $('toggle').onclick = async () => {
